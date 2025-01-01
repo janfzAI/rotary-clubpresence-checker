@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { Button } from "@/components/ui/button";
+import { Save, Download } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
+import { Navigation } from '@/components/Navigation';
+import { MembersManagement } from '@/components/MembersManagement';
+import { AttendanceHistory } from '@/components/AttendanceHistory';
+import { AttendanceStats } from '@/components/AttendanceStats';
 
-// Sample data - replace with your actual member list
+// Sample initial data
 const initialMembers = [
   { id: 1, name: "Anna Kowalska", present: false },
   { id: 2, name: "Jan Nowak", present: false },
@@ -14,8 +18,17 @@ const initialMembers = [
   { id: 5, name: "Ewa Dąbrowska", present: false },
 ];
 
+const sampleHistory = [
+  { date: new Date('2024-01-01'), presentCount: 3, totalCount: 5 },
+  { date: new Date('2024-01-08'), presentCount: 4, totalCount: 5 },
+  { date: new Date('2024-01-15'), presentCount: 5, totalCount: 5 },
+  { date: new Date('2024-01-22'), presentCount: 3, totalCount: 5 },
+];
+
 const Index = () => {
+  const [activeTab, setActiveTab] = useState('attendance');
   const [members, setMembers] = useState(initialMembers);
+  const [history, setHistory] = useState(sampleHistory);
   const { toast } = useToast();
 
   const handleToggleAttendance = (id: number) => {
@@ -25,35 +38,95 @@ const Index = () => {
   };
 
   const handleSave = () => {
-    console.log('Saving attendance:', members);
+    const newRecord = {
+      date: new Date(),
+      presentCount: members.filter(m => m.present).length,
+      totalCount: members.length
+    };
+    setHistory([...history, newRecord]);
     toast({
       title: "Zapisano obecność",
-      description: `Zaktualizowano listę obecności dla ${members.filter(m => m.present).length} osób.`,
+      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób.`,
+    });
+  };
+
+  const handleAddMember = (name: string) => {
+    const newId = Math.max(...members.map(m => m.id)) + 1;
+    setMembers([...members, { id: newId, name, present: false }]);
+  };
+
+  const handleRemoveMember = (id: number) => {
+    setMembers(members.filter(member => member.id !== id));
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Data', 'Obecni', 'Wszyscy'];
+    const csvContent = [
+      headers.join(','),
+      ...history.map(record => 
+        [
+          record.date.toLocaleDateString('pl-PL'),
+          record.presentCount,
+          record.totalCount
+        ].join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'obecnosc.csv';
+    link.click();
+    
+    toast({
+      title: "Wyeksportowano dane",
+      description: "Plik CSV został pobrany.",
     });
   };
 
   return (
-    <div className="container max-w-md mx-auto p-4">
-      <AttendanceHeader
-        date={new Date()}
-        presentCount={members.filter(m => m.present).length}
-        totalCount={members.length}
-      />
+    <div className="container max-w-2xl mx-auto p-4">
+      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
       
-      <AttendanceList
-        members={members}
-        onToggleAttendance={handleToggleAttendance}
-      />
-      
-      <div className="mt-6">
-        <Button
-          className="w-full"
-          onClick={handleSave}
-        >
-          <Save className="w-4 h-4 mr-2" />
-          Zapisz obecność
-        </Button>
-      </div>
+      {activeTab === 'attendance' && (
+        <div className="space-y-6">
+          <AttendanceHeader
+            date={new Date()}
+            presentCount={members.filter(m => m.present).length}
+            totalCount={members.length}
+          />
+          <AttendanceList
+            members={members}
+            onToggleAttendance={handleToggleAttendance}
+          />
+          <Button className="w-full" onClick={handleSave}>
+            <Save className="w-4 h-4 mr-2" />
+            Zapisz obecność
+          </Button>
+        </div>
+      )}
+
+      {activeTab === 'history' && (
+        <div className="space-y-6">
+          <AttendanceHistory records={history} />
+          <Button className="w-full" onClick={exportToCSV}>
+            <Download className="w-4 h-4 mr-2" />
+            Eksportuj do CSV
+          </Button>
+        </div>
+      )}
+
+      {activeTab === 'stats' && (
+        <AttendanceStats records={history} />
+      )}
+
+      {activeTab === 'members' && (
+        <MembersManagement
+          members={members}
+          onAddMember={handleAddMember}
+          onRemoveMember={handleRemoveMember}
+        />
+      )}
     </div>
   );
 };
