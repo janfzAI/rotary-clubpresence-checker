@@ -57,9 +57,12 @@ export const MembersManagement = ({
       </div>
 
       <div className="space-y-3">
-        {members.map((member) => (
+        {members.map((member, index) => (
           <Card key={member.id} className="p-4 flex justify-between items-center">
-            <span>{member.name}</span>
+            <span className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{index + 1}.</span>
+              <span>{member.name}</span>
+            </span>
             <Button
               variant="destructive"
               size="icon"
