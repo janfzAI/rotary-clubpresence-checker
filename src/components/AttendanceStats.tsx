@@ -40,10 +40,14 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
       return count + (record.presentMembers?.includes(member.id) ? 1 : 0);
     }, 0);
     
+    const presencePercentage = records.length > 0 
+      ? (presenceCount / records.length) * 100 
+      : 0;
+
     return {
       ...member,
       presenceCount,
-      presencePercentage: (presenceCount / records.length) * 100
+      presencePercentage
     };
   });
 
@@ -66,7 +70,7 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
             <div>
               <p className="text-sm text-muted-foreground">Średnia obecność</p>
               <p className="text-2xl font-bold">
-                {records.reduce((acc, curr) => acc + curr.presentCount, 0) / records.length}
+                {(records.reduce((acc, curr) => acc + curr.presentCount, 0) / records.length).toFixed(1)}
               </p>
             </div>
           </div>
@@ -126,8 +130,8 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
                     {record.presentMembers?.includes(member.id) ? '✓' : '—'}
                   </TableCell>
                 ))}
-                <TableCell className="text-right">{member.presenceCount}</TableCell>
-                <TableCell className="text-right">{member.presencePercentage.toFixed(1)}%</TableCell>
+                <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
+                <TableCell className="text-right font-medium">{member.presencePercentage.toFixed(1)}%</TableCell>
               </TableRow>
             ))}
           </TableBody>
