@@ -2,14 +2,29 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Percent, CalendarDays } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface AttendanceRecord {
   date: Date;
   presentCount: number;
   totalCount: number;
+  presentMembers?: number[]; // ID's of present members
 }
 
-export const AttendanceStats = ({ records }: { records: AttendanceRecord[] }) => {
+interface Member {
+  id: number;
+  name: string;
+  present: boolean;
+}
+
+export const AttendanceStats = ({ records, members }: { records: AttendanceRecord[], members: Member[] }) => {
   const chartData = records.map(record => ({
     date: record.date.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' }),
     attendance: (record.presentCount / record.totalCount) * 100
@@ -18,6 +33,19 @@ export const AttendanceStats = ({ records }: { records: AttendanceRecord[] }) =>
   const averageAttendance = records.length
     ? records.reduce((acc, curr) => acc + (curr.presentCount / curr.totalCount), 0) / records.length * 100
     : 0;
+
+  // Oblicz statystyki obecności dla każdego członka
+  const memberStats = members.map(member => {
+    const presenceCount = records.reduce((count, record) => {
+      return count + (record.presentMembers?.includes(member.id) ? 1 : 0);
+    }, 0);
+    
+    return {
+      ...member,
+      presenceCount,
+      presencePercentage: (presenceCount / records.length) * 100
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -73,6 +101,37 @@ export const AttendanceStats = ({ records }: { records: AttendanceRecord[] }) =>
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </Card>
+
+      <Card className="p-4 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">Członek</TableHead>
+              {records.map((record, index) => (
+                <TableHead key={index} className="text-center min-w-[100px]">
+                  {record.date.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' })}
+                </TableHead>
+              ))}
+              <TableHead className="text-right">Obecności</TableHead>
+              <TableHead className="text-right">Procent</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {memberStats.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell className="font-medium">{member.name}</TableCell>
+                {records.map((record, index) => (
+                  <TableCell key={index} className="text-center">
+                    {record.presentMembers?.includes(member.id) ? '✓' : '—'}
+                  </TableCell>
+                ))}
+                <TableCell className="text-right">{member.presenceCount}</TableCell>
+                <TableCell className="text-right">{member.presencePercentage.toFixed(1)}%</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Card>
     </div>
   );
