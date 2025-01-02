@@ -58,11 +58,17 @@ const Index = () => {
   };
 
   const handleSave = () => {
+    const presentMemberIds = members
+      .filter(m => m.present)
+      .map(m => m.id);
+
     const newRecord = {
       date: new Date(),
       presentCount: members.filter(m => m.present).length,
-      totalCount: members.length
+      totalCount: members.length,
+      presentMembers: presentMemberIds
     };
+    
     setHistory([...history, newRecord]);
     toast({
       title: "Zapisano obecność",
