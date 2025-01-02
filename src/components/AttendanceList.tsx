@@ -1,7 +1,9 @@
-import React from 'react';
-import { Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, SortAsc } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useToast } from "@/components/ui/use-toast";
 
 interface Member {
   id: number;
@@ -18,9 +20,39 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
   members,
   onToggleAttendance,
 }) => {
+  const [sortedAlphabetically, setSortedAlphabetically] = useState(false);
+  const { toast } = useToast();
+
+  const toggleSort = () => {
+    setSortedAlphabetically(!sortedAlphabetically);
+    toast({
+      title: "Lista posortowana",
+      description: `Lista została posortowana ${!sortedAlphabetically ? 'alfabetycznie' : 'według kolejności dodawania'}.`
+    });
+  };
+
+  const sortedMembers = [...members].sort((a, b) => {
+    if (sortedAlphabetically) {
+      return a.name.localeCompare(b.name);
+    }
+    return 0;
+  });
+
   return (
     <div className="space-y-3">
-      {members.map((member) => (
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleSort}
+          className="mb-2"
+        >
+          <SortAsc className="w-4 h-4 mr-2" />
+          {sortedAlphabetically ? 'Wyłącz sortowanie' : 'Sortuj alfabetycznie'}
+        </Button>
+      </div>
+
+      {sortedMembers.map((member) => (
         <Card
           key={member.id}
           className={cn(
