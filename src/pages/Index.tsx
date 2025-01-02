@@ -19,10 +19,30 @@ const initialMembers = [
 ];
 
 const sampleHistory = [
-  { date: new Date('2024-01-01'), presentCount: 3, totalCount: 5 },
-  { date: new Date('2024-01-08'), presentCount: 4, totalCount: 5 },
-  { date: new Date('2024-01-15'), presentCount: 5, totalCount: 5 },
-  { date: new Date('2024-01-22'), presentCount: 3, totalCount: 5 },
+  { 
+    date: new Date('2024-01-01'), 
+    presentCount: 3, 
+    totalCount: 5,
+    presentMembers: [1, 2, 3]
+  },
+  { 
+    date: new Date('2024-01-08'), 
+    presentCount: 4, 
+    totalCount: 5,
+    presentMembers: [1, 2, 3, 4]
+  },
+  { 
+    date: new Date('2024-01-15'), 
+    presentCount: 5, 
+    totalCount: 5,
+    presentMembers: [1, 2, 3, 4, 5]
+  },
+  { 
+    date: new Date('2024-01-22'), 
+    presentCount: 3, 
+    totalCount: 5,
+    presentMembers: [2, 3, 5]
+  },
 ];
 
 const Index = () => {
@@ -117,7 +137,7 @@ const Index = () => {
       )}
 
       {activeTab === 'stats' && (
-        <AttendanceStats records={history} />
+        <AttendanceStats records={history} members={members} />
       )}
 
       {activeTab === 'members' && (
