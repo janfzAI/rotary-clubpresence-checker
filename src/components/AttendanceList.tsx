@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Check, SortAsc } from 'lucide-react';
+import { Check, SortAsc, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
 
 interface Member {
   id: number;
@@ -11,16 +12,26 @@ interface Member {
   present: boolean;
 }
 
+interface Guest {
+  id: number;
+  name: string;
+}
+
 interface AttendanceListProps {
   members: Member[];
   onToggleAttendance: (id: number) => void;
+  onAddGuestVisit: (guestName: string) => void;
+  presentGuests?: string[];
 }
 
 export const AttendanceList: React.FC<AttendanceListProps> = ({
   members,
   onToggleAttendance,
+  onAddGuestVisit,
+  presentGuests = []
 }) => {
   const [sortedAlphabetically, setSortedAlphabetically] = useState(false);
+  const [newGuestName, setNewGuestName] = useState('');
   const { toast } = useToast();
 
   const toggleSort = () => {
@@ -29,6 +40,17 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
       title: "Lista posortowana",
       description: `Lista została posortowana ${!sortedAlphabetically ? 'alfabetycznie' : 'według kolejności dodawania'}.`
     });
+  };
+
+  const handleAddGuest = () => {
+    if (newGuestName.trim()) {
+      onAddGuestVisit(newGuestName.trim());
+      setNewGuestName('');
+      toast({
+        title: "Dodano gościa",
+        description: `${newGuestName} został dodany do listy obecności.`
+      });
+    }
   };
 
   const sortedMembers = [...members].sort((a, b) => {
@@ -80,6 +102,33 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
           </div>
         </Card>
       ))}
+
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4">Goście</h3>
+        <div className="flex gap-2 mb-4">
+          <Input
+            placeholder="Imię i nazwisko gościa"
+            value={newGuestName}
+            onChange={(e) => setNewGuestName(e.target.value)}
+          />
+          <Button onClick={handleAddGuest}>
+            <Plus className="w-4 h-4 mr-2" />
+            Dodaj
+          </Button>
+        </div>
+        {presentGuests.length > 0 && (
+          <div className="space-y-2">
+            {presentGuests.map((guestName, index) => (
+              <Card key={index} className="p-4 bg-secondary/10">
+                <div className="flex items-center justify-between">
+                  <span>{guestName}</span>
+                  <Check className="w-4 h-4 text-secondary" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
