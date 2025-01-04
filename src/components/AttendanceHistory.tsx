@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Calendar, Users, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface AttendanceRecord {
   date: Date;
@@ -22,7 +23,13 @@ export const AttendanceHistory = ({ records, onSelectDate }: AttendanceHistoryPr
         const recordDate = record.date instanceof Date ? record.date : new Date(record.date);
         
         return (
-          <Card key={index} className="p-4">
+          <Card 
+            key={index} 
+            className={cn(
+              "p-4",
+              record.presentCount >= 2 && "bg-primary/10"
+            )}
+          >
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-muted-foreground" />
