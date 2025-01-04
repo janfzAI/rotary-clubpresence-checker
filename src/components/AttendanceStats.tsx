@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Percent, CalendarDays } from 'lucide-react';
@@ -10,12 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AttendanceRecord {
   date: Date;
   presentCount: number;
   totalCount: number;
-  presentMembers?: number[]; // ID's of present members
+  presentMembers?: number[];
 }
 
 interface Member {
@@ -25,6 +26,25 @@ interface Member {
 }
 
 export const AttendanceStats = ({ records, members }: { records: AttendanceRecord[], members: Member[] }) => {
+  // Grupowanie rekordów według miesięcy
+  const groupedRecords = records.reduce((acc, record) => {
+    const monthKey = record.date.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' });
+    if (!acc[monthKey]) {
+      acc[monthKey] = [];
+    }
+    acc[monthKey].push(record);
+    return acc;
+  }, {} as { [key: string]: AttendanceRecord[] });
+
+  // Sortowanie kluczy miesięcy chronologicznie
+  const monthKeys = Object.keys(groupedRecords).sort((a, b) => {
+    const dateA = new Date(groupedRecords[a][0].date);
+    const dateB = new Date(groupedRecords[b][0].date);
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  const [currentMonth, setCurrentMonth] = useState(monthKeys[0]);
+
   const chartData = records.map(record => ({
     date: record.date.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' }),
     attendance: (record.presentCount / record.totalCount) * 100
@@ -44,12 +64,10 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
       ? (presenceCount / records.length) * 100 
       : 0;
 
-    // Oblicz całkowity okres w dniach
     const totalDays = records.length > 0 
       ? Math.ceil((records[records.length - 1].date.getTime() - records[0].date.getTime()) / (1000 * 60 * 60 * 24)) + 1
       : 0;
 
-    // Oblicz procentowy udział w całym okresie
     const totalParticipation = totalDays > 0 
       ? (presenceCount / totalDays) * 100 
       : 0;
@@ -119,39 +137,53 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
         </div>
       </Card>
 
-      <Card className="p-4 overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[200px]">Członek</TableHead>
-              {records.map((record, index) => (
-                <TableHead key={index} className="text-center min-w-[100px]">
-                  {record.date.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' })}
-                </TableHead>
-              ))}
-              <TableHead className="text-right">Obecności</TableHead>
-              <TableHead className="text-right">Procent</TableHead>
-              <TableHead className="text-right">Dni obecności</TableHead>
-              <TableHead className="text-right">Udział całkowity</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {memberStats.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell className="font-medium">{member.name}</TableCell>
-                {records.map((record, index) => (
-                  <TableCell key={index} className="text-center">
-                    {record.presentMembers?.includes(member.id) ? '✓' : '—'}
-                  </TableCell>
-                ))}
-                <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
-                <TableCell className="text-right font-medium">{member.presencePercentage.toFixed(1)}%</TableCell>
-                <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
-                <TableCell className="text-right font-medium">{member.totalParticipation.toFixed(1)}%</TableCell>
-              </TableRow>
+      <Card className="p-4">
+        <Tabs defaultValue={currentMonth} onValueChange={setCurrentMonth}>
+          <TabsList className="mb-4 flex flex-wrap">
+            {monthKeys.map((month) => (
+              <TabsTrigger key={month} value={month} className="px-4 py-2">
+                {month}
+              </TabsTrigger>
             ))}
-          </TableBody>
-        </Table>
+          </TabsList>
+          
+          {monthKeys.map((month) => (
+            <TabsContent key={month} value={month} className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Członek</TableHead>
+                    {groupedRecords[month].map((record, index) => (
+                      <TableHead key={index} className="text-center min-w-[100px]">
+                        {record.date.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' })}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right">Obecności</TableHead>
+                    <TableHead className="text-right">Procent</TableHead>
+                    <TableHead className="text-right">Dni obecności</TableHead>
+                    <TableHead className="text-right">Udział całkowity</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberStats.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">{member.name}</TableCell>
+                      {groupedRecords[month].map((record, index) => (
+                        <TableCell key={index} className="text-center">
+                          {record.presentMembers?.includes(member.id) ? '✓' : '—'}
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
+                      <TableCell className="text-right font-medium">{member.presencePercentage.toFixed(1)}%</TableCell>
+                      <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
+                      <TableCell className="text-right font-medium">{member.totalParticipation.toFixed(1)}%</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+          ))}
+        </Tabs>
       </Card>
     </div>
   );

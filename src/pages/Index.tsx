@@ -49,12 +49,19 @@ const initialMembers = [
   { id: 36, name: "Leszek Zdawski", present: false },
 ];
 
-// Generowanie dat spotkań (środy) od 4 września 2024
-const generateWednesdayDates = (startDate: Date, count: number) => {
+// Generowanie dat spotkań (środy) od 4 września 2024 do najbliższej środy
+const generateWednesdayDates = (startDate: Date) => {
   const dates = [];
   let currentDate = new Date(startDate);
+  const today = new Date();
   
-  for (let i = 0; i < count; i++) {
+  // Znajdź najbliższą przyszłą środę
+  const endDate = new Date();
+  const daysUntilWednesday = (3 - endDate.getDay() + 7) % 7;
+  endDate.setDate(endDate.getDate() + daysUntilWednesday);
+  endDate.setHours(23, 59, 59, 999);
+
+  while (currentDate <= endDate) {
     dates.push({
       date: new Date(currentDate),
       presentCount: 0,
@@ -68,7 +75,7 @@ const generateWednesdayDates = (startDate: Date, count: number) => {
 };
 
 const startDate = new Date(2024, 8, 4); // 4 września 2024
-const sampleHistory = generateWednesdayDates(startDate, 4); // Generuje 4 kolejne środy
+const sampleHistory = generateWednesdayDates(startDate);
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
