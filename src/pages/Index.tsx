@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
@@ -15,6 +15,7 @@ import { useAttendanceMembers } from '@/hooks/useAttendanceMembers';
 import { normalizeDate } from '@/utils/dateUtils';
 import { generateWednesdayDates } from '@/utils/dateUtils';
 
+// Lista członków Rotary Club Szczecin
 const initialMembers = [
   { id: 1, name: "Bogdan Borowczyk", present: false },
   { id: 2, name: "Janusz Bykowski", present: false },
@@ -68,15 +69,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = React.useState('attendance');
   const { toast } = useToast();
   const [currentMembers, setCurrentMembers] = useState(initialMembers);
-  const [guests, setGuests] = useState<Array<{ id: number; name: string; present: boolean; notes: string }>>(() => {
-    const savedGuests = localStorage.getItem('guests');
-    return savedGuests ? JSON.parse(savedGuests) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('guests', JSON.stringify(guests));
-  }, [guests]);
-
+  const [guests, setGuests] = useState<Array<{ id: number; name: string; present: boolean }>>([]);
   const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
   const { 
     members, 
@@ -136,9 +129,6 @@ const Index = () => {
       content += `\nObecni goście (${presentGuests.length}):\n`;
       presentGuests.forEach((guest, index) => {
         content += `${index + 1}. ${guest.name}\n`;
-        if (guest.notes) {
-          content += `   Uwagi: ${guest.notes}\n`;
-        }
       });
     }
     
@@ -175,20 +165,13 @@ const Index = () => {
     const newGuest = {
       id: guests.length > 0 ? Math.max(...guests.map(g => g.id)) + 1 : 1,
       name,
-      present: false,
-      notes: ''
+      present: false
     };
     setGuests([...guests, newGuest]);
   };
 
   const handleRemoveGuest = (id: number) => {
     setGuests(guests.filter(guest => guest.id !== id));
-  };
-
-  const handleUpdateGuestNotes = (id: number, notes: string) => {
-    setGuests(guests.map(guest => 
-      guest.id === id ? { ...guest, notes } : guest
-    ));
   };
 
   return (
@@ -243,7 +226,6 @@ const Index = () => {
           guests={guests}
           onAddGuest={handleAddGuest}
           onRemoveGuest={handleRemoveGuest}
-          onUpdateGuestNotes={handleUpdateGuestNotes}
         />
       )}
     </div>
