@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Check, SortAsc, Plus } from 'lucide-react';
+import { Check, SortAsc } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/components/ui/use-toast";
-import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 
 interface Member {
   id: number;
@@ -15,23 +15,23 @@ interface Member {
 interface Guest {
   id: number;
   name: string;
+  present: boolean;
 }
 
 interface AttendanceListProps {
   members: Member[];
+  guests: Guest[];
   onToggleAttendance: (id: number) => void;
-  onAddGuestVisit: (guestName: string) => void;
-  presentGuests?: string[];
+  onToggleGuestAttendance: (id: number) => void;
 }
 
 export const AttendanceList: React.FC<AttendanceListProps> = ({
   members,
+  guests,
   onToggleAttendance,
-  onAddGuestVisit,
-  presentGuests = []
+  onToggleGuestAttendance,
 }) => {
   const [sortedAlphabetically, setSortedAlphabetically] = useState(false);
-  const [newGuestName, setNewGuestName] = useState('');
   const { toast } = useToast();
 
   const toggleSort = () => {
@@ -42,18 +42,14 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
     });
   };
 
-  const handleAddGuest = () => {
-    if (newGuestName.trim()) {
-      onAddGuestVisit(newGuestName.trim());
-      setNewGuestName('');
-      toast({
-        title: "Dodano gościa",
-        description: `${newGuestName} został dodany do listy obecności.`
-      });
-    }
-  };
-
   const sortedMembers = [...members].sort((a, b) => {
+    if (sortedAlphabetically) {
+      return a.name.localeCompare(b.name);
+    }
+    return 0;
+  });
+
+  const sortedGuests = [...guests].sort((a, b) => {
     if (sortedAlphabetically) {
       return a.name.localeCompare(b.name);
     }
@@ -74,59 +70,74 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
         </Button>
       </div>
 
-      {sortedMembers.map((member, index) => (
-        <Card
-          key={member.id}
-          className={cn(
-            "p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
-            member.present && "bg-primary/10"
-          )}
-          onClick={() => onToggleAttendance(member.id)}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-lg">
-              {index + 1}. {member.name}
-            </span>
-            <div
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold">Członkowie</h3>
+          {sortedMembers.map((member, index) => (
+            <Card
+              key={member.id}
               className={cn(
-                "w-6 h-6 rounded-full border-2 flex items-center justify-center",
-                member.present
-                  ? "border-primary bg-primary text-white"
-                  : "border-gray-300"
+                "p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
+                member.present && "bg-primary/10"
               )}
+              onClick={() => onToggleAttendance(member.id)}
             >
-              {member.present && (
-                <Check className="w-4 h-4 animate-check-mark" />
-              )}
-            </div>
-          </div>
-        </Card>
-      ))}
-
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">Goście</h3>
-        <div className="flex gap-2 mb-4">
-          <Input
-            placeholder="Imię i nazwisko gościa"
-            value={newGuestName}
-            onChange={(e) => setNewGuestName(e.target.value)}
-          />
-          <Button onClick={handleAddGuest}>
-            <Plus className="w-4 h-4 mr-2" />
-            Dodaj
-          </Button>
-        </div>
-        {presentGuests.length > 0 && (
-          <div className="space-y-2">
-            {presentGuests.map((guestName, index) => (
-              <Card key={index} className="p-4 bg-secondary/10">
-                <div className="flex items-center justify-between">
-                  <span>{guestName}</span>
-                  <Check className="w-4 h-4 text-secondary" />
+              <div className="flex items-center justify-between">
+                <span className="text-lg">
+                  {index + 1}. {member.name}
+                </span>
+                <div
+                  className={cn(
+                    "w-6 h-6 rounded-full border-2 flex items-center justify-center",
+                    member.present
+                      ? "border-primary bg-primary text-white"
+                      : "border-gray-300"
+                  )}
+                >
+                  {member.present && (
+                    <Check className="w-4 h-4 animate-check-mark" />
+                  )}
                 </div>
-              </Card>
-            ))}
-          </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {guests.length > 0 && (
+          <>
+            <Separator className="my-4" />
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Goście</h3>
+              {sortedGuests.map((guest, index) => (
+                <Card
+                  key={guest.id}
+                  className={cn(
+                    "p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
+                    guest.present && "bg-secondary/10"
+                  )}
+                  onClick={() => onToggleGuestAttendance(guest.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">
+                      {index + 1}. {guest.name}
+                    </span>
+                    <div
+                      className={cn(
+                        "w-6 h-6 rounded-full border-2 flex items-center justify-center",
+                        guest.present
+                          ? "border-secondary bg-secondary text-white"
+                          : "border-gray-300"
+                      )}
+                    >
+                      {guest.present && (
+                        <Check className="w-4 h-4 animate-check-mark" />
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

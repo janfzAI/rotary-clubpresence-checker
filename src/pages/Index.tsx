@@ -13,6 +13,7 @@ import { AttendanceExport } from '@/components/AttendanceExport';
 import { useAttendanceHistory } from '@/hooks/useAttendanceHistory';
 import { useAttendanceMembers } from '@/hooks/useAttendanceMembers';
 import { normalizeDate } from '@/utils/dateUtils';
+import { generateWednesdayDates } from '@/utils/dateUtils';
 
 // Lista członków Rotary Club Szczecin
 const initialMembers = [
@@ -64,28 +65,25 @@ const initialHistory = generateWednesdayDates(startDate, endDate).map(date => ({
   presentMembers: []
 }));
 
-interface GuestVisit {
-  date: Date;
-  guestName: string;
-}
-
 const Index = () => {
   const [activeTab, setActiveTab] = React.useState('attendance');
   const { toast } = useToast();
   const [currentMembers, setCurrentMembers] = useState(initialMembers);
   const [guests, setGuests] = useState<Array<{ id: number; name: string }>>([]);
-  const [guestVisits, setGuestVisits] = useState<GuestVisit[]>([]);
-  const [presentGuests, setPresentGuests] = useState<string[]>([]);
   const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
-  const { members, selectedDate, setSelectedDate, toggleAttendance } = useAttendanceMembers(currentMembers, history);
+  const { 
+    members, 
+    guests: attendanceGuests, 
+    selectedDate, 
+    setSelectedDate, 
+    toggleAttendance,
+    toggleGuestAttendance 
+  } = useAttendanceMembers(currentMembers, guests, history);
 
   const handleDateSelect = (date: Date) => {
     console.log('Handling date selection:', date);
     setSelectedDate(date);
     setActiveTab('attendance');
-    
-    // Reset present guests when changing date
-    setPresentGuests([]);
   };
 
   const handleSave = () => {
@@ -95,36 +93,72 @@ const Index = () => {
       .filter(m => m.present)
       .map(m => m.id);
 
+    const presentGuestIds = attendanceGuests
+      .filter(g => g.present)
+      .map(g => g.id);
+
     const newRecord = {
       date: normalizeDate(selectedDate),
       presentCount: members.filter(m => m.present).length,
       totalCount: members.length,
       presentMembers: presentMemberIds,
-      presentGuests: presentGuests
+      presentGuests: presentGuestIds
     };
 
     updateHistory(newRecord);
-    
-    // Update guest visits
-    const newGuestVisits = [
-      ...guestVisits,
-      ...presentGuests.map(guestName => ({
-        date: normalizeDate(selectedDate),
-        guestName
-      }))
-    ];
-    setGuestVisits(newGuestVisits);
+    generateAttendanceFile();
     
     toast({
       title: "Zapisano obecność",
-      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób i ${presentGuests.length} gości.`,
+      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} członków i ${presentGuestIds.length} gości.`,
     });
   };
 
-  const handleAddGuestVisit = (guestName: string) => {
-    if (!presentGuests.includes(guestName)) {
-      setPresentGuests([...presentGuests, guestName]);
+  const generateAttendanceFile = () => {
+    const currentDate = new Date().toLocaleDateString('pl-PL');
+    const presentMembers = members.filter(m => m.present);
+    const presentGuests = attendanceGuests.filter(g => g.present);
+    
+    let content = `Lista obecności - ${currentDate}\n\n`;
+    content += `Obecni członkowie (${presentMembers.length} z ${members.length}):\n`;
+    presentMembers.forEach((member, index) => {
+      content += `${index + 1}. ${member.name}\n`;
+    });
+    
+    if (presentGuests.length > 0) {
+      content += `\nObecni goście (${presentGuests.length}):\n`;
+      presentGuests.forEach((guest, index) => {
+        content += `${index + 1}. ${guest.name}\n`;
+      });
     }
+    
+    content += `\nNieobecni:\n`;
+    members.filter(m => !m.present).forEach((member, index) => {
+      content += `${index + 1}. ${member.name}\n`;
+    });
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `obecnosc_${currentDate.replace(/\./g, '_')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleAddMember = (name: string) => {
+    const newMember = {
+      id: currentMembers.length > 0 ? Math.max(...currentMembers.map(m => m.id)) + 1 : 1,
+      name,
+      present: false
+    };
+    setCurrentMembers([...currentMembers, newMember]);
+  };
+
+  const handleRemoveMember = (id: number) => {
+    setCurrentMembers(currentMembers.filter(member => member.id !== id));
   };
 
   const handleAddGuest = (name: string) => {
@@ -149,13 +183,13 @@ const Index = () => {
             date={selectedDate}
             presentCount={members.filter(m => m.present).length}
             totalCount={members.length}
-            guestCount={presentGuests.length}
+            presentGuestsCount={attendanceGuests.filter(g => g.present).length}
           />
           <AttendanceList
             members={members}
+            guests={attendanceGuests}
             onToggleAttendance={toggleAttendance}
-            onAddGuestVisit={handleAddGuestVisit}
-            presentGuests={presentGuests}
+            onToggleGuestAttendance={toggleGuestAttendance}
           />
           <Button className="w-full" onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />
@@ -191,7 +225,6 @@ const Index = () => {
           guests={guests}
           onAddGuest={handleAddGuest}
           onRemoveGuest={handleRemoveGuest}
-          guestVisits={guestVisits}
         />
       )}
     </div>
