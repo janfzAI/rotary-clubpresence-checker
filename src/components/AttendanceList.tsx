@@ -52,7 +52,7 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
         </Button>
       </div>
 
-      {sortedMembers.map((member) => (
+      {sortedMembers.map((member, index) => (
         <Card
           key={member.id}
           className={cn(
@@ -62,7 +62,9 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
           onClick={() => onToggleAttendance(member.id)}
         >
           <div className="flex items-center justify-between">
-            <span className="text-lg">{member.name}</span>
+            <span className="text-lg">
+              {index + 1}. {member.name}
+            </span>
             <div
               className={cn(
                 "w-6 h-6 rounded-full border-2 flex items-center justify-center",

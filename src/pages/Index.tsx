@@ -72,18 +72,44 @@ const generateWednesdayDates = (startDate: Date) => {
 };
 
 const startDate = new Date(2024, 8, 4); // 4 września 2024
-const sampleHistory = generateWednesdayDates(startDate);
+const initialHistory = generateWednesdayDates(startDate);
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
   const [members, setMembers] = useState(initialMembers);
-  const [history, setHistory] = useState(sampleHistory);
+  const [history, setHistory] = useState(initialHistory);
   const { toast } = useToast();
 
   const handleToggleAttendance = (id: number) => {
     setMembers(members.map(member =>
       member.id === id ? { ...member, present: !member.present } : member
     ));
+  };
+
+  const generateAttendanceFile = () => {
+    const currentDate = new Date().toLocaleDateString('pl-PL');
+    const presentMembers = members.filter(m => m.present);
+    
+    let content = `Lista obecności - ${currentDate}\n\n`;
+    content += `Obecni (${presentMembers.length} z ${members.length}):\n`;
+    presentMembers.forEach((member, index) => {
+      content += `${index + 1}. ${member.name}\n`;
+    });
+    
+    content += `\nNieobecni:\n`;
+    members.filter(m => !m.present).forEach((member, index) => {
+      content += `${index + 1}. ${member.name}\n`;
+    });
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `obecnosc_${currentDate.replace(/\./g, '_')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleSave = () => {
@@ -99,6 +125,8 @@ const Index = () => {
     };
     
     setHistory([...history, newRecord]);
+    generateAttendanceFile();
+    
     toast({
       title: "Zapisano obecność",
       description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób.`,
