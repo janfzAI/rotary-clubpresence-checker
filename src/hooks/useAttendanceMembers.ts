@@ -7,13 +7,25 @@ interface Member {
   present: boolean;
 }
 
+interface Guest {
+  id: number;
+  name: string;
+  present: boolean;
+}
+
 interface AttendanceRecord {
   date: Date;
   presentMembers?: number[];
+  presentGuests?: number[];
 }
 
-export const useAttendanceMembers = (initialMembers: Member[], history: AttendanceRecord[]) => {
+export const useAttendanceMembers = (
+  initialMembers: Member[],
+  initialGuests: Guest[],
+  history: AttendanceRecord[]
+) => {
   const [members, setMembers] = useState(initialMembers);
+  const [guests, setGuests] = useState(initialGuests);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
@@ -28,8 +40,14 @@ export const useAttendanceMembers = (initialMembers: Member[], history: Attendan
         ...member,
         present: record.presentMembers?.includes(member.id) || false
       })));
+      
+      setGuests(guests.map(guest => ({
+        ...guest,
+        present: record.presentGuests?.includes(guest.id) || false
+      })));
     } else {
       setMembers(members.map(member => ({ ...member, present: false })));
+      setGuests(guests.map(guest => ({ ...guest, present: false })));
     }
   }, [selectedDate, history]);
 
@@ -39,10 +57,18 @@ export const useAttendanceMembers = (initialMembers: Member[], history: Attendan
     ));
   };
 
+  const toggleGuestAttendance = (id: number) => {
+    setGuests(guests.map(guest =>
+      guest.id === id ? { ...guest, present: !guest.present } : guest
+    ));
+  };
+
   return {
     members,
+    guests,
     selectedDate,
     setSelectedDate,
-    toggleAttendance
+    toggleAttendance,
+    toggleGuestAttendance
   };
 };

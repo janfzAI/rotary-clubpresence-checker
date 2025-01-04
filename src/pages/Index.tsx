@@ -71,7 +71,14 @@ const Index = () => {
   const [currentMembers, setCurrentMembers] = useState(initialMembers);
   const [guests, setGuests] = useState<Array<{ id: number; name: string }>>([]);
   const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
-  const { members, selectedDate, setSelectedDate, toggleAttendance } = useAttendanceMembers(currentMembers, history);
+  const { 
+    members, 
+    guests: attendanceGuests, 
+    selectedDate, 
+    setSelectedDate, 
+    toggleAttendance,
+    toggleGuestAttendance 
+  } = useAttendanceMembers(currentMembers, guests, history);
 
   const handleDateSelect = (date: Date) => {
     console.log('Handling date selection:', date);
@@ -86,11 +93,16 @@ const Index = () => {
       .filter(m => m.present)
       .map(m => m.id);
 
+    const presentGuestIds = attendanceGuests
+      .filter(g => g.present)
+      .map(g => g.id);
+
     const newRecord = {
       date: normalizeDate(selectedDate),
       presentCount: members.filter(m => m.present).length,
       totalCount: members.length,
-      presentMembers: presentMemberIds
+      presentMembers: presentMemberIds,
+      presentGuests: presentGuestIds
     };
 
     updateHistory(newRecord);
@@ -98,19 +110,27 @@ const Index = () => {
     
     toast({
       title: "Zapisano obecność",
-      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób.`,
+      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} członków i ${presentGuestIds.length} gości.`,
     });
   };
 
   const generateAttendanceFile = () => {
     const currentDate = new Date().toLocaleDateString('pl-PL');
     const presentMembers = members.filter(m => m.present);
+    const presentGuests = attendanceGuests.filter(g => g.present);
     
     let content = `Lista obecności - ${currentDate}\n\n`;
-    content += `Obecni (${presentMembers.length} z ${members.length}):\n`;
+    content += `Obecni członkowie (${presentMembers.length} z ${members.length}):\n`;
     presentMembers.forEach((member, index) => {
       content += `${index + 1}. ${member.name}\n`;
     });
+    
+    if (presentGuests.length > 0) {
+      content += `\nObecni goście (${presentGuests.length}):\n`;
+      presentGuests.forEach((guest, index) => {
+        content += `${index + 1}. ${guest.name}\n`;
+      });
+    }
     
     content += `\nNieobecni:\n`;
     members.filter(m => !m.present).forEach((member, index) => {
@@ -163,10 +183,13 @@ const Index = () => {
             date={selectedDate}
             presentCount={members.filter(m => m.present).length}
             totalCount={members.length}
+            presentGuestsCount={attendanceGuests.filter(g => g.present).length}
           />
           <AttendanceList
             members={members}
+            guests={attendanceGuests}
             onToggleAttendance={toggleAttendance}
+            onToggleGuestAttendance={toggleGuestAttendance}
           />
           <Button className="w-full" onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />

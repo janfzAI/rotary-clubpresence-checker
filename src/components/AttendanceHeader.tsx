@@ -5,12 +5,14 @@ interface AttendanceHeaderProps {
   date: Date;
   presentCount: number;
   totalCount: number;
+  presentGuestsCount: number;
 }
 
 export const AttendanceHeader: React.FC<AttendanceHeaderProps> = ({
   date,
   presentCount,
   totalCount,
+  presentGuestsCount,
 }) => {
   return (
     <div className="space-y-4 mb-6">
@@ -25,8 +27,15 @@ export const AttendanceHeader: React.FC<AttendanceHeaderProps> = ({
           })}
         </span>
       </div>
-      <div className="text-2xl font-semibold">
-        Obecnych: {presentCount} z {totalCount}
+      <div className="space-y-1">
+        <div className="text-2xl font-semibold">
+          Obecnych: {presentCount} z {totalCount}
+        </div>
+        {presentGuestsCount > 0 && (
+          <div className="text-lg text-muted-foreground">
+            Obecnych gości: {presentGuestsCount}
+          </div>
+        )}
       </div>
     </div>
   );
