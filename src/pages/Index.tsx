@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Save, Download } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
@@ -63,9 +63,39 @@ const initialHistory = generateWednesdayDates(startDate, endDate).map(date => ({
 const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
   const [members, setMembers] = useState(initialMembers);
-  const [history, setHistory] = useState(initialHistory);
+  const [history, setHistory] = useState(() => {
+    const savedHistory = localStorage.getItem('attendanceHistory');
+    if (savedHistory) {
+      // Konwertuj daty z powrotem na obiekty Date
+      const parsedHistory = JSON.parse(savedHistory);
+      return parsedHistory.map((record: any) => ({
+        ...record,
+        date: new Date(record.date)
+      }));
+    }
+    return initialHistory;
+  });
   const [selectedDate, setSelectedDate] = useState(new Date());
   const { toast } = useToast();
+
+  // Zapisz historię do localStorage za każdym razem, gdy się zmienia
+  useEffect(() => {
+    localStorage.setItem('attendanceHistory', JSON.stringify(history));
+    console.log('Historia zapisana w localStorage:', history);
+  }, [history]);
+
+  // Załaduj obecności dla wybranej daty
+  useEffect(() => {
+    const record = history.find(record => areDatesEqual(record.date, selectedDate));
+    if (record) {
+      setMembers(members.map(member => ({
+        ...member,
+        present: record.presentMembers?.includes(member.id) || false
+      })));
+    } else {
+      setMembers(members.map(member => ({ ...member, present: false })));
+    }
+  }, [selectedDate]);
 
   const handleToggleAttendance = (id: number) => {
     setMembers(members.map(member =>
@@ -113,7 +143,6 @@ const Index = () => {
       presentMembers: presentMemberIds
     };
     
-    // Sprawdź, czy istnieje już wpis dla tej daty
     const existingRecordIndex = history.findIndex(record => 
       areDatesEqual(record.date, selectedDate)
     );
@@ -122,13 +151,11 @@ const Index = () => {
 
     let updatedHistory;
     if (existingRecordIndex !== -1) {
-      // Aktualizuj istniejący wpis
       updatedHistory = history.map((record, index) => 
         index === existingRecordIndex ? newRecord : record
       );
       console.log('Updating existing record');
     } else {
-      // Dodaj nowy wpis
       updatedHistory = [...history, newRecord];
       console.log('Adding new record');
     }
