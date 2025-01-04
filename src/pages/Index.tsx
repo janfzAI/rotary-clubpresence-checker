@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Save, Download } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
@@ -8,7 +8,11 @@ import { Navigation } from '@/components/Navigation';
 import { MembersManagement } from '@/components/MembersManagement';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { AttendanceStats } from '@/components/AttendanceStats';
-import { normalizeDate, areDatesEqual, generateWednesdayDates } from '@/utils/dateUtils';
+import { AttendanceExport } from '@/components/AttendanceExport';
+import { useAttendanceHistory } from '@/hooks/useAttendanceHistory';
+import { useAttendanceMembers } from '@/hooks/useAttendanceMembers';
+import { normalizeDate } from '@/utils/dateUtils';
+import { generateWednesdayDates } from '@/utils/dateUtils';
 
 // Lista członków Rotary Club Szczecin
 const initialMembers = [
@@ -61,46 +65,32 @@ const initialHistory = generateWednesdayDates(startDate, endDate).map(date => ({
 }));
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('attendance');
-  const [members, setMembers] = useState(initialMembers);
-  const [history, setHistory] = useState(() => {
-    const savedHistory = localStorage.getItem('attendanceHistory');
-    if (savedHistory) {
-      // Konwertuj daty z powrotem na obiekty Date
-      const parsedHistory = JSON.parse(savedHistory);
-      return parsedHistory.map((record: any) => ({
-        ...record,
-        date: new Date(record.date)
-      }));
-    }
-    return initialHistory;
-  });
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activeTab, setActiveTab] = React.useState('attendance');
   const { toast } = useToast();
+  const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
+  const { members, selectedDate, setSelectedDate, toggleAttendance } = useAttendanceMembers(initialMembers, history);
 
-  // Zapisz historię do localStorage za każdym razem, gdy się zmienia
-  useEffect(() => {
-    localStorage.setItem('attendanceHistory', JSON.stringify(history));
-    console.log('Historia zapisana w localStorage:', history);
-  }, [history]);
+  const handleSave = () => {
+    console.log('Saving attendance for date:', selectedDate);
+    
+    const presentMemberIds = members
+      .filter(m => m.present)
+      .map(m => m.id);
 
-  // Załaduj obecności dla wybranej daty
-  useEffect(() => {
-    const record = history.find(record => areDatesEqual(record.date, selectedDate));
-    if (record) {
-      setMembers(members.map(member => ({
-        ...member,
-        present: record.presentMembers?.includes(member.id) || false
-      })));
-    } else {
-      setMembers(members.map(member => ({ ...member, present: false })));
-    }
-  }, [selectedDate]);
+    const newRecord = {
+      date: normalizeDate(selectedDate),
+      presentCount: members.filter(m => m.present).length,
+      totalCount: members.length,
+      presentMembers: presentMemberIds
+    };
 
-  const handleToggleAttendance = (id: number) => {
-    setMembers(members.map(member =>
-      member.id === id ? { ...member, present: !member.present } : member
-    ));
+    updateHistory(newRecord);
+    generateAttendanceFile();
+    
+    toast({
+      title: "Zapisano obecność",
+      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób.`,
+    });
   };
 
   const generateAttendanceFile = () => {
@@ -129,89 +119,6 @@ const Index = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleSave = () => {
-    console.log('Saving attendance for date:', selectedDate);
-    
-    const presentMemberIds = members
-      .filter(m => m.present)
-      .map(m => m.id);
-
-    const newRecord = {
-      date: normalizeDate(selectedDate),
-      presentCount: members.filter(m => m.present).length,
-      totalCount: members.length,
-      presentMembers: presentMemberIds
-    };
-    
-    const existingRecordIndex = history.findIndex(record => 
-      areDatesEqual(record.date, selectedDate)
-    );
-
-    console.log('Existing record index:', existingRecordIndex);
-
-    let updatedHistory;
-    if (existingRecordIndex !== -1) {
-      updatedHistory = history.map((record, index) => 
-        index === existingRecordIndex ? newRecord : record
-      );
-      console.log('Updating existing record');
-    } else {
-      updatedHistory = [...history, newRecord];
-      console.log('Adding new record');
-    }
-
-    setHistory(updatedHistory);
-    generateAttendanceFile();
-    
-    toast({
-      title: "Zapisano obecność",
-      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób.`,
-    });
-  };
-
-  const handleSelectDate = (date: Date) => {
-    setSelectedDate(date);
-    setActiveTab('attendance');
-    toast({
-      title: "Wybrano datę",
-      description: `Przełączono na edycję obecności z dnia ${date.toLocaleDateString('pl-PL')}.`,
-    });
-  };
-
-  const handleAddMember = (name: string) => {
-    const newId = Math.max(...members.map(m => m.id)) + 1;
-    setMembers([...members, { id: newId, name, present: false }]);
-  };
-
-  const handleRemoveMember = (id: number) => {
-    setMembers(members.filter(member => member.id !== id));
-  };
-
-  const exportToCSV = () => {
-    const headers = ['Data', 'Obecni', 'Wszyscy'];
-    const csvContent = [
-      headers.join(','),
-      ...history.map(record => 
-        [
-          record.date.toLocaleDateString('pl-PL'),
-          record.presentCount,
-          record.totalCount
-        ].join(',')
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'obecnosc.csv';
-    link.click();
-    
-    toast({
-      title: "Wyeksportowano dane",
-      description: "Plik CSV został pobrany.",
-    });
-  };
-
   return (
     <div className="container max-w-2xl mx-auto p-4">
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
@@ -225,7 +132,7 @@ const Index = () => {
           />
           <AttendanceList
             members={members}
-            onToggleAttendance={handleToggleAttendance}
+            onToggleAttendance={toggleAttendance}
           />
           <Button className="w-full" onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />
@@ -238,12 +145,9 @@ const Index = () => {
         <div className="space-y-6">
           <AttendanceHistory 
             records={history} 
-            onSelectDate={handleSelectDate}
+            onSelectDate={setSelectedDate}
           />
-          <Button className="w-full" onClick={exportToCSV}>
-            <Download className="w-4 h-4 mr-2" />
-            Eksportuj do CSV
-          </Button>
+          <AttendanceExport history={history} />
         </div>
       )}
 
@@ -254,8 +158,8 @@ const Index = () => {
       {activeTab === 'members' && (
         <MembersManagement
           members={members}
-          onAddMember={handleAddMember}
-          onRemoveMember={handleRemoveMember}
+          onAddMember={() => {}}
+          onRemoveMember={() => {}}
         />
       )}
     </div>
