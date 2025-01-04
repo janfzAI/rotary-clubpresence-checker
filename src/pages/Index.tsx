@@ -67,28 +67,13 @@ const initialHistory = generateWednesdayDates(startDate, endDate).map(date => ({
 const Index = () => {
   const [activeTab, setActiveTab] = React.useState('attendance');
   const { toast } = useToast();
-  const [currentMembers, setCurrentMembers] = React.useState(initialMembers);
-  const { history, updateHistory } = useAttendanceHistory(initialHistory, currentMembers);
-  const { members, selectedDate, setSelectedDate, toggleAttendance } = useAttendanceMembers(currentMembers, history);
+  const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
+  const { members, selectedDate, setSelectedDate, toggleAttendance } = useAttendanceMembers(initialMembers, history);
 
   const handleDateSelect = (date: Date) => {
     console.log('Handling date selection:', date);
     setSelectedDate(date);
     setActiveTab('attendance');
-  };
-
-  const handleAddMember = (name: string) => {
-    const newMember = {
-      id: currentMembers.length + 1,
-      name,
-      present: false
-    };
-    setCurrentMembers([...currentMembers, newMember]);
-  };
-
-  const handleRemoveMember = (id: number) => {
-    console.log('Removing member with id:', id);
-    setCurrentMembers(currentMembers.filter(member => member.id !== id));
   };
 
   const handleSave = () => {
@@ -178,9 +163,9 @@ const Index = () => {
 
       {activeTab === 'members' && (
         <MembersManagement
-          members={currentMembers}
-          onAddMember={handleAddMember}
-          onRemoveMember={handleRemoveMember}
+          members={members}
+          onAddMember={() => {}}
+          onRemoveMember={() => {}}
         />
       )}
     </div>
