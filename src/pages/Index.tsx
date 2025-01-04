@@ -8,6 +8,7 @@ import { Navigation } from '@/components/Navigation';
 import { MembersManagement } from '@/components/MembersManagement';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { AttendanceStats } from '@/components/AttendanceStats';
+import { normalizeDate, areDatesEqual, generateWednesdayDates } from '@/utils/dateUtils';
 
 // Lista członków Rotary Club Szczecin
 const initialMembers = [
@@ -50,29 +51,14 @@ const initialMembers = [
 ];
 
 // Generowanie dat spotkań (środy) od 4 września 2024 do czerwca 2025
-const generateWednesdayDates = (startDate: Date) => {
-  const dates = [];
-  const currentDate = new Date(startDate);
-  const endDate = new Date(2025, 5, 30); // 30 czerwca 2025
-  
-  while (currentDate <= endDate) {
-    if (currentDate.getDay() === 3) { // Środa
-      dates.push({
-        date: new Date(currentDate.getTime()),
-        presentCount: 0,
-        totalCount: initialMembers.length,
-        presentMembers: []
-      });
-    }
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-  
-  console.log('Wygenerowane daty:', dates.map(d => d.date.toLocaleDateString('pl-PL')));
-  return dates;
-};
-
 const startDate = new Date(2024, 8, 4); // 4 września 2024
-const initialHistory = generateWednesdayDates(startDate);
+const endDate = new Date(2025, 5, 30); // 30 czerwca 2025
+const initialHistory = generateWednesdayDates(startDate, endDate).map(date => ({
+  date,
+  presentCount: 0,
+  totalCount: initialMembers.length,
+  presentMembers: []
+}));
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
@@ -121,15 +107,15 @@ const Index = () => {
       .map(m => m.id);
 
     const newRecord = {
-      date: selectedDate,
+      date: normalizeDate(selectedDate),
       presentCount: members.filter(m => m.present).length,
       totalCount: members.length,
       presentMembers: presentMemberIds
     };
     
     // Sprawdź, czy istnieje już wpis dla tej daty
-    const existingRecordIndex = history.findIndex(
-      record => record.date.toDateString() === selectedDate.toDateString()
+    const existingRecordIndex = history.findIndex(record => 
+      areDatesEqual(record.date, selectedDate)
     );
 
     console.log('Existing record index:', existingRecordIndex);
