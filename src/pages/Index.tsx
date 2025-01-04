@@ -54,9 +54,8 @@ const initialMembers = [
   { id: 36, name: "Leszek Zdawski", present: false },
 ];
 
-// Generowanie dat spotkań (środy) od 4 września 2024 do czerwca 2025
-const startDate = new Date(2024, 8, 4); // 4 września 2024
-const endDate = new Date(2025, 5, 30); // 30 czerwca 2025
+const startDate = new Date(2024, 8, 4);
+const endDate = new Date(2025, 5, 30);
 const initialHistory = generateWednesdayDates(startDate, endDate).map(date => ({
   date,
   presentCount: 0,
