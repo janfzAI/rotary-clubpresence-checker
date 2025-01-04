@@ -70,6 +70,12 @@ const Index = () => {
   const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
   const { members, selectedDate, setSelectedDate, toggleAttendance } = useAttendanceMembers(initialMembers, history);
 
+  const handleDateSelect = (date: Date) => {
+    console.log('Handling date selection:', date);
+    setSelectedDate(date);
+    setActiveTab('attendance');
+  };
+
   const handleSave = () => {
     console.log('Saving attendance for date:', selectedDate);
     
@@ -145,7 +151,7 @@ const Index = () => {
         <div className="space-y-6">
           <AttendanceHistory 
             records={history} 
-            onSelectDate={setSelectedDate}
+            onSelectDate={handleDateSelect}
           />
           <AttendanceExport history={history} />
         </div>
