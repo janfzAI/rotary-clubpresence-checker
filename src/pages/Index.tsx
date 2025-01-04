@@ -49,27 +49,23 @@ const initialMembers = [
   { id: 36, name: "Leszek Zdawski", present: false },
 ];
 
-// Generowanie dat spotkań (środy) od 4 września 2024 do najbliższej środy
+// Generowanie dat spotkań (środy) od 4 września 2024 do czerwca 2025
 const generateWednesdayDates = (startDate: Date) => {
   const dates = [];
   let currentDate = new Date(startDate);
-  const today = new Date();
+  const endDate = new Date(2025, 5, 30); // 30 czerwca 2025
   
-  // Znajdź najbliższą przyszłą środę
-  const endDate = new Date();
-  const daysUntilWednesday = (3 - endDate.getDay() + 7) % 7;
-  endDate.setDate(endDate.getDate() + daysUntilWednesday);
-  endDate.setHours(23, 59, 59, 999);
-
   while (currentDate <= endDate) {
-    dates.push({
-      date: new Date(currentDate),
-      presentCount: 0,
-      totalCount: initialMembers.length,
-      presentMembers: []
-    });
-    // Dodaj 7 dni do daty
-    currentDate.setDate(currentDate.getDate() + 7);
+    if (currentDate.getDay() === 3) { // Środa
+      dates.push({
+        date: new Date(currentDate),
+        presentCount: 0,
+        totalCount: initialMembers.length,
+        presentMembers: []
+      });
+    }
+    // Dodaj 1 dzień do daty
+    currentDate.setDate(currentDate.getDate() + 1);
   }
   return dates;
 };
