@@ -114,6 +114,8 @@ const Index = () => {
   };
 
   const handleSave = () => {
+    console.log('Saving attendance for date:', selectedDate);
+    
     const presentMemberIds = members
       .filter(m => m.present)
       .map(m => m.id);
@@ -125,7 +127,27 @@ const Index = () => {
       presentMembers: presentMemberIds
     };
     
-    setHistory([...history, newRecord]);
+    // Sprawdź, czy istnieje już wpis dla tej daty
+    const existingRecordIndex = history.findIndex(
+      record => record.date.toDateString() === selectedDate.toDateString()
+    );
+
+    console.log('Existing record index:', existingRecordIndex);
+
+    let updatedHistory;
+    if (existingRecordIndex !== -1) {
+      // Aktualizuj istniejący wpis
+      updatedHistory = history.map((record, index) => 
+        index === existingRecordIndex ? newRecord : record
+      );
+      console.log('Updating existing record');
+    } else {
+      // Dodaj nowy wpis
+      updatedHistory = [...history, newRecord];
+      console.log('Adding new record');
+    }
+
+    setHistory(updatedHistory);
     generateAttendanceFile();
     
     toast({
