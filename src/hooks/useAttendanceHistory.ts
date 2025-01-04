@@ -6,16 +6,9 @@ interface AttendanceRecord {
   presentCount: number;
   totalCount: number;
   presentMembers?: number[];
-  presentGuests?: number[];
 }
 
 interface Member {
-  id: number;
-  name: string;
-  present: boolean;
-}
-
-interface Guest {
   id: number;
   name: string;
   present: boolean;
