@@ -31,6 +31,7 @@ export const useAttendanceMembers = (
   useEffect(() => {
     console.log('Selected date changed to:', selectedDate);
     console.log('Looking for record in history:', history);
+    console.log('Current guests state:', guests);
     
     const record = history.find(record => areDatesEqual(record.date, selectedDate));
     console.log('Found record:', record);
@@ -41,12 +42,14 @@ export const useAttendanceMembers = (
         present: record.presentMembers?.includes(member.id) || false
       })));
       
+      // Zachowujemy istniejących gości i aktualizujemy tylko ich obecność
       setGuests(guests.map(guest => ({
         ...guest,
         present: record.presentGuests?.includes(guest.id) || false
       })));
     } else {
       setMembers(members.map(member => ({ ...member, present: false })));
+      // Zachowujemy istniejących gości, tylko resetujemy ich obecność
       setGuests(guests.map(guest => ({ ...guest, present: false })));
     }
   }, [selectedDate, history]);
