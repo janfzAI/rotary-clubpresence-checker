@@ -69,7 +69,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = React.useState('attendance');
   const { toast } = useToast();
   const [currentMembers, setCurrentMembers] = useState(initialMembers);
-  const [guests, setGuests] = useState<Array<{ id: number; name: string }>>([]);
+  const [guests, setGuests] = useState<Array<{ id: number; name: string; present: boolean }>>([]);
   const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
   const { 
     members, 
@@ -164,7 +164,8 @@ const Index = () => {
   const handleAddGuest = (name: string) => {
     const newGuest = {
       id: guests.length > 0 ? Math.max(...guests.map(g => g.id)) + 1 : 1,
-      name
+      name,
+      present: false
     };
     setGuests([...guests, newGuest]);
   };
