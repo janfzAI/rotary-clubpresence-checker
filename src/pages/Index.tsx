@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
@@ -69,7 +69,11 @@ const Index = () => {
   const [activeTab, setActiveTab] = React.useState('attendance');
   const { toast } = useToast();
   const [currentMembers, setCurrentMembers] = useState(initialMembers);
-  const [guests, setGuests] = useState<Array<{ id: number; name: string; present: boolean }>>([]);
+  const [guests, setGuests] = useState<Array<{ id: number; name: string; present: boolean }>>(() => {
+    const savedGuests = localStorage.getItem('guests');
+    return savedGuests ? JSON.parse(savedGuests) : [];
+  });
+
   const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
   const { 
     members, 
@@ -79,6 +83,12 @@ const Index = () => {
     toggleAttendance,
     toggleGuestAttendance 
   } = useAttendanceMembers(currentMembers, guests, history);
+
+  // Save guests to localStorage whenever they change
+  useEffect(() => {
+    console.log('Saving guests to localStorage:', guests);
+    localStorage.setItem('guests', JSON.stringify(guests));
+  }, [guests]);
 
   const handleDateSelect = (date: Date) => {
     console.log('Handling date selection:', date);
