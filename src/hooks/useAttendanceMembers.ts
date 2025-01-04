@@ -17,7 +17,12 @@ export const useAttendanceMembers = (initialMembers: Member[], history: Attendan
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
+    console.log('Selected date changed to:', selectedDate);
+    console.log('Looking for record in history:', history);
+    
     const record = history.find(record => areDatesEqual(record.date, selectedDate));
+    console.log('Found record:', record);
+    
     if (record) {
       setMembers(members.map(member => ({
         ...member,
