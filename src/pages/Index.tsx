@@ -52,21 +52,22 @@ const initialMembers = [
 // Generowanie dat spotkań (środy) od 4 września 2024 do czerwca 2025
 const generateWednesdayDates = (startDate: Date) => {
   const dates = [];
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
   const endDate = new Date(2025, 5, 30); // 30 czerwca 2025
   
   while (currentDate <= endDate) {
     if (currentDate.getDay() === 3) { // Środa
       dates.push({
-        date: new Date(currentDate),
+        date: new Date(currentDate.getTime()),
         presentCount: 0,
         totalCount: initialMembers.length,
         presentMembers: []
       });
     }
-    // Dodaj 1 dzień do daty
     currentDate.setDate(currentDate.getDate() + 1);
   }
+  
+  console.log('Wygenerowane daty:', dates.map(d => d.date.toLocaleDateString('pl-PL')));
   return dates;
 };
 
