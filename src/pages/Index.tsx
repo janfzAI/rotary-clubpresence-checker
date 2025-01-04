@@ -49,35 +49,12 @@ const initialMembers = [
   { id: 36, name: "Leszek Zdawski", present: false },
 ];
 
-// Generowanie dat spotkań (środy) od 4 września 2024 do czerwca 2025
-const generateWednesdayDates = (startDate: Date) => {
-  const dates = [];
-  const currentDate = new Date(startDate);
-  const endDate = new Date(2025, 5, 30); // 30 czerwca 2025
-  
-  while (currentDate <= endDate) {
-    if (currentDate.getDay() === 3) { // Środa
-      dates.push({
-        date: new Date(currentDate.getTime()),
-        presentCount: 0,
-        totalCount: initialMembers.length,
-        presentMembers: []
-      });
-    }
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-  
-  console.log('Wygenerowane daty:', dates.map(d => d.date.toLocaleDateString('pl-PL')));
-  return dates;
-};
-
-const startDate = new Date(2024, 8, 4); // 4 września 2024
-const sampleHistory = generateWednesdayDates(startDate);
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
   const [members, setMembers] = useState(initialMembers);
   const [history, setHistory] = useState(sampleHistory);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [guests, setGuests] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleToggleAttendance = (id: number) => {
@@ -86,22 +63,59 @@ const Index = () => {
     ));
   };
 
+  const generateAttendanceFile = () => {
+    const presentMembers = members.filter(m => m.present);
+    const dateStr = selectedDate.toLocaleDateString('pl-PL', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    let content = `Lista obecności - ${dateStr}\n\n`;
+    content += 'Członkowie obecni:\n';
+    presentMembers.forEach((member, index) => {
+      content += `${index + 1}. ${member.name}\n`;
+    });
+
+    if (guests.length > 0) {
+      content += '\nGoście:\n';
+      guests.forEach((guest, index) => {
+        content += `${index + 1}. ${guest}\n`;
+      });
+    }
+
+    content += `\nRazem obecnych: ${presentMembers.length} członków i ${guests.length} gości`;
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `obecnosc_${dateStr}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleSave = () => {
     const presentMemberIds = members
       .filter(m => m.present)
       .map(m => m.id);
 
     const newRecord = {
-      date: new Date(),
+      date: selectedDate,
       presentCount: members.filter(m => m.present).length,
       totalCount: members.length,
-      presentMembers: presentMemberIds
+      presentMembers: presentMemberIds,
+      guests: [...guests]
     };
     
     setHistory([...history, newRecord]);
+    generateAttendanceFile();
+    
     toast({
       title: "Zapisano obecność",
-      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób.`,
+      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób i ${guests.length} gości.`,
     });
   };
 
@@ -146,13 +160,16 @@ const Index = () => {
       {activeTab === 'attendance' && (
         <div className="space-y-6">
           <AttendanceHeader
-            date={new Date()}
+            date={selectedDate}
             presentCount={members.filter(m => m.present).length}
             totalCount={members.length}
+            onDateChange={setSelectedDate}
           />
           <AttendanceList
             members={members}
             onToggleAttendance={handleToggleAttendance}
+            guests={guests}
+            onGuestsChange={setGuests}
           />
           <Button className="w-full" onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />
