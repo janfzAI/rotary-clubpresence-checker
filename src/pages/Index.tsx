@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
@@ -6,6 +6,7 @@ import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
 import { Navigation } from '@/components/Navigation';
 import { MembersManagement } from '@/components/MembersManagement';
+import { GuestsManagement } from '@/components/GuestsManagement';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { AttendanceStats } from '@/components/AttendanceStats';
 import { AttendanceExport } from '@/components/AttendanceExport';
@@ -67,8 +68,10 @@ const initialHistory = generateWednesdayDates(startDate, endDate).map(date => ({
 const Index = () => {
   const [activeTab, setActiveTab] = React.useState('attendance');
   const { toast } = useToast();
+  const [currentMembers, setCurrentMembers] = useState(initialMembers);
+  const [guests, setGuests] = useState<Array<{ id: number; name: string }>>([]);
   const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
-  const { members, selectedDate, setSelectedDate, toggleAttendance } = useAttendanceMembers(initialMembers, history);
+  const { members, selectedDate, setSelectedDate, toggleAttendance } = useAttendanceMembers(currentMembers, history);
 
   const handleDateSelect = (date: Date) => {
     console.log('Handling date selection:', date);
@@ -125,6 +128,31 @@ const Index = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleAddMember = (name: string) => {
+    const newMember = {
+      id: currentMembers.length > 0 ? Math.max(...currentMembers.map(m => m.id)) + 1 : 1,
+      name,
+      present: false
+    };
+    setCurrentMembers([...currentMembers, newMember]);
+  };
+
+  const handleRemoveMember = (id: number) => {
+    setCurrentMembers(currentMembers.filter(member => member.id !== id));
+  };
+
+  const handleAddGuest = (name: string) => {
+    const newGuest = {
+      id: guests.length > 0 ? Math.max(...guests.map(g => g.id)) + 1 : 1,
+      name
+    };
+    setGuests([...guests, newGuest]);
+  };
+
+  const handleRemoveGuest = (id: number) => {
+    setGuests(guests.filter(guest => guest.id !== id));
+  };
+
   return (
     <div className="container max-w-2xl mx-auto p-4">
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
@@ -163,9 +191,17 @@ const Index = () => {
 
       {activeTab === 'members' && (
         <MembersManagement
-          members={members}
-          onAddMember={() => {}}
-          onRemoveMember={() => {}}
+          members={currentMembers}
+          onAddMember={handleAddMember}
+          onRemoveMember={handleRemoveMember}
+        />
+      )}
+
+      {activeTab === 'guests' && (
+        <GuestsManagement
+          guests={guests}
+          onAddGuest={handleAddGuest}
+          onRemoveGuest={handleRemoveGuest}
         />
       )}
     </div>
