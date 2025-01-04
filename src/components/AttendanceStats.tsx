@@ -26,8 +26,13 @@ interface Member {
 }
 
 export const AttendanceStats = ({ records, members }: { records: AttendanceRecord[], members: Member[] }) => {
-  // Grupowanie rekordów według miesięcy
-  const groupedRecords = records.reduce((acc, record) => {
+  // Filtruj rekordy tylko do aktualnej daty
+  const currentDate = new Date();
+  const pastRecords = records.filter(record => record.date <= currentDate);
+  console.log('Filtered past records:', pastRecords);
+
+  // Grupowanie rekordów według miesięcy (tylko przeszłe spotkania)
+  const groupedRecords = pastRecords.reduce((acc, record) => {
     const monthKey = record.date.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' });
     if (!acc[monthKey]) {
       acc[monthKey] = [];
@@ -45,27 +50,29 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
 
   const [currentMonth, setCurrentMonth] = useState(monthKeys[0]);
 
+  // Dane do wykresu (wszystkie rekordy, włącznie z przyszłymi)
   const chartData = records.map(record => ({
     date: record.date.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' }),
     attendance: (record.presentCount / record.totalCount) * 100
   }));
 
-  const averageAttendance = records.length
-    ? records.reduce((acc, curr) => acc + (curr.presentCount / curr.totalCount), 0) / records.length * 100
+  // Obliczanie średnich tylko dla przeszłych spotkań
+  const averageAttendance = pastRecords.length
+    ? pastRecords.reduce((acc, curr) => acc + (curr.presentCount / curr.totalCount), 0) / pastRecords.length * 100
     : 0;
 
-  // Oblicz statystyki obecności dla każdego członka
+  // Oblicz statystyki obecności dla każdego członka (tylko przeszłe spotkania)
   const memberStats = members.map(member => {
-    const presenceCount = records.reduce((count, record) => {
+    const presenceCount = pastRecords.reduce((count, record) => {
       return count + (record.presentMembers?.includes(member.id) ? 1 : 0);
     }, 0);
     
-    const presencePercentage = records.length > 0 
-      ? (presenceCount / records.length) * 100 
+    const presencePercentage = pastRecords.length > 0 
+      ? (presenceCount / pastRecords.length) * 100 
       : 0;
 
-    const totalDays = records.length > 0 
-      ? Math.ceil((records[records.length - 1].date.getTime() - records[0].date.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const totalDays = pastRecords.length > 0 
+      ? Math.ceil((pastRecords[pastRecords.length - 1].date.getTime() - pastRecords[0].date.getTime()) / (1000 * 60 * 60 * 24)) + 1
       : 0;
 
     const totalParticipation = totalDays > 0 
@@ -89,7 +96,7 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
             <CalendarDays className="w-5 h-5 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">Liczba spotkań</p>
-              <p className="text-2xl font-bold">{records.length}</p>
+              <p className="text-2xl font-bold">{pastRecords.length}</p>
             </div>
           </div>
         </Card>
@@ -100,7 +107,7 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
             <div>
               <p className="text-sm text-muted-foreground">Średnia obecność</p>
               <p className="text-2xl font-bold">
-                {(records.reduce((acc, curr) => acc + curr.presentCount, 0) / records.length).toFixed(1)}
+                {(pastRecords.reduce((acc, curr) => acc + curr.presentCount, 0) / pastRecords.length).toFixed(1)}
               </p>
             </div>
           </div>
