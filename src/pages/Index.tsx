@@ -78,6 +78,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
   const [members, setMembers] = useState(initialMembers);
   const [history, setHistory] = useState(initialHistory);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const { toast } = useToast();
 
   const handleToggleAttendance = (id: number) => {
@@ -118,7 +119,7 @@ const Index = () => {
       .map(m => m.id);
 
     const newRecord = {
-      date: new Date(),
+      date: selectedDate,
       presentCount: members.filter(m => m.present).length,
       totalCount: members.length,
       presentMembers: presentMemberIds
@@ -130,6 +131,15 @@ const Index = () => {
     toast({
       title: "Zapisano obecność",
       description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} osób.`,
+    });
+  };
+
+  const handleSelectDate = (date: Date) => {
+    setSelectedDate(date);
+    setActiveTab('attendance');
+    toast({
+      title: "Wybrano datę",
+      description: `Przełączono na edycję obecności z dnia ${date.toLocaleDateString('pl-PL')}.`,
     });
   };
 
@@ -174,7 +184,7 @@ const Index = () => {
       {activeTab === 'attendance' && (
         <div className="space-y-6">
           <AttendanceHeader
-            date={new Date()}
+            date={selectedDate}
             presentCount={members.filter(m => m.present).length}
             totalCount={members.length}
           />
@@ -191,7 +201,10 @@ const Index = () => {
 
       {activeTab === 'history' && (
         <div className="space-y-6">
-          <AttendanceHistory records={history} />
+          <AttendanceHistory 
+            records={history} 
+            onSelectDate={handleSelectDate}
+          />
           <Button className="w-full" onClick={exportToCSV}>
             <Download className="w-4 h-4 mr-2" />
             Eksportuj do CSV
