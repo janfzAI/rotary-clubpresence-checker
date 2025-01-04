@@ -44,10 +44,22 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
       ? (presenceCount / records.length) * 100 
       : 0;
 
+    // Oblicz całkowity okres w dniach
+    const totalDays = records.length > 0 
+      ? Math.ceil((records[records.length - 1].date.getTime() - records[0].date.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      : 0;
+
+    // Oblicz procentowy udział w całym okresie
+    const totalParticipation = totalDays > 0 
+      ? (presenceCount / totalDays) * 100 
+      : 0;
+
     return {
       ...member,
       presenceCount,
-      presencePercentage
+      presencePercentage,
+      totalDays,
+      totalParticipation
     };
   });
 
@@ -119,6 +131,8 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
               ))}
               <TableHead className="text-right">Obecności</TableHead>
               <TableHead className="text-right">Procent</TableHead>
+              <TableHead className="text-right">Dni obecności</TableHead>
+              <TableHead className="text-right">Udział całkowity</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -132,6 +146,8 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
                 ))}
                 <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
                 <TableCell className="text-right font-medium">{member.presencePercentage.toFixed(1)}%</TableCell>
+                <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
+                <TableCell className="text-right font-medium">{member.totalParticipation.toFixed(1)}%</TableCell>
               </TableRow>
             ))}
           </TableBody>
