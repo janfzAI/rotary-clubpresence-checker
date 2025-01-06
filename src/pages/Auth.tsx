@@ -18,7 +18,7 @@ const Auth = () => {
     console.log('Attempting login with:', { email, token });
 
     // Simple validation for the demo account
-    if (email === 'janusz.kozlowski@infoludek.pl' && token === 'admin123') {
+    if (email === 'janusz.kozlowski@infoludek.pl' && token === 'admikin123') {
       console.log('Valid credentials, creating session');
       
       try {
