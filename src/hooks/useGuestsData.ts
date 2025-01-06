@@ -11,16 +11,27 @@ export const useGuestsData = () => {
   const [guests, setGuests] = useState<Guest[]>([]);
 
   useEffect(() => {
-    // For now, we'll keep guests in memory since they're temporary
-    // In the future, we could add a guests table to Supabase if needed
-    const savedGuests = localStorage.getItem('guests');
-    if (savedGuests) {
-      setGuests(JSON.parse(savedGuests));
-    }
+    const fetchGuests = async () => {
+      const { data, error } = await supabase.from('guests').select('*');
+      if (error) {
+        console.error('Error fetching guests:', error);
+      } else {
+        setGuests(data || []);
+      }
+    };
+
+    fetchGuests();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('guests', JSON.stringify(guests));
+    const saveGuests = async () => {
+      const { error } = await supabase.from('guests').upsert(guests);
+      if (error) {
+        console.error('Error saving guests:', error);
+      }
+    };
+
+    saveGuests();
   }, [guests]);
 
   const addGuest = (name: string) => {

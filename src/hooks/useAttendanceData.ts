@@ -17,7 +17,7 @@ export const useAttendanceData = () => {
     queryKey: ['attendance'],
     queryFn: async () => {
       console.log('Fetching attendance records from Supabase');
-      const { data, error } = await supabase
+      const { data: supabaseData, error } = await supabase
         .from('attendance_records')
         .select('*')
         .order('date', { ascending: true });
@@ -26,6 +26,8 @@ export const useAttendanceData = () => {
         console.error('Error fetching attendance:', error);
         throw error;
       }
+
+      console.log('Fetched data from Supabase:', supabaseData);
 
       // Generate all Wednesday dates between Sep 4, 2024 and Jun 25, 2025
       const startDate = new Date('2024-09-04');
@@ -36,7 +38,7 @@ export const useAttendanceData = () => {
 
       // Convert database records to map for easy lookup
       const recordsMap = new Map(
-        data.map((record: any) => [
+        supabaseData.map((record: any) => [
           record.date,
           {
             date: new Date(record.date),
@@ -68,39 +70,41 @@ export const useAttendanceData = () => {
       const normalizedDate = normalizeDate(record.date);
       console.log('Normalized date:', normalizedDate);
       
-      // First, try to find if a record exists for this date
-      const { data: existingRecord } = await supabase
+      const { data: existingRecord, error: fetchError } = await supabase
         .from('attendance_records')
         .select('id')
         .eq('date', normalizedDate.toISOString().split('T')[0])
         .single();
 
-      let result;
-      
-      if (existingRecord) {
-        // If record exists, update it
-        result = await supabase
-          .from('attendance_records')
-          .update({
-            present_members: record.presentMembers,
-            present_guests: record.presentGuests
-          })
-          .eq('date', normalizedDate.toISOString().split('T')[0]);
-      } else {
-        // If record doesn't exist, insert new one
-        result = await supabase
-          .from('attendance_records')
-          .insert({
-            date: normalizedDate.toISOString().split('T')[0],
-            present_members: record.presentMembers,
-            present_guests: record.presentGuests
-          });
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking existing record:', fetchError);
+        throw fetchError;
       }
 
-      const { error } = result;
-      if (error) {
-        console.error('Error updating attendance:', error);
-        throw error;
+      let result;
+      const recordData = {
+        date: normalizedDate.toISOString().split('T')[0],
+        present_members: record.presentMembers,
+        present_guests: record.presentGuests,
+        created_by: (await supabase.auth.getUser()).data.user?.id
+      };
+      
+      if (existingRecord) {
+        console.log('Updating existing record');
+        result = await supabase
+          .from('attendance_records')
+          .update(recordData)
+          .eq('date', normalizedDate.toISOString().split('T')[0]);
+      } else {
+        console.log('Inserting new record');
+        result = await supabase
+          .from('attendance_records')
+          .insert([recordData]);
+      }
+
+      if (result.error) {
+        console.error('Error updating attendance:', result.error);
+        throw result.error;
       }
 
       return result.data;
