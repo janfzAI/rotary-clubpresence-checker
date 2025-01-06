@@ -70,47 +70,41 @@ export const useAttendanceData = () => {
       const normalizedDate = normalizeDate(record.date);
       console.log('Normalized date:', normalizedDate);
       
-      const { data: existingRecord, error: fetchError } = await supabase
-        .from('attendance_records')
-        .select('id')
-        .eq('date', normalizedDate.toISOString().split('T')[0])
-        .single();
-
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error checking existing record:', fetchError);
-        throw fetchError;
-      }
-
-      let result;
+      const dateStr = normalizedDate.toISOString().split('T')[0];
       const recordData = {
-        date: normalizedDate.toISOString().split('T')[0],
+        date: dateStr,
         present_members: record.presentMembers,
         present_guests: record.presentGuests,
         created_by: (await supabase.auth.getUser()).data.user?.id
       };
-      
-      if (existingRecord) {
-        console.log('Updating existing record');
-        result = await supabase
+
+      // First try to update
+      const { data: updateData, error: updateError } = await supabase
+        .from('attendance_records')
+        .update(recordData)
+        .eq('date', dateStr)
+        .select();
+
+      // If no rows were updated, insert new record
+      if (!updateError && (!updateData || updateData.length === 0)) {
+        console.log('No existing record found, inserting new one');
+        const { data: insertData, error: insertError } = await supabase
           .from('attendance_records')
-          .update(recordData)
-          .eq('date', normalizedDate.toISOString().split('T')[0]);
-      } else {
-        console.log('Inserting new record');
-        result = await supabase
-          .from('attendance_records')
-          .insert([recordData]);
+          .insert([recordData])
+          .select();
+
+        if (insertError) throw insertError;
+        return insertData;
       }
 
-      if (result.error) {
-        console.error('Error updating attendance:', result.error);
-        throw result.error;
-      }
-
-      return result.data;
+      if (updateError) throw updateError;
+      return updateData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+    onError: (error) => {
+      console.error('Error in updateAttendance mutation:', error);
     }
   });
 
