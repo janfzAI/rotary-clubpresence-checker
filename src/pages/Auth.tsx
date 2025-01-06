@@ -22,10 +22,14 @@ const Auth = () => {
       console.log('Valid credentials, creating session');
       
       try {
-        // Create a session using Supabase's custom claims
-        const { data, error } = await supabase.auth.signInWithPassword({
+        // Use signInWithOtp instead of signInWithPassword
+        const { data, error } = await supabase.auth.signInWithOtp({
           email: email,
-          password: token, // Using token as password for simplicity
+          options: {
+            data: {
+              token: token // Store token in user metadata
+            }
+          }
         });
 
         if (error) {
@@ -33,10 +37,22 @@ const Auth = () => {
           throw error;
         }
 
-        if (data.session) {
-          console.log('Session created successfully:', data.session);
-          navigate('/');
-        }
+        console.log('OTP sign in response:', data);
+        
+        // Since OTP sign in is asynchronous, we'll set up a listener for the auth state
+        const authListener = supabase.auth.onAuthStateChange((event, session) => {
+          console.log('Auth state changed:', event, session);
+          if (event === 'SIGNED_IN' && session) {
+            console.log('Successfully signed in:', session);
+            navigate('/');
+          }
+        });
+
+        // Clean up the listener after 1 minute (should be enough for the email to arrive)
+        setTimeout(() => {
+          authListener.data.subscription.unsubscribe();
+        }, 60000);
+
       } catch (error) {
         console.error('Login error:', error);
         setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
