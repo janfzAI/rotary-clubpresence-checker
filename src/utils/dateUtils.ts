@@ -1,7 +1,7 @@
 export const normalizeDate = (date: Date) => {
-  // Resetuj czas do północy w lokalnej strefie czasowej
+  // Ustaw datę na północ w lokalnej strefie czasowej
   const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
+  normalized.setHours(12, 0, 0, 0); // Ustawiamy na 12:00 żeby uniknąć problemów ze strefami czasowymi
   return normalized;
 };
 

@@ -40,13 +40,14 @@ export const useAttendanceData = () => {
   const updateAttendance = useMutation({
     mutationFn: async (record: AttendanceRecord) => {
       console.log('Updating attendance record:', record);
-      const normalizedDate = normalizeDate(record.date).toISOString();
+      const normalizedDate = normalizeDate(record.date);
+      console.log('Normalized date:', normalizedDate);
       
       // First, try to find if a record exists for this date
       const { data: existingRecord } = await supabase
         .from('attendance_records')
         .select('id')
-        .eq('date', normalizedDate)
+        .eq('date', normalizedDate.toISOString().split('T')[0])
         .single();
 
       let result;
@@ -59,13 +60,13 @@ export const useAttendanceData = () => {
             present_members: record.presentMembers,
             present_guests: record.presentGuests
           })
-          .eq('date', normalizedDate);
+          .eq('date', normalizedDate.toISOString().split('T')[0]);
       } else {
         // If record doesn't exist, insert new one
         result = await supabase
           .from('attendance_records')
           .insert({
-            date: normalizedDate,
+            date: normalizedDate.toISOString().split('T')[0],
             present_members: record.presentMembers,
             present_guests: record.presentGuests
           });
