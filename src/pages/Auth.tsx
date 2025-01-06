@@ -9,43 +9,38 @@ import { Label } from "@/components/ui/label";
 const Auth = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
+  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    console.log('Attempting login with:', { email, token });
+    setSuccessMessage('');
+    setLoading(true);
+    
+    console.log('Attempting magic link login with:', { email });
 
-    // Simple validation for the demo account
-    if (email === 'janusz.kozlowski@infoludek.pl' && token === 'admikin123') {
-      console.log('Valid credentials, creating session');
-      
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: token
-        });
-
-        if (error) {
-          console.error('Supabase auth error:', error);
-          throw error;
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: window.location.origin,
         }
+      });
 
-        console.log('Sign in response:', data);
-        
-        if (data.session) {
-          console.log('Successfully signed in:', data.session);
-          navigate('/');
-        }
-
-      } catch (error) {
-        console.error('Login error:', error);
-        setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
+      if (error) {
+        console.error('Magic link error:', error);
+        setErrorMessage(error.message);
+      } else {
+        console.log('Magic link sent successfully');
+        setSuccessMessage('Sprawdź swoją skrzynkę email, aby się zalogować.');
       }
-    } else {
-      console.log('Invalid credentials');
-      setErrorMessage('Nieprawidłowy email lub token.');
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrorMessage('Wystąpił błąd podczas wysyłania linku logowania. Spróbuj ponownie.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,6 +51,12 @@ const Auth = () => {
       {errorMessage && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {successMessage && (
+        <Alert className="mb-4">
+          <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
 
@@ -72,20 +73,8 @@ const Auth = () => {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="token">Token</Label>
-          <Input
-            id="token"
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="Wprowadź token"
-            required
-          />
-        </div>
-
-        <Button type="submit" className="w-full">
-          Zaloguj się
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Wysyłanie...' : 'Wyślij link logowania'}
         </Button>
       </form>
     </div>
