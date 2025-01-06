@@ -22,14 +22,9 @@ const Auth = () => {
       console.log('Valid credentials, creating session');
       
       try {
-        // Use signInWithOtp instead of signInWithPassword
-        const { data, error } = await supabase.auth.signInWithOtp({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: email,
-          options: {
-            data: {
-              token: token // Store token in user metadata
-            }
-          }
+          password: token
         });
 
         if (error) {
@@ -37,21 +32,12 @@ const Auth = () => {
           throw error;
         }
 
-        console.log('OTP sign in response:', data);
+        console.log('Sign in response:', data);
         
-        // Since OTP sign in is asynchronous, we'll set up a listener for the auth state
-        const authListener = supabase.auth.onAuthStateChange((event, session) => {
-          console.log('Auth state changed:', event, session);
-          if (event === 'SIGNED_IN' && session) {
-            console.log('Successfully signed in:', session);
-            navigate('/');
-          }
-        });
-
-        // Clean up the listener after 1 minute (should be enough for the email to arrive)
-        setTimeout(() => {
-          authListener.data.subscription.unsubscribe();
-        }, 60000);
+        if (data.session) {
+          console.log('Successfully signed in:', data.session);
+          navigate('/');
+        }
 
       } catch (error) {
         console.error('Login error:', error);
