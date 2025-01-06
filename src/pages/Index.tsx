@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
@@ -10,10 +10,10 @@ import { GuestsManagement } from '@/components/GuestsManagement';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { AttendanceStats } from '@/components/AttendanceStats';
 import { AttendanceExport } from '@/components/AttendanceExport';
-import { useAttendanceHistory } from '@/hooks/useAttendanceHistory';
 import { useAttendanceMembers } from '@/hooks/useAttendanceMembers';
+import { useAttendanceData } from '@/hooks/useAttendanceData';
+import { useGuestsData } from '@/hooks/useGuestsData';
 import { normalizeDate } from '@/utils/dateUtils';
-import { generateWednesdayDates } from '@/utils/dateUtils';
 
 // Lista członków Rotary Club Szczecin
 const initialMembers = [
@@ -55,26 +55,13 @@ const initialMembers = [
   { id: 36, name: "Leszek Zdawski", present: false },
 ];
 
-// Generowanie dat spotkań (środy) od 4 września 2024 do czerwca 2025
-const startDate = new Date(2024, 8, 4); // 4 września 2024
-const endDate = new Date(2025, 5, 30); // 30 czerwca 2025
-const initialHistory = generateWednesdayDates(startDate, endDate).map(date => ({
-  date,
-  presentCount: 0,
-  totalCount: initialMembers.length,
-  presentMembers: []
-}));
-
 const Index = () => {
-  const [activeTab, setActiveTab] = React.useState('attendance');
+  const [activeTab, setActiveTab] = useState('attendance');
   const { toast } = useToast();
   const [currentMembers, setCurrentMembers] = useState(initialMembers);
-  const [guests, setGuests] = useState<Array<{ id: number; name: string; present: boolean }>>(() => {
-    const savedGuests = localStorage.getItem('guests');
-    return savedGuests ? JSON.parse(savedGuests) : [];
-  });
-
-  const { history, updateHistory } = useAttendanceHistory(initialHistory, initialMembers);
+  const { history, updateAttendance } = useAttendanceData();
+  const { guests, addGuest, removeGuest, setGuests } = useGuestsData();
+  
   const { 
     members, 
     guests: attendanceGuests, 
@@ -84,19 +71,13 @@ const Index = () => {
     toggleGuestAttendance 
   } = useAttendanceMembers(currentMembers, guests, history);
 
-  // Save guests to localStorage whenever they change
-  useEffect(() => {
-    console.log('Saving guests to localStorage:', guests);
-    localStorage.setItem('guests', JSON.stringify(guests));
-  }, [guests]);
-
   const handleDateSelect = (date: Date) => {
     console.log('Handling date selection:', date);
     setSelectedDate(date);
     setActiveTab('attendance');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log('Saving attendance for date:', selectedDate);
     
     const presentMemberIds = members
@@ -115,13 +96,22 @@ const Index = () => {
       presentGuests: presentGuestIds
     };
 
-    updateHistory(newRecord);
-    generateAttendanceFile();
-    
-    toast({
-      title: "Zapisano obecność",
-      description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} członków i ${presentGuestIds.length} gości.`,
-    });
+    try {
+      await updateAttendance.mutateAsync(newRecord);
+      generateAttendanceFile();
+      
+      toast({
+        title: "Zapisano obecność",
+        description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} członków i ${presentGuestIds.length} gości.`,
+      });
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      toast({
+        title: "Błąd zapisu",
+        description: "Nie udało się zapisać obecności. Spróbuj ponownie.",
+        variant: "destructive"
+      });
+    }
   };
 
   const generateAttendanceFile = () => {
@@ -171,19 +161,6 @@ const Index = () => {
     setCurrentMembers(currentMembers.filter(member => member.id !== id));
   };
 
-  const handleAddGuest = (name: string) => {
-    const newGuest = {
-      id: guests.length > 0 ? Math.max(...guests.map(g => g.id)) + 1 : 1,
-      name,
-      present: false
-    };
-    setGuests([...guests, newGuest]);
-  };
-
-  const handleRemoveGuest = (id: number) => {
-    setGuests(guests.filter(guest => guest.id !== id));
-  };
-
   return (
     <div className="container max-w-2xl mx-auto p-4">
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
@@ -202,9 +179,13 @@ const Index = () => {
             onToggleAttendance={toggleAttendance}
             onToggleGuestAttendance={toggleGuestAttendance}
           />
-          <Button className="w-full" onClick={handleSave}>
+          <Button 
+            className="w-full" 
+            onClick={handleSave}
+            disabled={updateAttendance.isPending}
+          >
             <Save className="w-4 h-4 mr-2" />
-            Zapisz obecność
+            {updateAttendance.isPending ? 'Zapisywanie...' : 'Zapisz obecność'}
           </Button>
         </div>
       )}
@@ -234,8 +215,8 @@ const Index = () => {
       {activeTab === 'guests' && (
         <GuestsManagement
           guests={guests}
-          onAddGuest={handleAddGuest}
-          onRemoveGuest={handleRemoveGuest}
+          onAddGuest={addGuest}
+          onRemoveGuest={removeGuest}
         />
       )}
     </div>
