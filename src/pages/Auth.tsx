@@ -9,39 +9,41 @@ import { Label } from "@/components/ui/label";
 const Auth = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    setSuccessMessage('');
     setLoading(true);
     
-    console.log('Attempting magic link login with:', { email });
+    console.log('Attempting login with:', { email });
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          emailRedirectTo: window.location.origin,
+    // Sprawdzanie czy to superadmin
+    if (email === 'janusz.kozlowski@infoludek.pl' && token === 'admin123') {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: token,
+        });
+
+        if (error) {
+          console.error('Login error:', error);
+          setErrorMessage('Błąd logowania. Spróbuj ponownie.');
+        } else {
+          console.log('Login successful:', data);
+          navigate('/');
         }
-      });
-
-      if (error) {
-        console.error('Magic link error:', error);
-        setErrorMessage(error.message);
-      } else {
-        console.log('Magic link sent successfully');
-        setSuccessMessage('Sprawdź swoją skrzynkę email, aby się zalogować.');
+      } catch (error) {
+        console.error('Login error:', error);
+        setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setErrorMessage('Wystąpił błąd podczas wysyłania linku logowania. Spróbuj ponownie.');
-    } finally {
-      setLoading(false);
+    } else {
+      setErrorMessage('Nieprawidłowy email lub token.');
     }
+    
+    setLoading(false);
   };
 
   return (
@@ -51,12 +53,6 @@ const Auth = () => {
       {errorMessage && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {successMessage && (
-        <Alert className="mb-4">
-          <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
 
@@ -73,8 +69,20 @@ const Auth = () => {
           />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="token">Token</Label>
+          <Input
+            id="token"
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="Wprowadź token"
+            required
+          />
+        </div>
+
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Wysyłanie...' : 'Wyślij link logowania'}
+          {loading ? 'Logowanie...' : 'Zaloguj się'}
         </Button>
       </form>
     </div>
