@@ -5,6 +5,8 @@ interface Guest {
   id: number;
   name: string;
   present: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const useGuestsData = () => {
@@ -12,10 +14,16 @@ export const useGuestsData = () => {
 
   useEffect(() => {
     const fetchGuests = async () => {
-      const { data, error } = await supabase.from('guests').select('*');
+      console.log('Fetching guests from Supabase...');
+      const { data, error } = await supabase
+        .from('guests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
       if (error) {
         console.error('Error fetching guests:', error);
       } else {
+        console.log('Fetched guests:', data);
         setGuests(data || []);
       }
     };
@@ -23,28 +31,35 @@ export const useGuestsData = () => {
     fetchGuests();
   }, []);
 
-  useEffect(() => {
-    const saveGuests = async () => {
-      const { error } = await supabase.from('guests').upsert(guests);
-      if (error) {
-        console.error('Error saving guests:', error);
-      }
-    };
+  const addGuest = async (name: string) => {
+    console.log('Adding new guest:', name);
+    const { data, error } = await supabase
+      .from('guests')
+      .insert([{ name, present: false }])
+      .select()
+      .single();
 
-    saveGuests();
-  }, [guests]);
-
-  const addGuest = (name: string) => {
-    const newGuest = {
-      id: guests.length > 0 ? Math.max(...guests.map(g => g.id)) + 1 : 1,
-      name,
-      present: false
-    };
-    setGuests([...guests, newGuest]);
+    if (error) {
+      console.error('Error adding guest:', error);
+    } else if (data) {
+      console.log('Added guest:', data);
+      setGuests([...guests, data]);
+    }
   };
 
-  const removeGuest = (id: number) => {
-    setGuests(guests.filter(guest => guest.id !== id));
+  const removeGuest = async (id: number) => {
+    console.log('Removing guest with ID:', id);
+    const { error } = await supabase
+      .from('guests')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error removing guest:', error);
+    } else {
+      console.log('Guest removed successfully');
+      setGuests(guests.filter(guest => guest.id !== id));
+    }
   };
 
   return {
