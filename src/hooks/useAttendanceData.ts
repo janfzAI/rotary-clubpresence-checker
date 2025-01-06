@@ -40,22 +40,44 @@ export const useAttendanceData = () => {
   const updateAttendance = useMutation({
     mutationFn: async (record: AttendanceRecord) => {
       console.log('Updating attendance record:', record);
-      const { data, error } = await supabase
+      const normalizedDate = normalizeDate(record.date).toISOString();
+      
+      // First, try to find if a record exists for this date
+      const { data: existingRecord } = await supabase
         .from('attendance_records')
-        .upsert({
-          date: normalizeDate(record.date).toISOString(),
-          present_members: record.presentMembers,
-          present_guests: record.presentGuests
-        }, {
-          onConflict: 'date'
-        });
+        .select('id')
+        .eq('date', normalizedDate)
+        .single();
 
+      let result;
+      
+      if (existingRecord) {
+        // If record exists, update it
+        result = await supabase
+          .from('attendance_records')
+          .update({
+            present_members: record.presentMembers,
+            present_guests: record.presentGuests
+          })
+          .eq('date', normalizedDate);
+      } else {
+        // If record doesn't exist, insert new one
+        result = await supabase
+          .from('attendance_records')
+          .insert({
+            date: normalizedDate,
+            present_members: record.presentMembers,
+            present_guests: record.presentGuests
+          });
+      }
+
+      const { error } = result;
       if (error) {
         console.error('Error updating attendance:', error);
         throw error;
       }
 
-      return data;
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
