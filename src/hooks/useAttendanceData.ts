@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { normalizeDate } from '@/utils/dateUtils';
+import { normalizeDate, generateWednesdayDates } from '@/utils/dateUtils';
 
 interface AttendanceRecord {
   date: Date;
@@ -27,13 +27,38 @@ export const useAttendanceData = () => {
         throw error;
       }
 
-      return data.map((record: any) => ({
-        date: new Date(record.date),
-        presentCount: record.present_members?.length || 0,
-        totalCount: 36, // Total number of members
-        presentMembers: record.present_members || [],
-        presentGuests: record.present_guests || []
-      }));
+      // Generate all Wednesday dates between Sep 4, 2024 and Jun 25, 2025
+      const startDate = new Date('2024-09-04');
+      const endDate = new Date('2025-06-25');
+      const allWednesdays = generateWednesdayDates(startDate, endDate);
+      
+      console.log('Generated Wednesday dates:', allWednesdays);
+
+      // Convert database records to map for easy lookup
+      const recordsMap = new Map(
+        data.map((record: any) => [
+          record.date,
+          {
+            date: new Date(record.date),
+            presentCount: record.present_members?.length || 0,
+            totalCount: 36,
+            presentMembers: record.present_members || [],
+            presentGuests: record.present_guests || []
+          }
+        ])
+      );
+
+      // Create records for all Wednesdays, using existing data if available
+      return allWednesdays.map(date => {
+        const dateStr = date.toISOString().split('T')[0];
+        return recordsMap.get(dateStr) || {
+          date,
+          presentCount: 0,
+          totalCount: 36,
+          presentMembers: [],
+          presentGuests: []
+        };
+      });
     }
   });
 
