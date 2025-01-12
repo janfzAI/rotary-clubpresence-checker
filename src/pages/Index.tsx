@@ -76,49 +76,12 @@ const Index = () => {
     setActiveTab('attendance');
   };
 
-  const handleSave = async () => {
-    console.log('Saving attendance for date:', selectedDate);
-    
-    const presentMemberIds = members
-      .filter(m => m.present)
-      .map(m => m.id);
-
-    const presentGuestIds = attendanceGuests
-      .filter(g => g.present)
-      .map(g => g.id);
-
-    const newRecord = {
-      date: normalizeDate(selectedDate),
-      presentCount: members.filter(m => m.present).length,
-      totalCount: members.length,
-      presentMembers: presentMemberIds,
-      presentGuests: presentGuestIds
-    };
-
-    try {
-      await updateAttendance.mutateAsync(newRecord);
-      generateAttendanceFile();
-      
-      toast({
-        title: "Zapisano obecność",
-        description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} członków i ${presentGuestIds.length} gości.`,
-      });
-    } catch (error) {
-      console.error('Error saving attendance:', error);
-      toast({
-        title: "Błąd zapisu",
-        description: "Nie udało się zapisać obecności. Spróbuj ponownie.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const generateAttendanceFile = () => {
-    const currentDate = new Date().toLocaleDateString('pl-PL');
+  const generateAttendanceFile = (date: Date) => {
+    const formattedDate = date.toLocaleDateString('pl-PL').replace(/\./g, '_');
     const presentMembers = members.filter(m => m.present);
     const presentGuests = attendanceGuests.filter(g => g.present);
     
-    let content = `Lista obecności - ${currentDate}\n\n`;
+    let content = `Lista obecności - ${date.toLocaleDateString('pl-PL')}\n\n`;
     content += `Obecni członkowie (${presentMembers.length} z ${members.length}):\n`;
     presentMembers.forEach((member, index) => {
       content += `${index + 1}. ${member.name}\n`;
@@ -140,11 +103,48 @@ const Index = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `obecnosc_${currentDate.replace(/\./g, '_')}.txt`;
+    link.download = `obecnosc_${formattedDate}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleSave = async () => {
+    console.log('Saving attendance for date:', selectedDate);
+    
+    const presentMemberIds = members
+      .filter(m => m.present)
+      .map(m => m.id);
+
+    const presentGuestIds = attendanceGuests
+      .filter(g => g.present)
+      .map(g => g.id);
+
+    const newRecord = {
+      date: normalizeDate(selectedDate),
+      presentCount: members.filter(m => m.present).length,
+      totalCount: members.length,
+      presentMembers: presentMemberIds,
+      presentGuests: presentGuestIds
+    };
+
+    try {
+      await updateAttendance.mutateAsync(newRecord);
+      generateAttendanceFile(selectedDate);
+      
+      toast({
+        title: "Zapisano obecność",
+        description: `Zaktualizowano listę obecności dla ${newRecord.presentCount} członków i ${presentGuestIds.length} gości.`,
+      });
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      toast({
+        title: "Błąd zapisu",
+        description: "Nie udało się zapisać obecności. Spróbuj ponownie.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAddMember = (name: string) => {
