@@ -7,37 +7,67 @@ interface AttendanceRecord {
   date: Date;
   presentCount: number;
   totalCount: number;
+  presentMembers?: number[];
+}
+
+interface Member {
+  id: number;
+  name: string;
 }
 
 interface AttendanceExportProps {
   history: AttendanceRecord[];
+  members: Member[];
 }
 
-export const AttendanceExport: React.FC<AttendanceExportProps> = ({ history }) => {
+export const AttendanceExport: React.FC<AttendanceExportProps> = ({ history, members }) => {
   const { toast } = useToast();
 
   const exportToCSV = () => {
-    const headers = ['Data', 'Obecni', 'Wszyscy'];
-    const csvContent = [
-      headers.join(','),
-      ...history.map(record => 
-        [
-          record.date.toLocaleDateString('pl-PL'),
-          record.presentCount,
-          record.totalCount
-        ].join(',')
-      )
-    ].join('\n');
+    console.log('Generating attendance matrix...');
+    
+    // Sort history by date
+    const sortedHistory = [...history].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
 
+    // Create header row
+    let csvContent = "LP,Imię i Nazwisko";
+    sortedHistory.forEach(record => {
+      csvContent += `,${new Date(record.date).toLocaleDateString('pl-PL')}`;
+    });
+    csvContent += ",Liczba obecności,Procent obecności\n";
+
+    // Calculate attendance for each member
+    members.forEach((member, index) => {
+      const memberAttendance = sortedHistory.map(record => 
+        record.presentMembers?.includes(member.id) ? "1" : "0"
+      );
+      
+      const presentCount = memberAttendance.filter(a => a === "1").length;
+      const attendancePercentage = (presentCount / sortedHistory.length * 100).toFixed(1);
+
+      csvContent += `${index + 1},${member.name}`;
+      memberAttendance.forEach(attendance => {
+        csvContent += `,${attendance}`;
+      });
+      csvContent += `,${presentCount},${attendancePercentage}%\n`;
+    });
+
+    // Create and download CSV file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'obecnosc.csv';
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `obecnosc_matrix_${new Date().toLocaleDateString('pl-PL').replace(/\./g, '_')}.csv`);
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     
     toast({
       title: "Wyeksportowano dane",
-      description: "Plik CSV został pobrany.",
+      description: "Plik CSV z macierzą obecności został pobrany.",
     });
   };
 
