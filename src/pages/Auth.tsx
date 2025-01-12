@@ -27,32 +27,38 @@ const Auth = () => {
     ];
 
     const isValidUser = validCredentials.some(cred => 
-      cred.email === email && cred.token === token
+      cred.email === email.toLowerCase() && cred.token === token
     );
 
-    if (isValidUser) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: token,
-        });
-
-        if (error) {
-          console.error('Login error:', error);
-          setErrorMessage('Błąd logowania. Spróbuj ponownie.');
-        } else {
-          console.log('Login successful:', data);
-          navigate('/');
-        }
-      } catch (error) {
-        console.error('Login error:', error);
-        setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
-      }
-    } else {
+    if (!isValidUser) {
       setErrorMessage('Nieprawidłowy email lub token.');
+      setLoading(false);
+      return;
     }
-    
-    setLoading(false);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password: token,
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        if (error.message === 'Invalid login credentials') {
+          setErrorMessage('Nieprawidłowy email lub token.');
+        } else {
+          setErrorMessage('Błąd logowania. Spróbuj ponownie.');
+        }
+      } else {
+        console.log('Login successful:', data);
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
