@@ -8,17 +8,41 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Checking auth session:', session);
-      if (!session) {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Checking auth session:', session);
+        
+        if (error) {
+          console.error('Session error:', error);
+          navigate('/auth');
+          return;
+        }
+
+        if (!session) {
+          console.log('No active session found');
+          navigate('/auth');
+          return;
+        }
+
+        // Refresh session if it exists
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.error('Session refresh error:', refreshError);
+          navigate('/auth');
+          return;
+        }
+
+      } catch (error) {
+        console.error('Auth check error:', error);
         navigate('/auth');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed in AuthRequired:', event, session);
-      if (event === 'SIGNED_OUT') {
+      console.log('Auth state changed:', event, session);
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
         navigate('/auth');
       }
     });
