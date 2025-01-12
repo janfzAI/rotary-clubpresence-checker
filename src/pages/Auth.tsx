@@ -21,7 +21,16 @@ const Auth = () => {
     console.log('Attempting login with:', { email });
 
     // Sprawdzanie czy to superadmin
-    if (email === 'janusz.kozlowski@infoludek.pl' && token === 'admin123') {
+    const validCredentials = [
+      { email: 'janusz.kozlowski@infoludek.pl', token: 'admin123' },
+      { email: 'janfzjanfz@gmail.com', token: 'admin123' }
+    ];
+
+    const isValidUser = validCredentials.some(cred => 
+      cred.email === email && cred.token === token
+    );
+
+    if (isValidUser) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email,
