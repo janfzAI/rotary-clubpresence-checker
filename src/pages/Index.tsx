@@ -77,6 +77,49 @@ const Index = () => {
     setActiveTab('attendance');
   };
 
+  const generateAttendanceMatrix = () => {
+    console.log('Generating attendance matrix...');
+    
+    // Sort history by date
+    const sortedHistory = [...history].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Create header row
+    let csvContent = "LP,Imię i Nazwisko";
+    sortedHistory.forEach(record => {
+      csvContent += `,${new Date(record.date).toLocaleDateString('pl-PL')}`;
+    });
+    csvContent += ",Liczba obecności,Procent obecności\n";
+
+    // Calculate attendance for each member
+    currentMembers.forEach((member, index) => {
+      const memberAttendance = sortedHistory.map(record => 
+        record.presentMembers?.includes(member.id) ? "1" : "0"
+      );
+      
+      const presentCount = memberAttendance.filter(a => a === "1").length;
+      const attendancePercentage = (presentCount / sortedHistory.length * 100).toFixed(1);
+
+      csvContent += `${index + 1},${member.name}`;
+      memberAttendance.forEach(attendance => {
+        csvContent += `,${attendance}`;
+      });
+      csvContent += `,${presentCount},${attendancePercentage}%\n`;
+    });
+
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `obecnosc_matrix_${new Date().toLocaleDateString('pl-PL').replace(/\./g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleSave = async () => {
     console.log('Saving attendance for date:', selectedDate);
     
@@ -98,7 +141,7 @@ const Index = () => {
 
     try {
       await updateAttendance.mutateAsync(newRecord);
-      generateAttendanceFile();
+      generateAttendanceMatrix(); // Generate and download matrix after saving
       
       toast({
         title: "Zapisano obecność",
@@ -112,40 +155,6 @@ const Index = () => {
         variant: "destructive"
       });
     }
-  };
-
-  const generateAttendanceFile = () => {
-    const currentDate = new Date().toLocaleDateString('pl-PL');
-    const presentMembers = members.filter(m => m.present);
-    const presentGuests = attendanceGuests.filter(g => g.present);
-    
-    let content = `Lista obecności - ${currentDate}\n\n`;
-    content += `Obecni członkowie (${presentMembers.length} z ${members.length}):\n`;
-    presentMembers.forEach((member, index) => {
-      content += `${index + 1}. ${member.name}\n`;
-    });
-    
-    if (presentGuests.length > 0) {
-      content += `\nObecni goście (${presentGuests.length}):\n`;
-      presentGuests.forEach((guest, index) => {
-        content += `${index + 1}. ${guest.name}\n`;
-      });
-    }
-    
-    content += `\nNieobecni:\n`;
-    members.filter(m => !m.present).forEach((member, index) => {
-      content += `${index + 1}. ${member.name}\n`;
-    });
-
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `obecnosc_${currentDate.replace(/\./g, '_')}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   const handleAddMember = (name: string) => {
