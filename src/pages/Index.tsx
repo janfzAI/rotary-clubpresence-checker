@@ -161,7 +161,7 @@ const Index = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 lg:max-w-6xl xl:max-w-7xl">
+    <div className="container mx-auto p-4 w-[80%] lg:max-w-6xl xl:max-w-7xl">
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
       
       {activeTab === 'attendance' && (
