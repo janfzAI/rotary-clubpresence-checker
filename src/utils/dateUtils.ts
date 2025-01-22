@@ -16,9 +16,18 @@ export const generateWednesdayDates = (startDate: Date, endDate: Date) => {
   const currentDate = normalizeDate(new Date(startDate));
   const normalizedEndDate = normalizeDate(endDate);
   
+  // Lista dat do wykluczenia
+  const excludeDates = [
+    '2024-12-25', // Boże Narodzenie
+    '2025-01-01'  // Nowy Rok
+  ];
+  
   while (currentDate <= normalizedEndDate) {
     if (currentDate.getDay() === 3) { // Środa
-      dates.push(new Date(currentDate));
+      const dateStr = currentDate.toISOString().split('T')[0];
+      if (!excludeDates.includes(dateStr)) {
+        dates.push(new Date(currentDate));
+      }
     }
     currentDate.setDate(currentDate.getDate() + 1);
   }
