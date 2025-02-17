@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Check, SortAsc } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -10,6 +11,7 @@ interface Member {
   id: number;
   name: string;
   present: boolean;
+  active?: boolean;
 }
 
 interface Guest {
@@ -42,7 +44,9 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
     });
   };
 
-  const sortedMembers = [...members].sort((a, b) => {
+  const activeMembers = members.filter(member => member.active !== false);
+
+  const sortedMembers = [...activeMembers].sort((a, b) => {
     if (sortedAlphabetically) {
       return a.name.localeCompare(b.name);
     }

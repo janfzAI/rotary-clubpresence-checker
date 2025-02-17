@@ -1,23 +1,29 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, SortAsc } from "lucide-react";
+import { Plus, Trash2, SortAsc, Ban } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 interface Member {
   id: number;
   name: string;
+  active?: boolean;
 }
 
 export const MembersManagement = ({ 
   members,
   onAddMember,
-  onRemoveMember 
+  onRemoveMember,
+  onToggleActive
 }: {
   members: Member[];
   onAddMember: (name: string) => void;
   onRemoveMember: (id: number) => void;
+  onToggleActive?: (id: number) => void;
 }) => {
   const [newMemberName, setNewMemberName] = useState('');
   const [sortedAlphabetically, setSortedAlphabetically] = useState(false);
@@ -40,6 +46,16 @@ export const MembersManagement = ({
       title: "Usunięto członka",
       description: `${name} został usunięty z listy.`
     });
+  };
+
+  const handleToggleActive = (id: number, name: string, currentlyActive: boolean) => {
+    if (onToggleActive) {
+      onToggleActive(id);
+      toast({
+        title: currentlyActive ? "Dezaktywowano członka" : "Aktywowano członka",
+        description: `${name} został ${currentlyActive ? 'dezaktywowany' : 'aktywowany'}.`
+      });
+    }
   };
 
   const toggleSort = () => {
@@ -86,18 +102,31 @@ export const MembersManagement = ({
 
       <div className="space-y-3">
         {sortedMembers.map((member, index) => (
-          <Card key={member.id} className="p-4 flex justify-between items-center">
-            <span className="flex items-center gap-2">
+          <Card 
+            key={member.id} 
+            className={`p-4 flex justify-between items-center ${!member.active ? 'opacity-50' : ''}`}
+          >
+            <span className="flex items-center gap-2 flex-1">
               <span className="text-sm text-muted-foreground">{index + 1}.</span>
               <span>{member.name}</span>
             </span>
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={() => handleRemoveMember(member.id, member.name)}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor={`active-${member.id}`}>Aktywny</Label>
+                <Switch
+                  id={`active-${member.id}`}
+                  checked={member.active}
+                  onCheckedChange={(checked) => handleToggleActive(member.id, member.name, !checked)}
+                />
+              </div>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={() => handleRemoveMember(member.id, member.name)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
           </Card>
         ))}
       </div>
