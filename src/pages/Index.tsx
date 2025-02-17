@@ -58,7 +58,7 @@ const initialMembers = [
 const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
   const { toast } = useToast();
-  const [members] = useState(initialMembers);
+  const [members, setMembers] = useState(initialMembers);
   const { history, updateAttendance } = useAttendanceData();
   const { guests, addGuest, removeGuest } = useGuestsData();
   
