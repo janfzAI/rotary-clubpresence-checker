@@ -32,33 +32,45 @@ export const useAttendanceMembers = (
 
   useEffect(() => {
     console.log('useAttendanceMembers - Selected date:', selectedDate);
-    console.log('useAttendanceMembers - Current members state:', members);
+    console.log('useAttendanceMembers - History:', history);
     
-    const record = history.find(record => {
-      const areEqual = areDatesEqual(new Date(record.date), selectedDate);
-      console.log('Comparing dates:', new Date(record.date), selectedDate, areEqual);
-      return areEqual;
-    });
+    // Najpierw resetujemy stan obecności
+    const resetMembers = initialMembers.map(member => ({ ...member, present: false }));
+    const resetGuests = initialGuests.map(guest => ({ ...guest, present: false }));
     
-    console.log('useAttendanceMembers - Found record:', record);
-    
-    // Resetuj stan obecności przed ustawieniem nowych wartości
-    setMembers(members.map(member => ({ ...member, present: false })));
-    setGuests(guests.map(guest => ({ ...guest, present: false })));
+    setMembers(resetMembers);
+    setGuests(resetGuests);
 
-    if (record) {
+    // Szukamy rekordu dla wybranej daty
+    const record = history.find(record => {
+      // Konwertujemy obie daty do formatu YYYY-MM-DD dla porównania
+      const recordDate = new Date(record.date);
+      const compareDate = new Date(selectedDate);
+      
+      const recordStr = recordDate.toISOString().split('T')[0];
+      const selectedStr = compareDate.toISOString().split('T')[0];
+      
+      console.log('Comparing dates:', recordStr, selectedStr);
+      return recordStr === selectedStr;
+    });
+
+    console.log('useAttendanceMembers - Found record:', record);
+
+    if (record && record.presentMembers) {
       console.log('useAttendanceMembers - Setting present members:', record.presentMembers);
-      setMembers(members.map(member => ({
+      setMembers(resetMembers.map(member => ({
         ...member,
         present: record.presentMembers?.includes(member.id) || false
       })));
-      
-      setGuests(guests.map(guest => ({
-        ...guest,
-        present: record.presentGuests?.includes(guest.id) || false
-      })));
+
+      if (record.presentGuests) {
+        setGuests(resetGuests.map(guest => ({
+          ...guest,
+          present: record.presentGuests?.includes(guest.id) || false
+        })));
+      }
     }
-  }, [selectedDate, history]);
+  }, [selectedDate, history, initialMembers, initialGuests]);
 
   const toggleAttendance = (id: number) => {
     console.log('Toggling attendance for member:', id);
