@@ -7,6 +7,12 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface Member {
   id: number;
@@ -41,19 +47,21 @@ export const MembersManagement = ({
   };
 
   const handleRemoveMember = (id: number, name: string) => {
-    onRemoveMember(id);
-    toast({
-      title: "Usunięto członka",
-      description: `${name} został usunięty z listy.`
-    });
+    if (window.confirm(`Czy na pewno chcesz całkowicie usunąć ${name} z systemu? Ta operacja jest nieodwracalna.`)) {
+      onRemoveMember(id);
+      toast({
+        title: "Usunięto członka",
+        description: `${name} został całkowicie usunięty z systemu.`
+      });
+    }
   };
 
-  const handleToggleActive = (id: number, name: string, currentlyActive: boolean) => {
+  const handleToggleActive = (id: number, name: string, isCurrentlyActive: boolean) => {
     if (onToggleActive) {
       onToggleActive(id);
       toast({
-        title: currentlyActive ? "Dezaktywowano członka" : "Aktywowano członka",
-        description: `${name} został ${currentlyActive ? 'dezaktywowany' : 'aktywowany'}.`
+        title: isCurrentlyActive ? "Dezaktywowano członka" : "Aktywowano członka",
+        description: `${name} został ${isCurrentlyActive ? 'dezaktywowany' : 'aktywowany'}.`
       });
     }
   };
@@ -104,7 +112,7 @@ export const MembersManagement = ({
         {sortedMembers.map((member, index) => (
           <Card 
             key={member.id} 
-            className={`p-4 flex justify-between items-center ${!member.active ? 'opacity-50' : ''}`}
+            className={`p-4 flex justify-between items-center ${member.active === false ? 'opacity-50' : ''}`}
           >
             <span className="flex items-center gap-2 flex-1">
               <span className="text-sm text-muted-foreground">{index + 1}.</span>
@@ -115,17 +123,26 @@ export const MembersManagement = ({
                 <Label htmlFor={`active-${member.id}`}>Aktywny</Label>
                 <Switch
                   id={`active-${member.id}`}
-                  checked={member.active}
-                  onCheckedChange={(checked) => handleToggleActive(member.id, member.name, !checked)}
+                  checked={member.active !== false}
+                  onCheckedChange={() => handleToggleActive(member.id, member.name, member.active !== false)}
                 />
               </div>
-              <Button
-                variant="destructive"
-                size="icon"
-                onClick={() => handleRemoveMember(member.id, member.name)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => handleRemoveMember(member.id, member.name)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Całkowicie usuń z systemu</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </Card>
         ))}
