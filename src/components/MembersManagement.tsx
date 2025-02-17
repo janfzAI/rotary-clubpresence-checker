@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, SortAsc, Ban } from "lucide-react";
+import { Plus, Trash2, SortAsc } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch"

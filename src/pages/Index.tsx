@@ -57,18 +57,17 @@ const initialMembers = [
 const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
   const { toast } = useToast();
-  const [currentMembers, setCurrentMembers] = useState(initialMembers);
+  const [members, setMembers] = useState(initialMembers);
   const { history, updateAttendance } = useAttendanceData();
   const { guests, addGuest, removeGuest, setGuests } = useGuestsData();
   
   const { 
-    members, 
     guests: attendanceGuests, 
     selectedDate, 
     setSelectedDate, 
     toggleAttendance,
     toggleGuestAttendance 
-  } = useAttendanceMembers(currentMembers, guests, history);
+  } = useAttendanceMembers(members, guests, history);
 
   const handleDateSelect = (date: Date) => {
     console.log('Handling date selection:', date);
@@ -149,16 +148,22 @@ const Index = () => {
 
   const handleAddMember = (name: string) => {
     const newMember = {
-      id: currentMembers.length > 0 ? Math.max(...currentMembers.map(m => m.id)) + 1 : 1,
+      id: members.length > 0 ? Math.max(...members.map(m => m.id)) + 1 : 1,
       name,
       present: false,
       active: true
     };
-    setCurrentMembers([...currentMembers, newMember]);
+    setMembers([...members, newMember]);
   };
 
   const handleRemoveMember = (id: number) => {
-    setCurrentMembers(currentMembers.filter(member => member.id !== id));
+    setMembers(members.filter(member => member.id !== id));
+  };
+
+  const handleToggleActive = (id: number) => {
+    setMembers(members.map(member =>
+      member.id === id ? { ...member, active: !member.active } : member
+    ));
   };
 
   return (
@@ -196,7 +201,7 @@ const Index = () => {
             records={history} 
             onSelectDate={handleDateSelect}
           />
-          <AttendanceExport history={history} members={currentMembers} />
+          <AttendanceExport history={history} members={members} />
         </div>
       )}
 
@@ -206,9 +211,10 @@ const Index = () => {
 
       {activeTab === 'members' && (
         <MembersManagement
-          members={currentMembers}
+          members={members}
           onAddMember={handleAddMember}
           onRemoveMember={handleRemoveMember}
+          onToggleActive={handleToggleActive}
         />
       )}
 
