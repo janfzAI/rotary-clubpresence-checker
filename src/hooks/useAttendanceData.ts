@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeDate, generateWednesdayDates } from '@/utils/dateUtils';
@@ -53,7 +54,16 @@ export const useAttendanceData = () => {
       // Create records for all Wednesdays, using existing data if available
       return allWednesdays.map(date => {
         const dateStr = date.toISOString().split('T')[0];
-        return recordsMap.get(dateStr) || {
+        const existingRecord = recordsMap.get(dateStr);
+        
+        if (existingRecord) {
+          return {
+            ...existingRecord,
+            date: new Date(existingRecord.date) // Upewnij się, że data jest obiektem Date
+          };
+        }
+        
+        return {
           date,
           presentCount: 0,
           totalCount: 36,
@@ -77,6 +87,8 @@ export const useAttendanceData = () => {
         present_guests: record.presentGuests,
         created_by: (await supabase.auth.getUser()).data.user?.id
       };
+
+      console.log('Sending data to Supabase:', recordData);
 
       // First try to update
       const { data: updateData, error: updateError } = await supabase
