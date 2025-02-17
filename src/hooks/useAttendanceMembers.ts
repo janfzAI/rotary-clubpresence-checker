@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { areDatesEqual } from '@/utils/dateUtils';
 
@@ -5,6 +6,7 @@ interface Member {
   id: number;
   name: string;
   present: boolean;
+  active?: boolean;
 }
 
 interface Guest {
@@ -29,41 +31,51 @@ export const useAttendanceMembers = (
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
-    console.log('Selected date changed to:', selectedDate);
-    console.log('Looking for record in history:', history);
-    console.log('Current guests state:', guests);
+    console.log('useAttendanceMembers - Selected date:', selectedDate);
+    console.log('useAttendanceMembers - Current members state:', members);
     
-    const record = history.find(record => areDatesEqual(record.date, selectedDate));
-    console.log('Found record:', record);
+    const record = history.find(record => {
+      const areEqual = areDatesEqual(new Date(record.date), selectedDate);
+      console.log('Comparing dates:', new Date(record.date), selectedDate, areEqual);
+      return areEqual;
+    });
     
+    console.log('useAttendanceMembers - Found record:', record);
+    
+    // Resetuj stan obecności przed ustawieniem nowych wartości
+    setMembers(members.map(member => ({ ...member, present: false })));
+    setGuests(guests.map(guest => ({ ...guest, present: false })));
+
     if (record) {
+      console.log('useAttendanceMembers - Setting present members:', record.presentMembers);
       setMembers(members.map(member => ({
         ...member,
         present: record.presentMembers?.includes(member.id) || false
       })));
       
-      // Zachowujemy istniejących gości i aktualizujemy tylko ich obecność
       setGuests(guests.map(guest => ({
         ...guest,
         present: record.presentGuests?.includes(guest.id) || false
       })));
-    } else {
-      setMembers(members.map(member => ({ ...member, present: false })));
-      // Zachowujemy istniejących gości, tylko resetujemy ich obecność
-      setGuests(guests.map(guest => ({ ...guest, present: false })));
     }
   }, [selectedDate, history]);
 
   const toggleAttendance = (id: number) => {
-    setMembers(members.map(member =>
-      member.id === id ? { ...member, present: !member.present } : member
-    ));
+    console.log('Toggling attendance for member:', id);
+    setMembers(prevMembers => 
+      prevMembers.map(member =>
+        member.id === id ? { ...member, present: !member.present } : member
+      )
+    );
   };
 
   const toggleGuestAttendance = (id: number) => {
-    setGuests(guests.map(guest =>
-      guest.id === id ? { ...guest, present: !guest.present } : guest
-    ));
+    console.log('Toggling attendance for guest:', id);
+    setGuests(prevGuests => 
+      prevGuests.map(guest =>
+        guest.id === id ? { ...guest, present: !guest.present } : guest
+      )
+    );
   };
 
   return {
