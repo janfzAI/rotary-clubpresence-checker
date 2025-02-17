@@ -6,7 +6,7 @@ interface Member {
   id: number;
   name: string;
   present: boolean;
-  active?: boolean;
+  active: boolean; // Zmienione z active?: boolean na active: boolean
 }
 
 interface Guest {
