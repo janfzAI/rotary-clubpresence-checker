@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
@@ -57,11 +58,12 @@ const initialMembers = [
 const Index = () => {
   const [activeTab, setActiveTab] = useState('attendance');
   const { toast } = useToast();
-  const [members, setMembers] = useState(initialMembers);
+  const [members] = useState(initialMembers);
   const { history, updateAttendance } = useAttendanceData();
-  const { guests, addGuest, removeGuest, setGuests } = useGuestsData();
+  const { guests, addGuest, removeGuest } = useGuestsData();
   
   const { 
+    members: attendanceMembers, 
     guests: attendanceGuests, 
     selectedDate, 
     setSelectedDate, 
@@ -77,11 +79,11 @@ const Index = () => {
 
   const generateAttendanceFile = (date: Date) => {
     const formattedDate = date.toLocaleDateString('pl-PL').replace(/\./g, '_');
-    const presentMembers = members.filter(m => m.present);
+    const presentMembers = attendanceMembers.filter(m => m.present);
     const presentGuests = attendanceGuests.filter(g => g.present);
     
     let content = `Lista obecności - ${date.toLocaleDateString('pl-PL')}\n\n`;
-    content += `Obecni członkowie (${presentMembers.length} z ${members.length}):\n`;
+    content += `Obecni członkowie (${presentMembers.length} z ${attendanceMembers.length}):\n`;
     presentMembers.forEach((member, index) => {
       content += `${index + 1}. ${member.name}\n`;
     });
@@ -94,7 +96,7 @@ const Index = () => {
     }
     
     content += `\nNieobecni:\n`;
-    members.filter(m => !m.present).forEach((member, index) => {
+    attendanceMembers.filter(m => !m.present).forEach((member, index) => {
       content += `${index + 1}. ${member.name}\n`;
     });
 
@@ -111,8 +113,9 @@ const Index = () => {
 
   const handleSave = async () => {
     console.log('Saving attendance for date:', selectedDate);
+    console.log('Current members state:', attendanceMembers);
     
-    const presentMemberIds = members
+    const presentMemberIds = attendanceMembers
       .filter(m => m.present)
       .map(m => m.id);
 
@@ -122,8 +125,8 @@ const Index = () => {
 
     const newRecord = {
       date: normalizeDate(selectedDate),
-      presentCount: members.filter(m => m.present).length,
-      totalCount: members.length,
+      presentCount: attendanceMembers.filter(m => m.present).length,
+      totalCount: attendanceMembers.length,
       presentMembers: presentMemberIds,
       presentGuests: presentGuestIds
     };
@@ -174,12 +177,12 @@ const Index = () => {
         <div className="space-y-6">
           <AttendanceHeader
             date={selectedDate}
-            presentCount={members.filter(m => m.present).length}
-            totalCount={members.length}
+            presentCount={attendanceMembers.filter(m => m.present).length}
+            totalCount={attendanceMembers.length}
             presentGuestsCount={attendanceGuests.filter(g => g.present).length}
           />
           <AttendanceList
-            members={members}
+            members={attendanceMembers}
             guests={attendanceGuests}
             onToggleAttendance={toggleAttendance}
             onToggleGuestAttendance={toggleGuestAttendance}
