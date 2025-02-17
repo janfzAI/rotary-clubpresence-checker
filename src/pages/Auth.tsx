@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 const Auth = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -20,32 +21,16 @@ const Auth = () => {
     
     console.log('Attempting login with:', { email });
 
-    // Sprawdzanie czy to superadmin
-    const validCredentials = [
-      { email: 'janusz.kozlowski@infoludek.pl', token: 'admin123' },
-      { email: 'janfzjanfz@gmail.com', token: 'admin123' }
-    ];
-
-    const isValidUser = validCredentials.some(cred => 
-      cred.email === email.toLowerCase() && cred.token === token
-    );
-
-    if (!isValidUser) {
-      setErrorMessage('Nieprawidłowy email lub token.');
-      setLoading(false);
-      return;
-    }
-
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.toLowerCase(),
-        password: token,
+        password: password,
       });
 
       if (error) {
         console.error('Login error:', error);
         if (error.message === 'Invalid login credentials') {
-          setErrorMessage('Nieprawidłowy email lub token.');
+          setErrorMessage('Nieprawidłowy email lub hasło.');
         } else {
           setErrorMessage('Błąd logowania. Spróbuj ponownie.');
         }
@@ -85,13 +70,13 @@ const Auth = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="token">Token</Label>
+          <Label htmlFor="password">Hasło</Label>
           <Input
-            id="token"
+            id="password"
             type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="Wprowadź token"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Wprowadź hasło"
             required
           />
         </div>
