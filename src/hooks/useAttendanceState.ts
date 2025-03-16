@@ -16,7 +16,7 @@ export interface Member {
 const initialMembers = [
   { id: 1, name: "Bogdan Borowczyk", present: false, active: true },
   { id: 2, name: "Janusz Bykowski", present: false, active: true },
-  { id: 3, name: "Wojciech Czyżewski", present: false, active: true },
+  { id: 3, name: "Krzysztof Meisinger", present: false, active: true },
   { id: 4, name: "Krzysztof Dokowski", present: false, active: true },
   { id: 5, name: "Jerzy Dominiak", present: false, active: true },
   { id: 6, name: "Włodzimierz Dominiczak", present: false, active: true },

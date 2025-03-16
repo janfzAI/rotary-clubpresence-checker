@@ -1,3 +1,4 @@
+
 export const normalizeDate = (date: Date) => {
   // Ustaw datę na północ w lokalnej strefie czasowej
   const normalized = new Date(date);
@@ -19,7 +20,8 @@ export const generateWednesdayDates = (startDate: Date, endDate: Date) => {
   // Lista dat do wykluczenia
   const excludeDates = [
     '2024-12-25', // Boże Narodzenie
-    '2025-01-01'  // Nowy Rok
+    '2025-01-01', // Nowy Rok
+    '2025-02-26'  // Dodano datę 26 lutego do wykluczenia
   ];
   
   while (currentDate <= normalizedEndDate) {
