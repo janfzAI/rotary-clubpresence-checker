@@ -21,9 +21,16 @@ export const generateWednesdayDates = (startDate: Date, endDate: Date) => {
   const excludeDates = [
     '2024-12-25', // Boże Narodzenie
     '2025-01-01', // Nowy Rok
-    '2025-02-26'  // Dodano datę 26 lutego do wykluczenia
+    '2025-02-26', // Dodano datę 26 lutego do wykluczenia
+    '2025-03-19'  // Wykluczono spotkanie ze środy 19 marca
   ];
   
+  // Lista specjalnych dat (niestandardowych spotkań)
+  const specialDates = [
+    '2025-03-21'  // Dodano specjalne spotkanie w piątek 21 marca zamiast środy
+  ];
+  
+  // Najpierw dodajemy wszystkie środy
   while (currentDate <= normalizedEndDate) {
     if (currentDate.getDay() === 3) { // Środa
       const dateStr = currentDate.toISOString().split('T')[0];
@@ -33,6 +40,16 @@ export const generateWednesdayDates = (startDate: Date, endDate: Date) => {
     }
     currentDate.setDate(currentDate.getDate() + 1);
   }
+  
+  // Następnie dodajemy specjalne daty
+  for (const specialDateStr of specialDates) {
+    const specialDate = new Date(specialDateStr);
+    specialDate.setHours(12, 0, 0, 0);
+    dates.push(specialDate);
+  }
+  
+  // Sortujemy daty chronologicznie
+  dates.sort((a, b) => a.getTime() - b.getTime());
   
   return dates;
 };

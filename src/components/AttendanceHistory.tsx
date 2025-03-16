@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Calendar, Users, ArrowRight } from "lucide-react";
@@ -22,12 +23,16 @@ export const AttendanceHistory = ({ records, onSelectDate }: AttendanceHistoryPr
         // Konwertuj string na obiekt Date, jeśli to konieczne
         const recordDate = record.date instanceof Date ? record.date : new Date(record.date);
         
+        // Sprawdź czy to specjalna data - piątek 21 marca
+        const isSpecialFriday = recordDate.toISOString().split('T')[0] === '2025-03-21';
+        
         return (
           <Card 
             key={index} 
             className={cn(
               "p-4",
-              record.presentCount >= 2 && "bg-primary/10"
+              record.presentCount >= 2 && "bg-primary/10",
+              isSpecialFriday && "bg-yellow-100/50" // Dodaj specjalny kolor dla wyjątkowego spotkania
             )}
           >
             <div className="flex justify-between items-center">
@@ -40,6 +45,7 @@ export const AttendanceHistory = ({ records, onSelectDate }: AttendanceHistoryPr
                     month: 'long',
                     day: 'numeric',
                   })}
+                  {isSpecialFriday && " (spotkanie wyjątkowe)"}
                 </span>
               </div>
               <div className="flex items-center gap-4">

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import {
@@ -60,11 +61,16 @@ export const StatsMonthlyTable = ({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px]">Członek</TableHead>
-                  {groupedRecords[month].map((record, index) => (
-                    <TableHead key={index} className="text-center min-w-[100px]">
-                      {record.date.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' })}
-                    </TableHead>
-                  ))}
+                  {groupedRecords[month].map((record, index) => {
+                    const recordDate = record.date instanceof Date ? record.date : new Date(record.date);
+                    const isSpecialFriday = recordDate.toISOString().split('T')[0] === '2025-03-21';
+                    return (
+                      <TableHead key={index} className="text-center min-w-[100px]">
+                        {recordDate.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' })}
+                        {isSpecialFriday && ' (pt)'}
+                      </TableHead>
+                    );
+                  })}
                   <TableHead className="text-right">Obecności</TableHead>
                   <TableHead className="text-right">Procent</TableHead>
                   <TableHead className="text-right">Dni obecności</TableHead>
