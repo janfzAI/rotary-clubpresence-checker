@@ -24,7 +24,7 @@ const Auth = () => {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase(),
+        email: email.toLowerCase().trim(),
         password: password,
       });
 
@@ -52,22 +52,37 @@ const Auth = () => {
     setErrorMessage('');
     
     try {
-      const loginInfo = preset === 'admin' 
-        ? { email: 'admin@rotaryszczecin.pl', password: 'admin123' }
-        : { email: 'user@rotaryszczecin.pl', password: 'user123' };
+      let loginInfo;
       
-      const { data, error } = await supabase.auth.signInWithPassword(loginInfo);
+      if (preset === 'admin') {
+        loginInfo = { 
+          email: 'admin@rotaryszczecin.pl', 
+          password: 'admin123' 
+        };
+        console.log('Attempting quick admin login with:', loginInfo);
+      } else {
+        loginInfo = { 
+          email: 'user@rotaryszczecin.pl', 
+          password: 'user123' 
+        };
+        console.log('Attempting quick user login with:', loginInfo);
+      }
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginInfo.email.trim(),
+        password: loginInfo.password,
+      });
       
       if (error) {
         console.error('Quick login error:', error);
-        setErrorMessage('Nie można zalogować z predefiniowanym użytkownikiem. Skontaktuj się z administratorem.');
+        setErrorMessage(`Nie można zalogować z użytkownikiem ${preset}. Szczegóły błędu: ${error.message}`);
       } else {
         console.log('Quick login successful:', data);
         navigate('/');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Quick login error:', error);
-      setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
+      setErrorMessage(`Wystąpił błąd podczas logowania: ${error.message}`);
     } finally {
       setLoading(false);
     }
