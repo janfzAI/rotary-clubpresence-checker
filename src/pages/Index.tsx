@@ -12,9 +12,10 @@ import { AttendanceFileHandler } from '@/components/AttendanceFileHandler';
 import { useAttendanceState } from '@/hooks/useAttendanceState';
 import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
 import { useAuth } from '@/hooks/useAuth';
+import { UserMenu } from '@/components/UserMenu';
 
 const Index = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, userEmail } = useAuth();
   
   const {
     activeTab,
@@ -39,7 +40,10 @@ const Index = () => {
 
   return (
     <div className="container mx-auto p-4 w-[80%] lg:max-w-6xl xl:max-w-7xl">
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <div className="flex justify-between items-center mb-4">
+        <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+        <UserMenu />
+      </div>
       
       {!isAdmin && <ReadOnlyNotice />}
       
