@@ -5,12 +5,28 @@ import { supabase } from '@/integrations/supabase/client';
 export const useAuth = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setUserEmail(session?.user?.email ?? null);
+        
+        if (session?.user) {
+          // Check if user has admin role
+          const { data, error } = await supabase.rpc('has_role', {
+            _user_id: session.user.id,
+            _role: 'admin'
+          });
+          
+          if (error) {
+            console.error('Error checking role:', error);
+          } else {
+            setIsAdmin(!!data);
+            console.log('User is admin:', data);
+          }
+        }
       } finally {
         setIsLoading(false);
       }
@@ -20,6 +36,18 @@ export const useAuth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUserEmail(session?.user?.email ?? null);
+      
+      if (session?.user) {
+        // Update admin status when auth state changes
+        supabase.rpc('has_role', {
+          _user_id: session.user.id,
+          _role: 'admin'
+        }).then(({ data }) => {
+          setIsAdmin(!!data);
+        });
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -33,6 +61,7 @@ export const useAuth = () => {
   return {
     userEmail,
     isLoading,
+    isAdmin,
     signOut
   };
 };

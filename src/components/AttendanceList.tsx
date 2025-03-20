@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Check, SortAsc } from 'lucide-react';
+import { Check, SortAsc, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ interface AttendanceListProps {
   guests: Guest[];
   onToggleAttendance: (id: number) => void;
   onToggleGuestAttendance: (id: number) => void;
+  readOnly?: boolean;
 }
 
 export const AttendanceList: React.FC<AttendanceListProps> = ({
@@ -32,6 +33,7 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
   guests,
   onToggleAttendance,
   onToggleGuestAttendance,
+  readOnly = false,
 }) => {
   const [sortedAlphabetically, setSortedAlphabetically] = useState(false);
   const { toast } = useToast();
@@ -62,7 +64,15 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <div>
+          {readOnly && (
+            <div className="flex items-center text-muted-foreground">
+              <Lock className="w-4 h-4 mr-2" />
+              <span className="text-sm">Tryb tylko do odczytu</span>
+            </div>
+          )}
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -81,10 +91,11 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
             <Card
               key={member.id}
               className={cn(
-                "p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
-                member.present && "bg-primary/10"
+                "p-4 transition-all duration-200 hover:shadow-md",
+                member.present && "bg-primary/10",
+                readOnly ? "" : "cursor-pointer"
               )}
-              onClick={() => onToggleAttendance(member.id)}
+              onClick={readOnly ? undefined : () => onToggleAttendance(member.id)}
             >
               <div className="flex items-center justify-between">
                 <span className="text-lg">
@@ -116,10 +127,11 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
                 <Card
                   key={guest.id}
                   className={cn(
-                    "p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
-                    guest.present && "bg-secondary/10"
+                    "p-4 transition-all duration-200 hover:shadow-md",
+                    guest.present && "bg-secondary/10",
+                    readOnly ? "" : "cursor-pointer"
                   )}
-                  onClick={() => onToggleGuestAttendance(guest.id)}
+                  onClick={readOnly ? undefined : () => onToggleGuestAttendance(guest.id)}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-lg">
