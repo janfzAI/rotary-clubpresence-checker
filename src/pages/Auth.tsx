@@ -63,7 +63,7 @@ const Auth = () => {
       } else {
         loginInfo = { 
           email: 'user@rotaryszczecin.pl', 
-          password: 'user123' 
+          password: 'RCSZCZECIN' 
         };
         console.log('Attempting quick user login with:', loginInfo);
       }
