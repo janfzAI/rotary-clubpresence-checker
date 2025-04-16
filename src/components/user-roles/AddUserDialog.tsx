@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { useToast } from "@/components/ui/use-toast";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -34,16 +35,33 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
   const [newUserRole, setNewUserRole] = useState<AppRole>('user');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const validateInputs = () => {
+    if (!newUserEmail) {
+      onError("Email jest wymagany");
+      return false;
+    }
+    
+    if (!newUserEmail.includes('@')) {
+      onError("Niepoprawny format adresu email");
+      return false;
+    }
+    
+    if (!newUserPassword || newUserPassword.length < 6) {
+      onError("Hasło jest wymagane i musi mieć co najmniej 6 znaków");
+      return false;
+    }
+    
+    return true;
+  };
 
   const handleAddUser = async () => {
+    if (!validateInputs()) return;
+    
     try {
       setIsSubmitting(true);
       
-      if (!newUserEmail || !newUserPassword) {
-        onError("Email i hasło są wymagane");
-        return;
-      }
-
       console.log("Attempting to create user:", newUserEmail);
       
       // Create user with auto-confirm enabled
@@ -98,6 +116,12 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
 
       console.log("Role set successfully");
 
+      // Success!
+      toast({
+        title: "Utworzono użytkownika",
+        description: `Użytkownik ${newUserEmail} został utworzony z rolą ${newUserRole}`
+      });
+      
       onSuccess();
       setNewUserEmail('');
       setNewUserPassword('');
