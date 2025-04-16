@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { AddUserDialog } from "./user-roles/AddUserDialog";
 import type { Database } from "@/integrations/supabase/types";
@@ -40,9 +41,9 @@ export const UserRolesManagement = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Initial fetch and setup refresh interval
+  // Initial fetch only on component mount
   useEffect(() => {
-    // Immediate fetch on component mount
+    // No periodic automatic refresh - we'll rely on manual refresh only
     const initialFetch = async () => {
       try {
         await fetchUsers();
@@ -53,18 +54,6 @@ export const UserRolesManagement = () => {
     };
     
     initialFetch();
-    
-    // Set up interval for periodic refresh
-    const interval = setInterval(async () => {
-      try {
-        await fetchUsers();
-        console.log("Interval fetch completed");
-      } catch (error) {
-        console.error("Error during interval fetch:", error);
-      }
-    }, 3000); // Refresh every 3 seconds
-    
-    return () => clearInterval(interval);
   }, []);
 
   // Manual refresh function with visual feedback
@@ -135,10 +124,14 @@ export const UserRolesManagement = () => {
   // Error state
   if (error) {
     return (
-      <div className="p-6 text-center">
-        <div className="text-red-500 mb-4">
-          Wystąpił błąd podczas ładowania użytkowników: {error.message}
-        </div>
+      <div className="p-6 space-y-4">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Wystąpił błąd podczas ładowania użytkowników</AlertTitle>
+          <AlertDescription>
+            {error.message}
+          </AlertDescription>
+        </Alert>
         <Button onClick={fetchUsers}>Spróbuj ponownie</Button>
       </div>
     );
@@ -163,7 +156,13 @@ export const UserRolesManagement = () => {
       </div>
       
       {users.length === 0 ? (
-        <p className="text-muted-foreground">Brak użytkowników w systemie.</p>
+        <div className="p-4 border rounded-md text-center">
+          <p className="text-muted-foreground mb-4">Brak użytkowników w systemie lub nie udało się ich załadować.</p>
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Odśwież listę
+          </Button>
+        </div>
       ) : (
         <Table>
           <TableHeader>

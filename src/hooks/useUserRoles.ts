@@ -21,16 +21,8 @@ export const useUserRoles = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch all auth users using a direct RPC call to get ALL users
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        throw authError;
-      }
-
-      console.log("Fetched auth users:", authUsers);
-      
-      // Fetch all profiles as a backup
+      // Instead of using admin.listUsers which requires admin privileges,
+      // we'll fetch profiles directly which is accessible with normal auth
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email');
@@ -40,6 +32,12 @@ export const useUserRoles = () => {
       }
 
       console.log("Fetched profiles:", profiles);
+      
+      if (!profiles || profiles.length === 0) {
+        setUsers([]);
+        console.log("No profiles found");
+        return;
+      }
 
       // Fetch all user_roles
       const { data: userRoles, error: rolesError } = await supabase
@@ -51,32 +49,15 @@ export const useUserRoles = () => {
       }
 
       console.log("Fetched user roles:", userRoles);
-
-      // Create a comprehensive list of users from both auth users and profiles
-      // Start with auth users if available
-      let allUsers = [];
-      
-      if (authUsers && authUsers.users) {
-        allUsers = authUsers.users.map(user => ({
-          id: user.id,
-          email: user.email || '',
-        }));
-      } else {
-        // Fallback to profiles if auth users not available
-        allUsers = profiles.map(profile => ({
-          id: profile.id,
-          email: profile.email,
-        }));
-      }
       
       // Map users to roles
-      const usersWithRoles = allUsers.map((user) => {
+      const usersWithRoles = profiles.map((profile) => {
         // Find user's role in the userRoles array
-        const userRole = userRoles.find(role => role.user_id === user.id);
+        const userRole = userRoles ? userRoles.find(role => role.user_id === profile.id) : null;
         
         return {
-          id: user.id,
-          email: user.email,
+          id: profile.id,
+          email: profile.email,
           // Default to 'user' if no role is found
           role: userRole ? userRole.role : 'user' as AppRole
         };
