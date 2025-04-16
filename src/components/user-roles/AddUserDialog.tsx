@@ -58,6 +58,16 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
         throw new Error("Nie udało się utworzyć użytkownika");
       }
 
+      // Add user to profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: newUserEmail
+        });
+
+      if (profileError) throw profileError;
+
       // Add role for the new user
       const { error: roleError } = await supabase
         .from('user_roles')
