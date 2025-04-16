@@ -41,9 +41,15 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
         return;
       }
 
+      // Create user with auto-confirm enabled
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: newUserEmail,
         password: newUserPassword,
+        options: {
+          data: {
+            role: newUserRole
+          }
+        }
       });
 
       if (signUpError) throw signUpError;
@@ -51,6 +57,16 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
       if (!authData.user) {
         throw new Error("Nie udało się utworzyć użytkownika");
       }
+
+      // Add role for the new user
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: newUserRole
+        });
+
+      if (roleError) throw roleError;
 
       onSuccess();
       setNewUserEmail('');
