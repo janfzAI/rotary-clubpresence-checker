@@ -183,7 +183,8 @@ export const useUserRoles = () => {
           throw new Error("Password is required to create a new user");
         }
         
-        // Use the admin.createUser function
+        // Use the admin createUser function which is available on the client
+        // for the Supabase instance with the correct service key
         const { data: userData, error: createError } = await supabase.auth.admin.createUser({
           email,
           password,
@@ -199,8 +200,8 @@ export const useUserRoles = () => {
           throw createError;
         }
         
-        if (!userData.user) {
-          throw new Error("Failed to create user account");
+        if (!userData || !userData.user) {
+          throw new Error("Failed to create user account - no user data returned");
         }
         
         userId = userData.user.id;

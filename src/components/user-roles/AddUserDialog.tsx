@@ -33,14 +33,19 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<AppRole>('user');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddUser = async () => {
     try {
+      setIsSubmitting(true);
+      
       if (!newUserEmail || !newUserPassword) {
         onError("Email i hasło są wymagane");
         return;
       }
 
+      console.log("Attempting to create user:", newUserEmail);
+      
       // Create user with auto-confirm enabled
       const { data: authData, error: signUpError } = await supabase.auth.admin.createUser({
         email: newUserEmail,
@@ -51,11 +56,17 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
         }
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error("Error creating user:", signUpError);
+        throw signUpError;
+      }
 
-      if (!authData.user) {
+      if (!authData || !authData.user) {
+        console.error("No user data returned");
         throw new Error("Nie udało się utworzyć użytkownika");
       }
+
+      console.log("User created successfully:", authData.user.id);
 
       // Add user to profiles table
       const { error: profileError } = await supabase
@@ -65,7 +76,12 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
           email: newUserEmail
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        throw profileError;
+      }
+
+      console.log("Profile created successfully");
 
       // Add role for the new user
       const { error: roleError } = await supabase
@@ -75,7 +91,12 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
           role: newUserRole
         });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error("Error setting role:", roleError);
+        throw roleError;
+      }
+
+      console.log("Role set successfully");
 
       onSuccess();
       setNewUserEmail('');
@@ -86,6 +107,8 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
     } catch (error: any) {
       console.error('Error adding user:', error);
       onError(error.message || "Nie udało się utworzyć użytkownika");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -137,8 +160,12 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleAddUser} className="w-full">
-            Dodaj użytkownika
+          <Button 
+            onClick={handleAddUser} 
+            className="w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Dodawanie...' : 'Dodaj użytkownika'}
           </Button>
         </div>
       </DialogContent>
