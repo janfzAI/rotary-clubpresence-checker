@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,18 +163,54 @@ export const MembersManagement = ({
     }
   };
 
+  const findBestMatchingUser = (memberName: string) => {
+    console.log(`Searching for user match for member: ${memberName}`);
+    
+    // Try exact matching by converting both strings to lowercase and removing whitespace
+    const normalizedName = memberName.toLowerCase().replace(/\s+/g, '');
+    
+    // First attempt: look for exact partial matches in either direction
+    for (const user of users) {
+      const normalizedEmail = user.email.toLowerCase().replace(/\s+/g, '');
+      const nameInEmail = normalizedEmail.includes(normalizedName);
+      const emailInName = normalizedName.includes(normalizedEmail);
+      
+      console.log(`Comparing: "${normalizedName}" with "${normalizedEmail}"`);
+      console.log(`- Name in email: ${nameInEmail}, Email in name: ${emailInName}`);
+      
+      if (nameInEmail || emailInName) {
+        console.log(`Match found: ${user.email}`);
+        return user;
+      }
+    }
+    
+    // Second attempt: look for name parts in email or vice versa
+    const nameParts = memberName.toLowerCase().split(/\s+/);
+    for (const user of users) {
+      for (const part of nameParts) {
+        if (part.length > 2 && user.email.toLowerCase().includes(part)) {
+          console.log(`Partial match found with "${part}" in "${user.email}"`);
+          return user;
+        }
+      }
+    }
+    
+    // No match found
+    console.log('No matching user found');
+    return null;
+  };
+
   const handleOpenRoleDialog = (member: Member) => {
     setSelectedMember(member);
     
-    const existingUser = users.find(u => 
-      u.email.toLowerCase().includes(member.name.toLowerCase()) || 
-      member.name.toLowerCase().includes(u.email.toLowerCase())
-    );
+    const matchedUser = findBestMatchingUser(member.name);
     
-    if (existingUser) {
-      setMemberEmail(existingUser.email);
-      setSelectedRole(existingUser.role);
+    if (matchedUser) {
+      console.log(`Found matching user for ${member.name}: ${matchedUser.email} with role: ${matchedUser.role}`);
+      setMemberEmail(matchedUser.email);
+      setSelectedRole(matchedUser.role);
     } else {
+      console.log(`No matching user found for ${member.name}, setting empty email`);
       setMemberEmail('');
       setSelectedRole('user');
     }
