@@ -115,7 +115,7 @@ export const MembersManagement = ({
       return;
     }
 
-    if (!memberPassword) {
+    if (!memberPassword && !users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase())) {
       toast({
         title: "Uwaga",
         description: "Hasło nie zostało podane. Jeśli tworzysz nowego użytkownika, potrzebujesz podać hasło.",
@@ -164,7 +164,12 @@ export const MembersManagement = ({
 
   const handleOpenRoleDialog = (member: Member) => {
     setSelectedMember(member);
-    const existingUser = users.find(u => u.email.toLowerCase().includes(member.name.toLowerCase()));
+    
+    const existingUser = users.find(u => 
+      u.email.toLowerCase().includes(member.name.toLowerCase()) || 
+      member.name.toLowerCase().includes(u.email.toLowerCase())
+    );
+    
     if (existingUser) {
       setMemberEmail(existingUser.email);
       setSelectedRole(existingUser.role);
@@ -172,6 +177,7 @@ export const MembersManagement = ({
       setMemberEmail('');
       setSelectedRole('user');
     }
+    
     setMemberPassword('');
   };
 
@@ -271,10 +277,18 @@ export const MembersManagement = ({
                     <AlertDialogHeader>
                       <AlertDialogTitle>Zarządzaj uprawnieniami - {selectedMember?.name}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Przypisz rolę do użytkownika w systemie poprzez podanie adresu email i wybranie roli.
-                        {!users.find(u => u.email.toLowerCase().includes(selectedMember?.name?.toLowerCase() || ''))} i 
-                        {" "}
-                        <strong>Podaj hasło aby utworzyć nowe konto dla tego członka lub zmienić hasło istniejącego konta.</strong>
+                        {memberEmail ? (
+                          <>
+                            Wybierz rolę dla użytkownika <strong>{memberEmail}</strong>
+                            {!users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase()) && 
+                              " (nowe konto zostanie utworzone)"}
+                          </>
+                        ) : (
+                          <>
+                            Przypisz rolę do użytkownika w systemie poprzez podanie adresu email i wybranie roli.
+                            <strong> Podaj hasło aby utworzyć nowe konto dla tego członka.</strong>
+                          </>
+                        )}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     
