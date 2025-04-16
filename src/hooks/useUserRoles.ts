@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -22,90 +23,25 @@ export const useUserRoles = () => {
       
       console.log("Starting to fetch users...");
       
-      // Get the authenticated user
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("Current authenticated user:", session?.user?.email);
-
-      // First get all Auth users using the admin API
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      // Get all profiles from the profiles table
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email');
       
-      if (authError) {
-        console.error("Error fetching auth users:", authError);
-        throw authError;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
       }
       
-      if (!authUsers || !authUsers.users || authUsers.users.length === 0) {
-        console.log("No auth users found - trying profiles table instead");
-        
-        // Fallback to profiles table
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email');
-        
-        if (profilesError) {
-          console.error("Error fetching profiles:", profilesError);
-          throw profilesError;
-        }
-        
-        console.log("Fetched profiles:", profiles, "Count:", profiles?.length || 0);
-        
-        if (!profiles || profiles.length === 0) {
-          console.log("No profiles found in the database");
-          setUsers([]);
-          return;
-        }
-        
-        // Use the profiles we found
-        processProfiles(profiles);
+      console.log("Fetched profiles:", profiles, "Count:", profiles?.length || 0);
+      
+      if (!profiles || profiles.length === 0) {
+        console.log("No profiles found in the database");
+        setUsers([]);
+        setLoading(false);
         return;
       }
       
-      console.log("Fetched auth users:", authUsers.users, "Count:", authUsers.users.length);
-      
-      // Extract the user information we need
-      const profiles = authUsers.users.map(user => ({
-        id: user.id,
-        email: user.email || 'No email'
-      }));
-      
-      // Process the profiles to add role information
-      processProfiles(profiles);
-      
-    } catch (error) {
-      console.error('Error in fetchUsers:', error);
-      
-      // If we couldn't get users using the admin API, fall back to using profiles
-      console.log("Falling back to profiles table...");
-      try {
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email');
-        
-        if (profilesError) {
-          console.error("Error fetching profiles in fallback:", profilesError);
-          throw profilesError;
-        }
-        
-        console.log("Fetched profiles in fallback:", profiles, "Count:", profiles?.length || 0);
-        
-        if (profiles && profiles.length > 0) {
-          processProfiles(profiles);
-          return;
-        }
-        
-        setError(error instanceof Error ? error : new Error('Unknown error fetching users'));
-      } catch (fallbackError) {
-        console.error("Fallback also failed:", fallbackError);
-        setError(fallbackError instanceof Error ? fallbackError : new Error('Failed to fetch users'));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Helper function to process profiles and add role information
-  const processProfiles = async (profiles: { id: string; email: string | null }[]) => {
-    try {
       // Fetch all user_roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
@@ -136,8 +72,10 @@ export const useUserRoles = () => {
       console.log("Final mapped users with roles:", usersWithRoles, "Count:", usersWithRoles.length);
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error("Error processing profiles:", error);
-      throw error;
+      console.error("Error in fetchUsers:", error);
+      setError(error instanceof Error ? error : new Error('Unknown error fetching users'));
+    } finally {
+      setLoading(false);
     }
   };
 

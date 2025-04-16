@@ -41,6 +41,28 @@ export const useAuth = () => {
             setIsManager(!!isManagerData);
             console.log('User is manager:', !!isManagerData);
           }
+
+          // Ensure the user exists in the profiles table
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profileError || !profileData) {
+            console.log('Creating profile for user:', session.user.id);
+            // Profile doesn't exist, create it
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: session.user.id,
+                email: session.user.email
+              });
+
+            if (insertError) {
+              console.error('Error creating profile:', insertError);
+            }
+          }
         }
       } catch (error) {
         console.error("Error getting user session:", error);
@@ -81,6 +103,29 @@ export const useAuth = () => {
             console.log('User is manager (auth state change):', !!data);
           }
         });
+
+        // Ensure profile exists
+        supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (error || !data) {
+              // Profile doesn't exist, create it
+              supabase
+                .from('profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email
+                })
+                .then(({ error: insertError }) => {
+                  if (insertError) {
+                    console.error('Error creating profile on auth state change:', insertError);
+                  }
+                });
+            }
+          });
       } else {
         setIsAdmin(false);
         setIsManager(false);

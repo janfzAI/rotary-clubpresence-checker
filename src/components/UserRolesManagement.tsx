@@ -153,8 +153,7 @@ export const UserRolesManagement = () => {
             <Info className="h-4 w-4" />
             <AlertTitle>Informacja</AlertTitle>
             <AlertDescription>
-              Jeśli nie widzisz wszystkich użytkowników, kliknij "Odśwież listę". System będzie próbował pobrać 
-              użytkowników z różnych źródeł.
+              Proszę kliknąć "Odśwież listę", aby zobaczyć wszystkich użytkowników. Upewnij się, że wszyscy użytkownicy zostali dodani do tabeli "profiles" w bazie danych.
             </AlertDescription>
           </Alert>
           
