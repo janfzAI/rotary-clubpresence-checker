@@ -1,9 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -33,6 +41,10 @@ interface UserRole {
 export const UserRolesManagement = () => {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState<AppRole>('user');
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,7 +55,6 @@ export const UserRolesManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch all users that have profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email');
@@ -52,22 +63,18 @@ export const UserRolesManagement = () => {
         throw profilesError;
       }
 
-      // For each user, check their roles
       const usersWithRoles = await Promise.all(
         profiles.map(async (profile) => {
-          // Check admin role
           const { data: isAdmin } = await supabase.rpc('has_role', {
             _user_id: profile.id,
             _role: 'admin'
           });
 
-          // Check manager role
           const { data: isManager } = await supabase.rpc('has_role', {
             _user_id: profile.id,
             _role: 'manager'
           });
 
-          // Determine highest role
           let role: AppRole = 'user';
           if (isAdmin) role = 'admin';
           else if (isManager) role = 'manager';
@@ -99,7 +106,6 @@ export const UserRolesManagement = () => {
       const user = users.find(u => u.id === userId);
       if (!user) return;
 
-      // First remove all roles
       const { error: deleteError } = await supabase
         .from('user_roles')
         .delete()
@@ -107,7 +113,6 @@ export const UserRolesManagement = () => {
 
       if (deleteError) throw deleteError;
 
-      // Then add the new role if it's not 'user'
       if (newRole !== 'user') {
         const { error: insertError } = await supabase
           .from('user_roles')
@@ -119,7 +124,6 @@ export const UserRolesManagement = () => {
         if (insertError) throw insertError;
       }
 
-      // Update local state
       setUsers(users.map(u => 
         u.id === userId ? { ...u, role: newRole } : u
       ));
@@ -138,6 +142,58 @@ export const UserRolesManagement = () => {
     }
   };
 
+  const handleAddUser = async () => {
+    try {
+      if (!newUserEmail || !newUserPassword) {
+        toast({
+          title: "Błąd",
+          description: "Email i hasło są wymagane",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: newUserEmail,
+        password: newUserPassword,
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (authData.user) {
+        if (newUserRole !== 'user') {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: authData.user.id,
+              role: newUserRole
+            });
+          
+          if (roleError) throw roleError;
+        }
+
+        toast({
+          title: "Sukces",
+          description: `Utworzono nowego użytkownika: ${newUserEmail}`
+        });
+
+        setNewUserEmail('');
+        setNewUserPassword('');
+        setNewUserRole('user');
+        setDialogOpen(false);
+
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast({
+        title: "Błąd dodawania użytkownika",
+        description: "Nie udało się utworzyć użytkownika. Sprawdź konsolę.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center p-10">
@@ -149,7 +205,62 @@ export const UserRolesManagement = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Zarządzanie uprawnieniami użytkowników</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Zarządzanie uprawnieniami użytkowników</h2>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Dodaj użytkownika
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Dodaj nowego użytkownika</DialogTitle>
+              <DialogDescription>
+                Wprowadź dane nowego użytkownika i wybierz jego uprawnienia.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="email">Email</label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="uzytkownik@przykład.pl"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="password">Hasło</label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label>Uprawnienia</label>
+                <Select value={newUserRole} onValueChange={(value: AppRole) => setNewUserRole(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wybierz uprawnienia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Użytkownik</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="admin">Administrator</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleAddUser} className="w-full">
+                Dodaj użytkownika
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
       
       {users.length === 0 ? (
         <p className="text-muted-foreground">Brak użytkowników w systemie.</p>
