@@ -14,38 +14,34 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [isResetMode, setIsResetMode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    setSuccessMessage('');
     setLoading(true);
     
-    try {
-      if (isResetMode) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
-          redirectTo: `${window.location.origin}/auth?reset=true`,
-        });
-        
-        if (error) throw error;
-        
-        setSuccessMessage('Link do resetowania hasła został wysłany na podany adres email.');
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.toLowerCase().trim(),
-          password: password,
-        });
+    console.log('Attempting login with:', { email });
 
-        if (error) throw error;
-        
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase().trim(),
+        password: password,
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        if (error.message === 'Invalid login credentials') {
+          setErrorMessage('Nieprawidłowy email lub hasło.');
+        } else {
+          setErrorMessage('Błąd logowania. Spróbuj ponownie.');
+        }
+      } else {
         console.log('Login successful:', data);
         navigate('/');
       }
-    } catch (error: any) {
-      console.error('Auth error:', error);
-      setErrorMessage(error.message || 'Wystąpił błąd podczas logowania.');
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
     } finally {
       setLoading(false);
     }
@@ -102,20 +98,9 @@ const Auth = () => {
         </Alert>
       )}
 
-      {successMessage && (
-        <Alert className="mb-4 bg-green-50 text-green-800 border-green-300">
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      <Tabs defaultValue={isResetMode ? "reset" : "login"} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="login" onClick={() => setIsResetMode(false)}>
-            Logowanie
-          </TabsTrigger>
-          <TabsTrigger value="reset" onClick={() => setIsResetMode(true)}>
-            Reset hasła
-          </TabsTrigger>
+      <Tabs defaultValue="login" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="login">Logowanie</TabsTrigger>
           <TabsTrigger value="quick">Szybkie logowanie</TabsTrigger>
         </TabsList>
         
@@ -141,7 +126,7 @@ const Auth = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Wprowadź hasło"
-                required={!isResetMode}
+                required
               />
             </div>
 
@@ -151,26 +136,6 @@ const Auth = () => {
           </form>
         </TabsContent>
         
-        <TabsContent value="reset">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="reset-email">Email</Label>
-              <Input
-                id="reset-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Wprowadź email do resetowania hasła"
-                required
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Wysyłanie...' : 'Wyślij link do resetowania'}
-            </Button>
-          </form>
-        </TabsContent>
-
         <TabsContent value="quick">
           <div className="space-y-4">
             <div className="p-4 border rounded-md">

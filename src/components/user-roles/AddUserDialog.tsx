@@ -18,9 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useUserRoles } from "@/hooks/useUserRoles";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { useToast } from "@/components/ui/use-toast";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -34,52 +33,51 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<AppRole>('user');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-  const { createUserAndSetRole } = useUserRoles();
-
-  const validateInputs = () => {
-    if (!newUserEmail) {
-      onError("Email jest wymagany");
-      return false;
-    }
-    
-    if (!newUserEmail.includes('@')) {
-      onError("Niepoprawny format adresu email");
-      return false;
-    }
-    
-    if (!newUserPassword || newUserPassword.length < 6) {
-      onError("Hasło jest wymagane i musi mieć co najmniej 6 znaków");
-      return false;
-    }
-    
-    return true;
-  };
 
   const handleAddUser = async () => {
-    if (!validateInputs()) return;
-    
     try {
-      setIsSubmitting(true);
-      
-      console.log("Attempting to create user:", newUserEmail);
-      
-      // Use the createUserAndSetRole function from useUserRoles hook
-      const createdEmail = await createUserAndSetRole(
-        newUserEmail,
-        newUserPassword,
-        newUserRole
-      );
+      if (!newUserEmail || !newUserPassword) {
+        onError("Email i hasło są wymagane");
+        return;
+      }
 
-      console.log("User created successfully:", createdEmail);
-
-      // Success!
-      toast({
-        title: "Utworzono użytkownika",
-        description: `Użytkownik ${createdEmail} został utworzony z rolą ${newUserRole}`
+      // Create user with auto-confirm enabled
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: newUserEmail,
+        password: newUserPassword,
+        options: {
+          data: {
+            role: newUserRole
+          }
+        }
       });
-      
+
+      if (signUpError) throw signUpError;
+
+      if (!authData.user) {
+        throw new Error("Nie udało się utworzyć użytkownika");
+      }
+
+      // Add user to profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: newUserEmail
+        });
+
+      if (profileError) throw profileError;
+
+      // Add role for the new user
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: newUserRole
+        });
+
+      if (roleError) throw roleError;
+
       onSuccess();
       setNewUserEmail('');
       setNewUserPassword('');
@@ -89,8 +87,6 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
     } catch (error: any) {
       console.error('Error adding user:', error);
       onError(error.message || "Nie udało się utworzyć użytkownika");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -142,12 +138,8 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
               </SelectContent>
             </Select>
           </div>
-          <Button 
-            onClick={handleAddUser} 
-            className="w-full"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Dodawanie...' : 'Dodaj użytkownika'}
+          <Button onClick={handleAddUser} className="w-full">
+            Dodaj użytkownika
           </Button>
         </div>
       </DialogContent>

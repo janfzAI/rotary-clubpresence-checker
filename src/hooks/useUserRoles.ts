@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -88,40 +87,20 @@ export const useUserRoles = () => {
         prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u)
       );
 
-      // Check if the user exists before proceeding
-      const { data: userExists } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
-        
-      if (!userExists) {
-        console.error(`User with ID ${userId} does not exist`);
-        throw new Error('User not found');
-      }
-
-      // Handle password update if provided
+      // Update password if provided
       if (newPassword) {
-        try {
-          console.log("Attempting to update password...");
-          
-          const { error: passwordError } = await supabase.auth.admin.updateUserById(
-            userId,
-            { password: newPassword }
-          );
+        console.log("Attempting to update password...");
+        // Note: This is an admin operation, ensure proper authorization
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(
+          userId,
+          { password: newPassword }
+        );
 
-          if (passwordError) {
-            console.error("Password update error:", passwordError);
-            // We'll continue with role update even if password update fails
-            console.log("Password update failed, but continuing with role update");
-          } else {
-            console.log("Password updated successfully");
-          }
-        } catch (pwError) {
-          console.error("Password update failed with exception:", pwError);
-          // We'll continue with role update even if password update fails
-          console.log("Password update failed with exception, but continuing with role update");
+        if (passwordError) {
+          console.error("Password update error:", passwordError);
+          throw passwordError;
         }
+        console.log("Password updated successfully");
       }
 
       // Handle role change
@@ -175,56 +154,42 @@ export const useUserRoles = () => {
 
   const createUserAndSetRole = async (email: string, password: string, role: AppRole, memberName?: string) => {
     try {
-      console.log("Starting user creation process for:", email);
-      
       // First, check if the user already exists
-      const { data: existingProfiles, error: checkError } = await supabase
+      const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
         .select('id, email')
-        .eq('email', email);
+        .eq('email', email)
+        .maybeSingle();
 
-      if (checkError) {
-        console.error("Error checking for existing user:", checkError);
-        throw checkError;
-      }
+      if (checkError) throw checkError;
 
-      const existingUser = existingProfiles && existingProfiles.length > 0 ? existingProfiles[0] : null;
       let userId;
       
       if (existingUser) {
-        // User exists, we'll just update their role
+        // User exists, update their role
         userId = existingUser.id;
-        console.log("User already exists, will update role for:", email);
+        console.log("User already exists, updating role for:", email);
       } else {
-        // User doesn't exist, create them
+        // User doesn't exist, create them using the admin API instead of signUp
         console.log("Creating new user with email:", email);
         
-        if (!password) {
-          throw new Error("Password is required to create a new user");
-        }
-        
-        // Create new user
+        // Use the admin.createUser function to avoid auto-login
         const { data: userData, error: createError } = await supabase.auth.admin.createUser({
           email,
           password,
           email_confirm: true, // Auto-confirm email
           user_metadata: {
-            name: memberName,
-            role: role
+            name: memberName
           }
         });
 
-        if (createError) {
-          console.error("Error creating user account:", createError);
-          throw createError;
-        }
+        if (createError) throw createError;
         
-        if (!userData || !userData.user) {
-          throw new Error("Failed to create user account - no user data returned");
+        if (!userData.user) {
+          throw new Error("Failed to create user account");
         }
         
         userId = userData.user.id;
-        console.log("New user created with ID:", userId);
         
         // Create profile for the user
         const { error: profileError } = await supabase
@@ -234,17 +199,11 @@ export const useUserRoles = () => {
             email: email
           });
           
-        if (profileError) {
-          console.error("Error creating profile:", profileError);
-          throw profileError;
-        }
-        
-        console.log("User profile created successfully");
+        if (profileError) throw profileError;
       }
       
       // Set or update the user's role
       if (role !== 'user') {
-        console.log(`Setting role '${role}' for user:`, userId);
         const { error: roleError } = await supabase
           .from('user_roles')
           .upsert({
@@ -254,25 +213,7 @@ export const useUserRoles = () => {
             onConflict: 'user_id'
           });
           
-        if (roleError) {
-          console.error("Error setting user role:", roleError);
-          throw roleError;
-        }
-        
-        console.log("User role set successfully");
-      } else {
-        // For 'user' role, we might want to remove any existing elevated roles
-        const { error: deleteRoleError } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId);
-          
-        if (deleteRoleError && deleteRoleError.code !== 'PGRST116') { // Ignore if no rows were deleted
-          console.error("Error removing existing roles:", deleteRoleError);
-          throw deleteRoleError;
-        }
-        
-        console.log("Default user role applied (existing roles removed if any)");
+        if (roleError) throw roleError;
       }
       
       // Refresh the users list
