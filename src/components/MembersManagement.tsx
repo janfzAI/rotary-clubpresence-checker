@@ -36,6 +36,7 @@ import {
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
+import { AddUserDialog } from "@/components/user-roles/AddUserDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -63,7 +64,7 @@ export const MembersManagement = ({
   const [memberEmail, setMemberEmail] = useState('');
   const [memberPassword, setMemberPassword] = useState('');
   const { toast } = useToast();
-  const { users, handleRoleChange } = useUserRoles();
+  const { users, handleRoleChange, fetchUsers } = useUserRoles();
   const { isAdmin } = useAuth();
 
   const handleAddMember = () => {
@@ -171,17 +172,40 @@ export const MembersManagement = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2">
-        <Input
-          placeholder="Imię i nazwisko"
-          value={newMemberName}
-          onChange={(e) => setNewMemberName(e.target.value)}
-          className="flex-1"
-        />
-        <Button onClick={handleAddMember}>
-          <Plus className="w-4 h-4 mr-2" />
-          Dodaj
-        </Button>
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="flex gap-2 flex-1">
+          <Input
+            placeholder="Imię i nazwisko"
+            value={newMemberName}
+            onChange={(e) => setNewMemberName(e.target.value)}
+            className="flex-1"
+          />
+          <Button onClick={handleAddMember}>
+            <Plus className="w-4 h-4 mr-2" />
+            Dodaj
+          </Button>
+        </div>
+        
+        {isAdmin && (
+          <div className="flex justify-end">
+            <AddUserDialog 
+              onSuccess={() => {
+                fetchUsers();
+                toast({
+                  title: "Dodano użytkownika",
+                  description: "Nowy użytkownik został pomyślnie dodany do systemu."
+                });
+              }}
+              onError={(message) => {
+                toast({
+                  title: "Błąd",
+                  description: message,
+                  variant: "destructive"
+                });
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end">
