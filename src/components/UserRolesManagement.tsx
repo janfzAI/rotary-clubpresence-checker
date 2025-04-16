@@ -12,11 +12,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface UserRole {
   id: string;
   email: string;
-  role: string;
+  role: AppRole;
 }
 
 export const UserRolesManagement = () => {
@@ -57,7 +60,7 @@ export const UserRolesManagement = () => {
           });
 
           // Determine highest role
-          let role = 'user';
+          let role: AppRole = 'user';
           if (isAdmin) role = 'admin';
           else if (isManager) role = 'manager';
 
@@ -82,7 +85,7 @@ export const UserRolesManagement = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: AppRole) => {
     try {
       const user = users.find(u => u.id === userId);
       if (!user) return;
@@ -148,7 +151,7 @@ export const UserRolesManagement = () => {
               <div className="flex items-center gap-4">
                 <Select 
                   value={user.role} 
-                  onValueChange={(value) => handleRoleChange(user.id, value)}
+                  onValueChange={(value: AppRole) => handleRoleChange(user.id, value)}
                 >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Wybierz uprawnienia" />
