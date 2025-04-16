@@ -12,6 +12,7 @@ import { AttendanceFileHandler } from '@/components/AttendanceFileHandler';
 import { DatabaseStructure } from '@/components/DatabaseStructure';
 import { useAttendanceState } from '@/hooks/useAttendanceState';
 import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
+import { RoleNotice } from '@/components/RoleNotice';
 import { useAuth } from '@/hooks/useAuth';
 import { UserMenu } from '@/components/UserMenu';
 
@@ -56,6 +57,7 @@ const Index = () => {
         <UserMenu />
       </div>
       
+      <RoleNotice isAdmin={isAdmin} isManager={isManager} />
       {!canEditAttendance && <ReadOnlyNotice />}
       
       {activeTab === 'attendance' && (
