@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, SortAsc } from "lucide-react";
+import { Plus, Trash2, SortAsc, UserCog } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch"
@@ -13,6 +13,31 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useUserRoles } from "@/hooks/useUserRoles";
+import { useAuth } from "@/hooks/useAuth";
+import type { Database } from "@/integrations/supabase/types";
+
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface Member {
   id: number;
@@ -33,7 +58,12 @@ export const MembersManagement = ({
 }) => {
   const [newMemberName, setNewMemberName] = useState('');
   const [sortedAlphabetically, setSortedAlphabetically] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AppRole>('user');
+  const [memberEmail, setMemberEmail] = useState('');
   const { toast } = useToast();
+  const { users, handleRoleChange } = useUserRoles();
+  const { isAdmin } = useAuth();
 
   const handleAddMember = () => {
     if (newMemberName.trim()) {
@@ -72,6 +102,67 @@ export const MembersManagement = ({
       title: "Lista posortowana",
       description: `Lista została posortowana ${!sortedAlphabetically ? 'alfabetycznie' : 'według kolejności dodawania'}.`
     });
+  };
+
+  const handleRoleChangeSubmit = async () => {
+    if (!memberEmail || !selectedRole) {
+      toast({
+        title: "Błąd",
+        description: "Proszę podać email i wybrać rolę",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Find user by email
+      const user = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
+      
+      if (!user) {
+        toast({
+          title: "Błąd",
+          description: "Nie znaleziono użytkownika o podanym adresie email",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const email = await handleRoleChange(user.id, selectedRole);
+      
+      if (email) {
+        toast({
+          title: "Zmieniono uprawnienia",
+          description: `Pomyślnie zmieniono rolę użytkownika ${email} na ${selectedRole}`
+        });
+        
+        // Reset form
+        setMemberEmail('');
+        setSelectedRole('user');
+        setSelectedMember(null);
+      }
+    } catch (error) {
+      console.error("Error changing role:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się zmienić uprawnień użytkownika",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleOpenRoleDialog = (member: Member) => {
+    setSelectedMember(member);
+    
+    // Find if this member has an associated user
+    const existingUser = users.find(u => u.email.toLowerCase().includes(member.name.toLowerCase()));
+    
+    if (existingUser) {
+      setMemberEmail(existingUser.email);
+      setSelectedRole(existingUser.role);
+    } else {
+      setMemberEmail('');
+      setSelectedRole('user');
+    }
   };
 
   const sortedMembers = [...members].sort((a, b) => {
@@ -130,6 +221,67 @@ export const MembersManagement = ({
                   onCheckedChange={() => handleToggleActive(member.id, member.name, member.active !== false)}
                 />
               </div>
+              
+              {isAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleOpenRoleDialog(member)}
+                    >
+                      <UserCog className="w-4 h-4 mr-2" />
+                      Uprawnienia
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Zarządzaj uprawnieniami - {selectedMember?.name}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Przypisz rolę do użytkownika w systemie poprzez podanie adresu email i wybranie roli.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="member-email">Email użytkownika</Label>
+                        <Input 
+                          id="member-email" 
+                          value={memberEmail} 
+                          onChange={(e) => setMemberEmail(e.target.value)} 
+                          placeholder="adres@email.com"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="member-role">Rola</Label>
+                        <Select 
+                          value={selectedRole} 
+                          onValueChange={(value) => setSelectedRole(value as AppRole)}
+                        >
+                          <SelectTrigger id="member-role">
+                            <SelectValue placeholder="Wybierz rolę" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Role</SelectLabel>
+                              <SelectItem value="admin">Administrator</SelectItem>
+                              <SelectItem value="manager">Manager</SelectItem>
+                              <SelectItem value="user">Użytkownik</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRoleChangeSubmit}>Zapisz</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
