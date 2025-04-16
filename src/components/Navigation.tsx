@@ -1,6 +1,6 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { List, History, BarChart2, Users, User, Database, Shield } from "lucide-react";
+import { List, History, BarChart2, Users, User, Database } from "lucide-react";
 
 export const Navigation = ({ activeTab, onTabChange, isAdmin }: { 
   activeTab: string;
@@ -14,7 +14,7 @@ export const Navigation = ({ activeTab, onTabChange, isAdmin }: {
       </div>
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList className="grid w-full" style={{ 
-          gridTemplateColumns: isAdmin ? "repeat(7, 1fr)" : "repeat(5, 1fr)" 
+          gridTemplateColumns: isAdmin ? "repeat(6, 1fr)" : "repeat(5, 1fr)" 
         }}>
           <TabsTrigger value="attendance" className="flex items-center gap-2">
             <List className="h-4 w-4" />
@@ -37,16 +37,10 @@ export const Navigation = ({ activeTab, onTabChange, isAdmin }: {
             <span className="hidden sm:inline">Goście</span>
           </TabsTrigger>
           {isAdmin && (
-            <>
-              <TabsTrigger value="database" className="flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                <span className="hidden sm:inline">Baza danych</span>
-              </TabsTrigger>
-              <TabsTrigger value="usersRoles" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">Uprawnienia</span>
-              </TabsTrigger>
-            </>
+            <TabsTrigger value="database" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              <span className="hidden sm:inline">Baza danych</span>
+            </TabsTrigger>
           )}
         </TabsList>
       </Tabs>
