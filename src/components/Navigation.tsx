@@ -1,11 +1,12 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { List, History, BarChart2, Users, User } from "lucide-react";
+import { List, History, BarChart2, Users, User, Database } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 
-export const Navigation = ({ activeTab, onTabChange }: { 
+export const Navigation = ({ activeTab, onTabChange, isAdmin }: { 
   activeTab: string;
   onTabChange: (value: string) => void;
+  isAdmin: boolean;
 }) => {
   return (
     <div className="w-full mb-6">
@@ -14,7 +15,9 @@ export const Navigation = ({ activeTab, onTabChange }: {
         <UserMenu />
       </div>
       <Tabs value={activeTab} onValueChange={onTabChange}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full" style={{ 
+          gridTemplateColumns: isAdmin ? "repeat(6, 1fr)" : "repeat(5, 1fr)" 
+        }}>
           <TabsTrigger value="attendance" className="flex items-center gap-2">
             <List className="h-4 w-4" />
             <span className="hidden sm:inline">Obecność</span>
@@ -35,6 +38,12 @@ export const Navigation = ({ activeTab, onTabChange }: {
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Goście</span>
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="database" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              <span className="hidden sm:inline">Baza danych</span>
+            </TabsTrigger>
+          )}
         </TabsList>
       </Tabs>
     </div>

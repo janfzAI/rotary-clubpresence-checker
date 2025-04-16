@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
@@ -9,6 +8,7 @@ import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { AttendanceStats } from '@/components/AttendanceStats';
 import { AttendanceExport } from '@/components/AttendanceExport';
 import { AttendanceFileHandler } from '@/components/AttendanceFileHandler';
+import { DatabaseStructure } from '@/components/DatabaseStructure';
 import { useAttendanceState } from '@/hooks/useAttendanceState';
 import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,7 +41,7 @@ const Index = () => {
   return (
     <div className="container mx-auto p-4 w-[80%] lg:max-w-6xl xl:max-w-7xl">
       <div className="flex justify-between items-center mb-4">
-        <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+        <Navigation activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdmin} />
         <UserMenu />
       </div>
       
@@ -142,6 +142,10 @@ const Index = () => {
             </div>
           </div>
         )
+      )}
+
+      {activeTab === 'database' && isAdmin && (
+        <DatabaseStructure />
       )}
     </div>
   );
