@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -191,6 +192,16 @@ export const UserRolesManagement = ({
         
         try {
           console.log(`Creating new user with email: ${memberEmail}, role: ${selectedRole}`);
+          
+          if (!memberPassword) {
+            toast({
+              title: "Błąd",
+              description: "Hasło jest wymagane dla nowego użytkownika",
+              variant: "destructive"
+            });
+            return;
+          }
+          
           const createdEmail = await createUserAndSetRole(
             memberEmail, 
             memberPassword, 
@@ -222,36 +233,31 @@ export const UserRolesManagement = ({
       }
       
       if (memberPassword) {
-        const { error: updateError } = await supabase.auth.admin.updateUserById(
-          user.id,
-          { password: memberPassword }
-        );
-
-        if (updateError) {
-          throw updateError;
+        const updatedEmail = await handleRoleChange(user.id, selectedRole, memberPassword);
+        
+        if (updatedEmail) {
+          toast({
+            title: "Zmieniono uprawnienia",
+            description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole} i zaktualizowano hasło`
+          });
         }
+      } else {
+        const updatedEmail = await handleRoleChange(user.id, selectedRole);
         
-        toast({
-          title: "Hasło zmienione",
-          description: "Hasło zostało pomyślnie zaktualizowane"
-        });
+        if (updatedEmail) {
+          toast({
+            title: "Zmieniono uprawnienia",
+            description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole}`
+          });
+        }
       }
       
-      const updatedEmail = await handleRoleChange(user.id, selectedRole);
-      
-      if (updatedEmail) {
-        toast({
-          title: "Zmieniono uprawnienia",
-          description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole}${memberPassword ? ' i zaktualizowano hasło' : ''}`
-        });
-        
-        fetchUsers();
-      }
-      
+      fetchUsers();
       setMemberEmail('');
       setMemberPassword('');
       setSelectedRole('user');
       setSelectedMember(null);
+      
     } catch (error: any) {
       console.error("Error managing user:", error);
       toast({
