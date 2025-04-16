@@ -2,11 +2,15 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { List, History, BarChart2, Users, User, Database } from "lucide-react";
 
-export const Navigation = ({ activeTab, onTabChange, isAdmin }: { 
+export const Navigation = ({ activeTab, onTabChange, isAdmin, isManager }: { 
   activeTab: string;
   onTabChange: (value: string) => void;
   isAdmin: boolean;
+  isManager?: boolean;
 }) => {
+  // Calculate if user has elevated permissions (either admin or manager)
+  const hasElevatedPermissions = isAdmin || isManager;
+
   return (
     <div className="w-full mb-6">
       <div className="flex justify-between items-center mb-4">

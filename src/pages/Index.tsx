@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
@@ -15,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { UserMenu } from '@/components/UserMenu';
 
 const Index = () => {
-  const { isAdmin, userEmail } = useAuth();
+  const { isAdmin, isManager, userEmail } = useAuth();
   
   const {
     activeTab,
@@ -38,14 +39,24 @@ const Index = () => {
     toast
   } = useAttendanceState();
 
+  // Define if user has permission to edit attendance and manage guests/members
+  const canEditAttendance = isAdmin || isManager;
+  const canManageGuests = isAdmin || isManager;
+  const canManageMembers = isAdmin; // Only admins can manage members
+
   return (
     <div className="container mx-auto p-4 w-[80%] lg:max-w-6xl xl:max-w-7xl">
       <div className="flex justify-between items-center mb-4">
-        <Navigation activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdmin} />
+        <Navigation 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab} 
+          isAdmin={isAdmin} 
+          isManager={isManager} 
+        />
         <UserMenu />
       </div>
       
-      {!isAdmin && <ReadOnlyNotice />}
+      {!canEditAttendance && <ReadOnlyNotice />}
       
       {activeTab === 'attendance' && (
         <div className="space-y-6">
@@ -58,11 +69,11 @@ const Index = () => {
           <AttendanceList
             members={attendanceMembers}
             guests={attendanceGuests}
-            onToggleAttendance={isAdmin ? toggleAttendance : () => {}}
-            onToggleGuestAttendance={isAdmin ? toggleGuestAttendance : () => {}}
-            readOnly={!isAdmin}
+            onToggleAttendance={canEditAttendance ? toggleAttendance : () => {}}
+            onToggleGuestAttendance={canEditAttendance ? toggleGuestAttendance : () => {}}
+            readOnly={!canEditAttendance}
           />
-          {isAdmin && (
+          {canEditAttendance && (
             <AttendanceFileHandler
               selectedDate={selectedDate}
               attendanceMembers={attendanceMembers}
@@ -101,7 +112,7 @@ const Index = () => {
       )}
 
       {activeTab === 'members' && (
-        isAdmin ? (
+        canManageMembers ? (
           <MembersManagement
             members={members}
             onAddMember={handleAddMember}
@@ -124,7 +135,7 @@ const Index = () => {
       )}
 
       {activeTab === 'guests' && (
-        isAdmin ? (
+        canManageGuests ? (
           <GuestsManagement
             guests={guests}
             onAddGuest={addGuest}
