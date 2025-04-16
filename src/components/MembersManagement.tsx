@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +63,7 @@ export const MembersManagement = ({
   const [memberEmail, setMemberEmail] = useState('');
   const [memberPassword, setMemberPassword] = useState('');
   const { toast } = useToast();
-  const { users, handleRoleChange, fetchUsers } = useUserRoles();
+  const { users, handleRoleChange, fetchUsers, createUserAndSetRole } = useUserRoles();
   const { isAdmin } = useAuth();
 
   const handleAddMember = () => {
@@ -116,35 +115,48 @@ export const MembersManagement = ({
       return;
     }
 
+    if (!memberPassword) {
+      toast({
+        title: "Uwaga",
+        description: "Hasło nie zostało podane. Jeśli tworzysz nowego użytkownika, potrzebujesz podać hasło.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const user = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
       
       if (user) {
-        await handleRoleChange(user.id, selectedRole, memberPassword);
+        await handleRoleChange(user.id, selectedRole, memberPassword || undefined);
         
         toast({
           title: "Zmieniono uprawnienia",
           description: `Pomyślnie zmieniono rolę użytkownika ${memberEmail} na ${selectedRole}${memberPassword ? ' i zaktualizowano hasło' : ''}`
         });
       } else {
+        await createUserAndSetRole(
+          memberEmail, 
+          memberPassword, 
+          selectedRole,
+          selectedMember?.name
+        );
+        
         toast({
-          title: "Błąd",
-          description: "Nie znaleziono użytkownika o podanym adresie email",
-          variant: "destructive"
+          title: "Utworzono użytkownika",
+          description: `Pomyślnie utworzono konto dla ${memberEmail} z rolą ${selectedRole}`
         });
-        return;
       }
       
-      // Reset form
       setMemberEmail('');
       setMemberPassword('');
       setSelectedRole('user');
       setSelectedMember(null);
     } catch (error) {
-      console.error("Error changing role:", error);
+      console.error("Error managing user:", error);
       toast({
         title: "Błąd",
-        description: "Nie udało się zmienić uprawnień użytkownika",
+        description: error instanceof Error ? error.message : "Nie udało się zmienić uprawnień użytkownika",
         variant: "destructive"
       });
     }
@@ -260,7 +272,9 @@ export const MembersManagement = ({
                       <AlertDialogTitle>Zarządzaj uprawnieniami - {selectedMember?.name}</AlertDialogTitle>
                       <AlertDialogDescription>
                         Przypisz rolę do użytkownika w systemie poprzez podanie adresu email i wybranie roli.
-                        Możesz również zresetować hasło użytkownika.
+                        {!users.find(u => u.email.toLowerCase().includes(selectedMember?.name?.toLowerCase() || ''))} i 
+                        {" "}
+                        <strong>Podaj hasło aby utworzyć nowe konto dla tego członka lub zmienić hasło istniejącego konta.</strong>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     
@@ -276,13 +290,20 @@ export const MembersManagement = ({
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="member-password">Nowe hasło (opcjonalne)</Label>
+                        <Label htmlFor="member-password">
+                          {users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase()) 
+                            ? "Nowe hasło (opcjonalne)" 
+                            : "Hasło (wymagane dla nowego konta)"}
+                        </Label>
                         <Input 
                           id="member-password"
                           type="password"
                           value={memberPassword}
                           onChange={(e) => setMemberPassword(e.target.value)}
-                          placeholder="Pozostaw puste aby nie zmieniać hasła"
+                          placeholder={users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase())
+                            ? "Pozostaw puste aby nie zmieniać hasła" 
+                            : "Podaj hasło dla nowego konta"}
+                          required={!users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase())}
                         />
                       </div>
                       

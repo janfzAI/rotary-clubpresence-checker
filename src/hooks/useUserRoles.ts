@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -129,6 +130,82 @@ export const useUserRoles = () => {
     }
   };
 
+  // New function to create a user if they don't exist yet
+  const createUserAndSetRole = async (email: string, password: string, role: AppRole, memberName?: string) => {
+    try {
+      // First, check if the user already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      let userId;
+      
+      if (existingUser) {
+        // User exists, update their role
+        userId = existingUser.id;
+        console.log("User already exists, updating role for:", email);
+      } else {
+        // User doesn't exist, create them
+        console.log("Creating new user with email:", email);
+        
+        // Create user in auth system
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: memberName
+            }
+          }
+        });
+
+        if (signUpError) throw signUpError;
+        
+        if (!authData.user) {
+          throw new Error("Failed to create user account");
+        }
+        
+        userId = authData.user.id;
+        
+        // Create profile for the user
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            email: email
+          });
+          
+        if (profileError) throw profileError;
+      }
+      
+      // Set or update the user's role
+      if (role !== 'user') {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: userId,
+            role: role
+          }, {
+            onConflict: 'user_id'
+          });
+          
+        if (roleError) throw roleError;
+      }
+      
+      // Refresh the users list
+      await fetchUsers();
+      
+      return email;
+    } catch (error) {
+      console.error('Error creating user and setting role:', error);
+      throw error;
+    }
+  };
+
   // Fetch users on mount
   useEffect(() => {
     fetchUsers();
@@ -139,6 +216,7 @@ export const useUserRoles = () => {
     loading,
     error,
     fetchUsers,
-    handleRoleChange
+    handleRoleChange,
+    createUserAndSetRole
   };
 };
