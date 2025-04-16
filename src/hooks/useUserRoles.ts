@@ -21,8 +21,7 @@ export const useUserRoles = () => {
       setLoading(true);
       setError(null);
       
-      // Instead of using admin.listUsers which requires admin privileges,
-      // we'll fetch profiles directly which is accessible with normal auth
+      // Fetch all profiles directly from profiles table
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email');
@@ -39,7 +38,7 @@ export const useUserRoles = () => {
         return;
       }
 
-      // Fetch all user_roles
+      // Fetch all user_roles with a separate query
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
@@ -50,7 +49,7 @@ export const useUserRoles = () => {
 
       console.log("Fetched user roles:", userRoles);
       
-      // Map users to roles
+      // Map users to roles with improved logging
       const usersWithRoles = profiles.map((profile) => {
         // Find user's role in the userRoles array
         const userRole = userRoles ? userRoles.find(role => role.user_id === profile.id) : null;
@@ -75,32 +74,41 @@ export const useUserRoles = () => {
 
   const handleRoleChange = async (userId: string, newRole: AppRole) => {
     try {
-      const { error: deleteError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
+      // For optimization, update optimistically first
+      setUsers(prevUsers => 
+        prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u)
+      );
 
-      if (deleteError) throw deleteError;
-
-      if (newRole !== 'user') {
-        const { error: insertError } = await supabase
+      if (newRole === 'user') {
+        // Delete existing role
+        const { error: deleteError } = await supabase
           .from('user_roles')
-          .insert({
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteError) throw deleteError;
+      } else {
+        // Upsert (insert or update) the role
+        const { error: upsertError } = await supabase
+          .from('user_roles')
+          .upsert({
             user_id: userId,
             role: newRole
+          }, {
+            onConflict: 'user_id' 
           });
           
-        if (insertError) throw insertError;
+        if (upsertError) throw upsertError;
       }
 
-      // Update the local state to reflect the change
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, role: newRole } : u
-      ));
-
+      // Return the email for confirmation toast
       return users.find(u => u.id === userId)?.email;
     } catch (error) {
       console.error('Error changing role:', error);
+      
+      // If there was an error, revert the optimistic update
+      fetchUsers();
+      
       throw error;
     }
   };

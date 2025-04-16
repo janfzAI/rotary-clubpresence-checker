@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -41,33 +41,16 @@ export const UserRolesManagement = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Initial fetch only on component mount
-  useEffect(() => {
-    // No periodic automatic refresh - we'll rely on manual refresh only
-    const initialFetch = async () => {
-      try {
-        await fetchUsers();
-        console.log("Initial fetch completed");
-      } catch (error) {
-        console.error("Error during initial fetch:", error);
-      }
-    };
-    
-    initialFetch();
-  }, []);
-
-  // Manual refresh function with visual feedback
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       await fetchUsers();
-      console.log("Manual refresh completed");
       toast({
         title: "Lista odświeżona",
         description: `Lista użytkowników została zaktualizowana. Znaleziono ${users.length} użytkowników.`
       });
     } catch (error) {
-      console.error("Manual refresh error:", error);
+      console.error("Error refreshing users:", error);
       toast({
         title: "Błąd odświeżania",
         description: "Nie udało się odświeżyć listy użytkowników.",
@@ -89,6 +72,7 @@ export const UserRolesManagement = () => {
       description: "Użytkownik został utworzony i dodany do listy.",
     });
     
+    // Fetch updated user list
     fetchUsers();
   };
 
@@ -105,7 +89,7 @@ export const UserRolesManagement = () => {
       console.error('Error changing role:', error);
       toast({
         title: "Błąd zmiany uprawnień",
-        description: "Nie udało się zmienić uprawnień użytkownika. Sprawdź konsolę.",
+        description: "Nie udało się zmienić uprawnień użytkownika.",
         variant: "destructive"
       });
     }
@@ -132,7 +116,7 @@ export const UserRolesManagement = () => {
             {error.message}
           </AlertDescription>
         </Alert>
-        <Button onClick={fetchUsers}>Spróbuj ponownie</Button>
+        <Button onClick={handleRefresh}>Spróbuj ponownie</Button>
       </div>
     );
   }
