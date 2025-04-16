@@ -14,10 +14,12 @@ interface UserRole {
 export const useUserRoles = () => {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -58,7 +60,7 @@ export const useUserRoles = () => {
       console.log("Mapped users with roles:", usersWithRoles);
     } catch (error) {
       console.error('Error fetching users:', error);
-      throw error;
+      setError(error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -102,6 +104,7 @@ export const useUserRoles = () => {
   return {
     users,
     loading,
+    error,
     fetchUsers,
     handleRoleChange
   };

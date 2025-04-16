@@ -1,6 +1,6 @@
 
-import React, { useEffect } from 'react';
-import { Loader2 } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -34,21 +34,47 @@ import type { Database } from "@/integrations/supabase/types";
 type AppRole = Database["public"]["Enums"]["app_role"];
 
 export const UserRolesManagement = () => {
-  const { users, loading, fetchUsers, handleRoleChange } = useUserRoles();
+  const { users, loading, error, fetchUsers, handleRoleChange } = useUserRoles();
   const { toast } = useToast();
-  const [alertDialogOpen, setAlertDialogOpen] = React.useState(false);
-  const [errorMessage, setErrorMessage] = React.useState('');
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Odświeżaj listę użytkowników co 3 sekundy podczas aktywnego używania komponentu
+  // Refresh the user list every 5 seconds
   useEffect(() => {
-    fetchUsers();
+    const fetchData = async () => {
+      try {
+        await fetchUsers();
+      } catch (error) {
+        console.error("Error refreshing user list:", error);
+      }
+    };
     
-    const interval = setInterval(() => {
-      fetchUsers();
-    }, 3000);
+    fetchData();
     
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Manual refresh with loading state
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchUsers();
+      toast({
+        title: "Lista odświeżona",
+        description: "Lista użytkowników została zaktualizowana."
+      });
+    } catch (error) {
+      toast({
+        title: "Błąd odświeżania",
+        description: "Nie udało się odświeżyć listy użytkowników.",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleError = (message: string) => {
     setErrorMessage(message);
@@ -83,11 +109,22 @@ export const UserRolesManagement = () => {
     }
   };
 
-  if (loading) {
+  if (loading && users.length === 0) {
     return (
       <div className="flex justify-center items-center p-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2">Ładowanie użytkowników...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <div className="text-red-500 mb-4">
+          Wystąpił błąd podczas ładowania użytkowników
+        </div>
+        <Button onClick={fetchUsers}>Spróbuj ponownie</Button>
       </div>
     );
   }
@@ -135,11 +172,22 @@ export const UserRolesManagement = () => {
       )}
       
       <Button 
-        onClick={fetchUsers} 
+        onClick={handleRefresh} 
         variant="outline"
         className="mt-4"
+        disabled={refreshing}
       >
-        Odśwież listę
+        {refreshing ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Odświeżanie...
+          </>
+        ) : (
+          <>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Odśwież listę
+          </>
+        )}
       </Button>
 
       <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
