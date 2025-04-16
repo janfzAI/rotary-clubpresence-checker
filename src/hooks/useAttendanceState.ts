@@ -27,7 +27,7 @@ const initialMembers = [
   { id: 11, name: "Zbigniew Kasperski", present: false, active: true },
   { id: 12, name: "Aleksandra Klich", present: false, active: true },
   { id: 13, name: "Maciej Kołban", present: false, active: true },
-  { id: 14, name: "Mirek Moroz", present: false, active: true },
+  { id: 14, name: "Mirosław Moroz", present: false, active: true },
   { id: 15, name: "Remigiusz Kowalski", present: false, active: true },
   { id: 16, name: "Janusz Kozłowski", present: false, active: true },
   { id: 17, name: "Maciej Krzeptowski", present: false, active: true },
