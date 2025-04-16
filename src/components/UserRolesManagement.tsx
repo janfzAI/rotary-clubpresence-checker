@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   Select,
   SelectContent,
@@ -73,6 +81,7 @@ export const UserRolesManagement = () => {
       );
 
       setUsers(usersWithRoles);
+      console.log("Fetched users with roles:", usersWithRoles);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -141,32 +150,49 @@ export const UserRolesManagement = () => {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Zarządzanie uprawnieniami użytkowników</h2>
-      <div className="space-y-3">
-        {users.length === 0 ? (
-          <p className="text-muted-foreground">Brak użytkowników w systemie.</p>
-        ) : (
-          users.map((user) => (
-            <Card key={user.id} className="p-4 flex flex-wrap justify-between items-center gap-4">
-              <span className="flex-grow min-w-[200px]">{user.email}</span>
-              <div className="flex items-center gap-4">
-                <Select 
-                  value={user.role} 
-                  onValueChange={(value: AppRole) => handleRoleChange(user.id, value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Wybierz uprawnienia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">Użytkownik</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="admin">Administrator</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
+      
+      {users.length === 0 ? (
+        <p className="text-muted-foreground">Brak użytkowników w systemie.</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email użytkownika</TableHead>
+              <TableHead>Uprawnienia</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  <Select 
+                    value={user.role} 
+                    onValueChange={(value: AppRole) => handleRoleChange(user.id, value)}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Wybierz uprawnienia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">Użytkownik</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="admin">Administrator</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+      
+      <Button 
+        onClick={fetchUsers} 
+        variant="outline"
+        className="mt-4"
+      >
+        Odśwież listę
+      </Button>
     </div>
   );
 };
