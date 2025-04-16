@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,37 +115,34 @@ export const MembersManagement = ({
       return;
     }
 
-    if (!memberPassword && !users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase())) {
-      toast({
-        title: "Uwaga",
-        description: "Hasło nie zostało podane. Jeśli tworzysz nowego użytkownika, potrzebujesz podać hasło.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
+      console.log(`Attempting to change role for ${memberEmail} to ${selectedRole}`);
       const user = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
       
-      if (user) {
-        await handleRoleChange(user.id, selectedRole, memberPassword || undefined);
-        
+      if (!user) {
+        console.error(`No user found with email: ${memberEmail}`);
+        toast({
+          title: "Błąd",
+          description: `Nie znaleziono użytkownika z emailem ${memberEmail}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log(`Found user: ${user.id}, ${user.email}, current role: ${user.role}`);
+      
+      const updatedEmail = await handleRoleChange(user.id, selectedRole, memberPassword || undefined);
+      
+      if (updatedEmail) {
         toast({
           title: "Zmieniono uprawnienia",
-          description: `Pomyślnie zmieniono rolę użytkownika ${memberEmail} na ${selectedRole}${memberPassword ? ' i zaktualizowano hasło' : ''}`
+          description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole}${memberPassword ? ' i zaktualizowano hasło' : ''}`
         });
-      } else {
-        await createUserAndSetRole(
-          memberEmail, 
-          memberPassword, 
-          selectedRole,
-          selectedMember?.name
-        );
         
-        toast({
-          title: "Utworzono użytkownika",
-          description: `Pomyślnie utworzono konto dla ${memberEmail} z rolą ${selectedRole}`
-        });
+        // Refresh users list to ensure we have the latest data
+        fetchUsers();
+      } else {
+        throw new Error("Nie udało się zmienić uprawnień użytkownika");
       }
       
       setMemberEmail('');

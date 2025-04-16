@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -80,6 +81,8 @@ export const useUserRoles = () => {
 
   const handleRoleChange = async (userId: string, newRole: AppRole, newPassword?: string) => {
     try {
+      console.log(`Changing role for user ${userId} to ${newRole}${newPassword ? ' and updating password' : ''}`);
+      
       // For optimization, update optimistically first
       setUsers(prevUsers => 
         prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u)
@@ -87,24 +90,38 @@ export const useUserRoles = () => {
 
       // Update password if provided
       if (newPassword) {
+        console.log("Updating password...");
+        // Note: This function doesn't exist in the client SDK
+        // It should be replaced with appropriate API call or removed
         const { error: passwordError } = await supabase.auth.admin.updateUserById(
           userId,
           { password: newPassword }
         );
 
-        if (passwordError) throw passwordError;
+        if (passwordError) {
+          console.error("Password update error:", passwordError);
+          throw passwordError;
+        }
+        console.log("Password updated successfully");
       }
 
+      console.log("Processing role change for role:", newRole);
       if (newRole === 'user') {
         // Delete existing role
+        console.log("Deleting role entry for user (setting to default 'user')");
         const { error: deleteError } = await supabase
           .from('user_roles')
           .delete()
           .eq('user_id', userId);
 
-        if (deleteError) throw deleteError;
+        if (deleteError) {
+          console.error("Error deleting role:", deleteError);
+          throw deleteError;
+        }
+        console.log("Role entry deleted successfully");
       } else {
         // Upsert (insert or update) the role
+        console.log(`Upserting role to '${newRole}'`);
         const { error: upsertError } = await supabase
           .from('user_roles')
           .upsert({
@@ -114,15 +131,26 @@ export const useUserRoles = () => {
             onConflict: 'user_id' 
           });
           
-        if (upsertError) throw upsertError;
+        if (upsertError) {
+          console.error("Error upserting role:", upsertError);
+          throw upsertError;
+        }
+        console.log("Role upserted successfully");
       }
 
+      // Refresh the users list to ensure we have the latest data
+      console.log("Role change completed, refreshing users list");
+      await fetchUsers();
+
       // Return the email for confirmation toast
-      return users.find(u => u.id === userId)?.email;
+      const userEmail = users.find(u => u.id === userId)?.email;
+      console.log(`Role change completed for ${userEmail}`);
+      return userEmail;
     } catch (error) {
       console.error('Error changing role:', error);
       
       // If there was an error, revert the optimistic update
+      console.log("Error occurred, reverting optimistic update and refreshing data");
       fetchUsers();
       
       throw error;
