@@ -40,32 +40,45 @@ export const UserRolesManagement = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Refresh the user list every 5 seconds
+  // Initial fetch and setup refresh interval
   useEffect(() => {
-    const fetchData = async () => {
+    // Immediate fetch on component mount
+    const initialFetch = async () => {
       try {
         await fetchUsers();
+        console.log("Initial fetch completed");
       } catch (error) {
-        console.error("Error refreshing user list:", error);
+        console.error("Error during initial fetch:", error);
       }
     };
     
-    fetchData();
+    initialFetch();
     
-    const interval = setInterval(fetchData, 5000);
+    // Set up interval for periodic refresh
+    const interval = setInterval(async () => {
+      try {
+        await fetchUsers();
+        console.log("Interval fetch completed");
+      } catch (error) {
+        console.error("Error during interval fetch:", error);
+      }
+    }, 3000); // Refresh every 3 seconds
+    
     return () => clearInterval(interval);
   }, []);
 
-  // Manual refresh with loading state
+  // Manual refresh function with visual feedback
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       await fetchUsers();
+      console.log("Manual refresh completed");
       toast({
         title: "Lista odświeżona",
-        description: "Lista użytkowników została zaktualizowana."
+        description: `Lista użytkowników została zaktualizowana. Znaleziono ${users.length} użytkowników.`
       });
     } catch (error) {
+      console.error("Manual refresh error:", error);
       toast({
         title: "Błąd odświeżania",
         description: "Nie udało się odświeżyć listy użytkowników.",
@@ -109,6 +122,7 @@ export const UserRolesManagement = () => {
     }
   };
 
+  // Loading state when we have no users yet
   if (loading && users.length === 0) {
     return (
       <div className="flex justify-center items-center p-10">
@@ -118,11 +132,12 @@ export const UserRolesManagement = () => {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="p-6 text-center">
         <div className="text-red-500 mb-4">
-          Wystąpił błąd podczas ładowania użytkowników
+          Wystąpił błąd podczas ładowania użytkowników: {error.message}
         </div>
         <Button onClick={fetchUsers}>Spróbuj ponownie</Button>
       </div>
@@ -134,6 +149,17 @@ export const UserRolesManagement = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Zarządzanie uprawnieniami użytkowników</h2>
         <AddUserDialog onSuccess={handleSuccess} onError={handleError} />
+      </div>
+      
+      {loading && users.length > 0 && (
+        <div className="flex items-center text-sm text-muted-foreground mb-2">
+          <Loader2 className="h-3 w-3 animate-spin mr-2" />
+          Odświeżanie listy...
+        </div>
+      )}
+      
+      <div className="mb-2 text-sm text-muted-foreground">
+        Liczba użytkowników w systemie: {users.length}
       </div>
       
       {users.length === 0 ? (
@@ -185,7 +211,7 @@ export const UserRolesManagement = () => {
         ) : (
           <>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Odśwież listę
+            Odśwież listę ({users.length} użytkowników)
           </>
         )}
       </Button>

@@ -21,7 +21,16 @@ export const useUserRoles = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch all profiles
+      // Fetch all auth users using a direct RPC call to get ALL users
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        throw authError;
+      }
+
+      console.log("Fetched auth users:", authUsers);
+      
+      // Fetch all profiles as a backup
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email');
@@ -43,14 +52,31 @@ export const useUserRoles = () => {
 
       console.log("Fetched user roles:", userRoles);
 
-      // Map profiles to user roles
-      const usersWithRoles = profiles.map((profile) => {
-        // Find user's role in the userRoles array
-        const userRole = userRoles.find(role => role.user_id === profile.id);
-        
-        return {
+      // Create a comprehensive list of users from both auth users and profiles
+      // Start with auth users if available
+      let allUsers = [];
+      
+      if (authUsers && authUsers.users) {
+        allUsers = authUsers.users.map(user => ({
+          id: user.id,
+          email: user.email || '',
+        }));
+      } else {
+        // Fallback to profiles if auth users not available
+        allUsers = profiles.map(profile => ({
           id: profile.id,
           email: profile.email,
+        }));
+      }
+      
+      // Map users to roles
+      const usersWithRoles = allUsers.map((user) => {
+        // Find user's role in the userRoles array
+        const userRole = userRoles.find(role => role.user_id === user.id);
+        
+        return {
+          id: user.id,
+          email: user.email,
           // Default to 'user' if no role is found
           role: userRole ? userRole.role : 'user' as AppRole
         };
@@ -86,6 +112,7 @@ export const useUserRoles = () => {
         if (insertError) throw insertError;
       }
 
+      // Update the local state to reflect the change
       setUsers(users.map(u => 
         u.id === userId ? { ...u, role: newRole } : u
       ));
@@ -97,6 +124,7 @@ export const useUserRoles = () => {
     }
   };
 
+  // Fetch users on mount
   useEffect(() => {
     fetchUsers();
   }, []);
