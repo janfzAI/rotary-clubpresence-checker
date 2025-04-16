@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -153,6 +154,7 @@ export const UserRolesManagement = () => {
         return;
       }
 
+      // Step 1: Sign up the user through Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: newUserEmail,
         password: newUserPassword,
@@ -160,30 +162,65 @@ export const UserRolesManagement = () => {
 
       if (signUpError) throw signUpError;
 
-      if (authData.user) {
-        if (newUserRole !== 'user') {
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: authData.user.id,
-              role: newUserRole
-            });
-          
-          if (roleError) throw roleError;
-        }
-
-        toast({
-          title: "Sukces",
-          description: `Utworzono nowego użytkownika: ${newUserEmail}`
-        });
-
-        setNewUserEmail('');
-        setNewUserPassword('');
-        setNewUserRole('user');
-        setDialogOpen(false);
-
-        fetchUsers();
+      if (!authData.user) {
+        throw new Error("Nie udało się utworzyć użytkownika");
       }
+
+      // Step 2: Wait a moment to ensure the user is created in the auth.users table
+      // and the profiles trigger has run
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Step 3: Check if the profile exists and create it if it doesn't
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (!existingProfile) {
+        // Create profile manually if it doesn't exist
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            email: newUserEmail
+          });
+          
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          throw profileError;
+        }
+      }
+
+      // Step 4: Assign the role if not 'user'
+      if (newUserRole !== 'user') {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: authData.user.id,
+            role: newUserRole
+          });
+        
+        if (roleError) {
+          console.error('Error assigning role:', roleError);
+          throw roleError;
+        }
+      }
+
+      toast({
+        title: "Sukces",
+        description: `Utworzono nowego użytkownika: ${newUserEmail}`
+      });
+
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserRole('user');
+      setDialogOpen(false);
+
+      // Refresh the list after a short delay to ensure all DB operations are complete
+      setTimeout(() => {
+        fetchUsers();
+      }, 1000);
     } catch (error) {
       console.error('Error adding user:', error);
       toast({
