@@ -21,52 +21,58 @@ export const useUserRoles = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch all profiles directly from profiles table
+      console.log("Starting to fetch users...");
+      
+      // Fetch ALL profiles from the profiles table without any filters
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email');
       
       if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
         throw profilesError;
       }
 
-      console.log("Fetched profiles:", profiles);
+      console.log("Fetched profiles:", profiles, "Count:", profiles?.length || 0);
       
       if (!profiles || profiles.length === 0) {
+        console.log("No profiles found in the database");
         setUsers([]);
-        console.log("No profiles found");
         return;
       }
 
-      // Fetch all user_roles with a separate query
+      // Fetch all user_roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) {
+        console.error("Error fetching user roles:", rolesError);
         throw rolesError;
       }
 
-      console.log("Fetched user roles:", userRoles);
+      console.log("Fetched user roles:", userRoles, "Count:", userRoles?.length || 0);
       
-      // Map users to roles with improved logging
+      // Map users to roles
       const usersWithRoles = profiles.map((profile) => {
-        // Find user's role in the userRoles array
         const userRole = userRoles ? userRoles.find(role => role.user_id === profile.id) : null;
+        
+        console.log(`Mapping profile ${profile.id} (${profile.email}) with role:`, 
+          userRole ? userRole.role : 'user (default)');
         
         return {
           id: profile.id,
-          email: profile.email,
+          email: profile.email || 'No email',
           // Default to 'user' if no role is found
           role: userRole ? userRole.role : 'user' as AppRole
         };
       });
 
+      console.log("Final mapped users with roles:", usersWithRoles, "Count:", usersWithRoles.length);
       setUsers(usersWithRoles);
-      console.log("Mapped users with roles:", usersWithRoles);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      setError(error instanceof Error ? error : new Error('Unknown error'));
+      console.error('Error in fetchUsers:', error);
+      setError(error instanceof Error ? error : new Error('Unknown error fetching users'));
     } finally {
       setLoading(false);
     }
