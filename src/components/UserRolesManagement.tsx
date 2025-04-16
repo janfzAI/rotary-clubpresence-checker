@@ -30,6 +30,16 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -46,6 +56,8 @@ export const UserRolesManagement = () => {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<AppRole>('user');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -166,50 +178,10 @@ export const UserRolesManagement = () => {
         throw new Error("Nie udało się utworzyć użytkownika");
       }
 
-      // Step 2: Wait a moment to ensure the user is created in the auth.users table
-      // and the profiles trigger has run
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Step 3: Check if the profile exists and create it if it doesn't
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (!existingProfile) {
-        // Create profile manually if it doesn't exist
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: newUserEmail
-          });
-          
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          throw profileError;
-        }
-      }
-
-      // Step 4: Assign the role if not 'user'
-      if (newUserRole !== 'user') {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: newUserRole
-          });
-        
-        if (roleError) {
-          console.error('Error assigning role:', roleError);
-          throw roleError;
-        }
-      }
-
+      // Let the user know the account was created but they need to manually update the role
       toast({
-        title: "Sukces",
-        description: `Utworzono nowego użytkownika: ${newUserEmail}`
+        title: "Użytkownik utworzony",
+        description: `Użytkownik ${newUserEmail} został utworzony. Konto musi zostać aktywowane poprzez link wysłany na email. Dodaj uprawnienia po aktywacji konta.`,
       });
 
       setNewUserEmail('');
@@ -217,17 +189,17 @@ export const UserRolesManagement = () => {
       setNewUserRole('user');
       setDialogOpen(false);
 
-      // Refresh the list after a short delay to ensure all DB operations are complete
+      // Refresh the list to show the new user
       setTimeout(() => {
         fetchUsers();
-      }, 1000);
-    } catch (error) {
+      }, 2000);
+    } catch (error: any) {
       console.error('Error adding user:', error);
-      toast({
-        title: "Błąd dodawania użytkownika",
-        description: "Nie udało się utworzyć użytkownika. Sprawdź konsolę.",
-        variant: "destructive"
-      });
+      
+      // Show more user-friendly error message
+      const errorMsg = error.message || "Nie udało się utworzyć użytkownika";
+      setErrorMessage(errorMsg);
+      setAlertDialogOpen(true);
     }
   };
 
@@ -341,6 +313,20 @@ export const UserRolesManagement = () => {
       >
         Odśwież listę
       </Button>
+
+      <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Błąd dodawania użytkownika</AlertDialogTitle>
+            <AlertDialogDescription>
+              {errorMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
