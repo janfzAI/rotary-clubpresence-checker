@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -24,6 +26,9 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
+        // Session exists, user is authenticated
+        setIsAuthenticated(true);
+
         // Refresh session if it exists
         const { error: refreshError } = await supabase.auth.refreshSession();
         if (refreshError) {
@@ -42,14 +47,20 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session);
+      
+      // Only redirect to auth page if user explicitly signs out
+      // Don't redirect for other auth events like SIGNED_IN
       if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
         navigate('/auth');
+      } else if (event === 'SIGNED_IN' && !isAuthenticated) {
+        setIsAuthenticated(true);
       }
     });
 
     checkAuth();
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isAuthenticated]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;

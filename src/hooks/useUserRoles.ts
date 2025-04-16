@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -130,7 +129,6 @@ export const useUserRoles = () => {
     }
   };
 
-  // New function to create a user if they don't exist yet
   const createUserAndSetRole = async (email: string, password: string, role: AppRole, memberName?: string) => {
     try {
       // First, check if the user already exists
@@ -149,27 +147,26 @@ export const useUserRoles = () => {
         userId = existingUser.id;
         console.log("User already exists, updating role for:", email);
       } else {
-        // User doesn't exist, create them
+        // User doesn't exist, create them using the admin API instead of signUp
         console.log("Creating new user with email:", email);
         
-        // Create user in auth system
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        // Use the admin.createUser function to avoid auto-login
+        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
           email,
           password,
-          options: {
-            data: {
-              name: memberName
-            }
+          email_confirm: true, // Auto-confirm email
+          user_metadata: {
+            name: memberName
           }
         });
 
-        if (signUpError) throw signUpError;
+        if (createError) throw createError;
         
-        if (!authData.user) {
+        if (!userData.user) {
           throw new Error("Failed to create user account");
         }
         
-        userId = authData.user.id;
+        userId = userData.user.id;
         
         // Create profile for the user
         const { error: profileError } = await supabase
@@ -206,7 +203,6 @@ export const useUserRoles = () => {
     }
   };
 
-  // Fetch users on mount
   useEffect(() => {
     fetchUsers();
   }, []);
