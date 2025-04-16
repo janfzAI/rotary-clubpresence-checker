@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -148,36 +148,47 @@ export const UserRolesManagement = () => {
           </Button>
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Email użytkownika</TableHead>
-              <TableHead>Uprawnienia</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <Select 
-                    value={user.role} 
-                    onValueChange={(value: AppRole) => onRoleChange(user.id, value)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Wybierz uprawnienia" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">Użytkownik</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="admin">Administrator</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </TableCell>
+        <>
+          <Alert className="mb-4">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Informacja</AlertTitle>
+            <AlertDescription>
+              Jeśli nie widzisz wszystkich użytkowników, kliknij "Odśwież listę". System będzie próbował pobrać 
+              użytkowników z różnych źródeł.
+            </AlertDescription>
+          </Alert>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email użytkownika</TableHead>
+                <TableHead>Uprawnienia</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Select 
+                      value={user.role} 
+                      onValueChange={(value: AppRole) => onRoleChange(user.id, value)}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Wybierz uprawnienia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">Użytkownik</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="admin">Administrator</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </>
       )}
       
       <Button 
