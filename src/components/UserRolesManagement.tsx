@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -39,6 +39,17 @@ export const UserRolesManagement = () => {
   const [alertDialogOpen, setAlertDialogOpen] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState('');
 
+  // Odświeżaj listę użytkowników co 3 sekundy podczas aktywnego używania komponentu
+  useEffect(() => {
+    fetchUsers();
+    
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   const handleError = (message: string) => {
     setErrorMessage(message);
     setAlertDialogOpen(true);
@@ -47,12 +58,10 @@ export const UserRolesManagement = () => {
   const handleSuccess = () => {
     toast({
       title: "Użytkownik utworzony",
-      description: "Użytkownik został utworzony. Konto musi zostać aktywowane poprzez link wysłany na email. Dodaj uprawnienia po aktywacji konta.",
+      description: "Użytkownik został utworzony i dodany do listy.",
     });
     
-    setTimeout(() => {
-      fetchUsers();
-    }, 2000);
+    fetchUsers();
   };
 
   const onRoleChange = async (userId: string, newRole: AppRole) => {

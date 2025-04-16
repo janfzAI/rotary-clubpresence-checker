@@ -19,6 +19,7 @@ export const useUserRoles = () => {
     try {
       setLoading(true);
       
+      // Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email');
@@ -27,32 +28,34 @@ export const useUserRoles = () => {
         throw profilesError;
       }
 
-      const usersWithRoles = await Promise.all(
-        profiles.map(async (profile) => {
-          const { data: isAdmin } = await supabase.rpc('has_role', {
-            _user_id: profile.id,
-            _role: 'admin'
-          });
+      console.log("Fetched profiles:", profiles);
 
-          const { data: isManager } = await supabase.rpc('has_role', {
-            _user_id: profile.id,
-            _role: 'manager'
-          });
+      // Fetch all user_roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
 
-          let role: AppRole = 'user';
-          if (isAdmin) role = 'admin';
-          else if (isManager) role = 'manager';
+      if (rolesError) {
+        throw rolesError;
+      }
 
-          return {
-            id: profile.id,
-            email: profile.email,
-            role
-          };
-        })
-      );
+      console.log("Fetched user roles:", userRoles);
+
+      // Map profiles to user roles
+      const usersWithRoles = profiles.map((profile) => {
+        // Find user's role in the userRoles array
+        const userRole = userRoles.find(role => role.user_id === profile.id);
+        
+        return {
+          id: profile.id,
+          email: profile.email,
+          // Default to 'user' if no role is found
+          role: userRole ? userRole.role : 'user' as AppRole
+        };
+      });
 
       setUsers(usersWithRoles);
-      console.log("Fetched users with roles:", usersWithRoles);
+      console.log("Mapped users with roles:", usersWithRoles);
     } catch (error) {
       console.error('Error fetching users:', error);
       throw error;
