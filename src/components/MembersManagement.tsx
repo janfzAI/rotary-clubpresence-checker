@@ -61,6 +61,7 @@ export const MembersManagement = ({
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>('user');
   const [memberEmail, setMemberEmail] = useState('');
+  const [memberPassword, setMemberPassword] = useState('');
   const { toast } = useToast();
   const { users, handleRoleChange } = useUserRoles();
   const { isAdmin } = useAuth();
@@ -115,10 +116,16 @@ export const MembersManagement = ({
     }
 
     try {
-      // Find user by email
       const user = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
       
-      if (!user) {
+      if (user) {
+        await handleRoleChange(user.id, selectedRole, memberPassword);
+        
+        toast({
+          title: "Zmieniono uprawnienia",
+          description: `Pomyślnie zmieniono rolę użytkownika ${memberEmail} na ${selectedRole}${memberPassword ? ' i zaktualizowano hasło' : ''}`
+        });
+      } else {
         toast({
           title: "Błąd",
           description: "Nie znaleziono użytkownika o podanym adresie email",
@@ -126,20 +133,12 @@ export const MembersManagement = ({
         });
         return;
       }
-
-      const email = await handleRoleChange(user.id, selectedRole);
       
-      if (email) {
-        toast({
-          title: "Zmieniono uprawnienia",
-          description: `Pomyślnie zmieniono rolę użytkownika ${email} na ${selectedRole}`
-        });
-        
-        // Reset form
-        setMemberEmail('');
-        setSelectedRole('user');
-        setSelectedMember(null);
-      }
+      // Reset form
+      setMemberEmail('');
+      setMemberPassword('');
+      setSelectedRole('user');
+      setSelectedMember(null);
     } catch (error) {
       console.error("Error changing role:", error);
       toast({
@@ -152,10 +151,7 @@ export const MembersManagement = ({
 
   const handleOpenRoleDialog = (member: Member) => {
     setSelectedMember(member);
-    
-    // Find if this member has an associated user
     const existingUser = users.find(u => u.email.toLowerCase().includes(member.name.toLowerCase()));
-    
     if (existingUser) {
       setMemberEmail(existingUser.email);
       setSelectedRole(existingUser.role);
@@ -163,6 +159,7 @@ export const MembersManagement = ({
       setMemberEmail('');
       setSelectedRole('user');
     }
+    setMemberPassword('');
   };
 
   const sortedMembers = [...members].sort((a, b) => {
@@ -239,6 +236,7 @@ export const MembersManagement = ({
                       <AlertDialogTitle>Zarządzaj uprawnieniami - {selectedMember?.name}</AlertDialogTitle>
                       <AlertDialogDescription>
                         Przypisz rolę do użytkownika w systemie poprzez podanie adresu email i wybranie roli.
+                        Możesz również zresetować hasło użytkownika.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     
@@ -250,6 +248,17 @@ export const MembersManagement = ({
                           value={memberEmail} 
                           onChange={(e) => setMemberEmail(e.target.value)} 
                           placeholder="adres@email.com"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="member-password">Nowe hasło (opcjonalne)</Label>
+                        <Input 
+                          id="member-password"
+                          type="password"
+                          value={memberPassword}
+                          onChange={(e) => setMemberPassword(e.target.value)}
+                          placeholder="Pozostaw puste aby nie zmieniać hasła"
                         />
                       </div>
                       

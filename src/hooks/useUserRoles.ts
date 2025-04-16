@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -79,12 +78,22 @@ export const useUserRoles = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: AppRole) => {
+  const handleRoleChange = async (userId: string, newRole: AppRole, newPassword?: string) => {
     try {
       // For optimization, update optimistically first
       setUsers(prevUsers => 
         prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u)
       );
+
+      // Update password if provided
+      if (newPassword) {
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(
+          userId,
+          { password: newPassword }
+        );
+
+        if (passwordError) throw passwordError;
+      }
 
       if (newRole === 'user') {
         // Delete existing role
