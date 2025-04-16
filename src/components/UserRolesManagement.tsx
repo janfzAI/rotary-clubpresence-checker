@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, RefreshCw, AlertTriangle, Info } from "lucide-react";
+import { Loader2, RefreshCw, AlertTriangle, Info, Plus, SortAsc, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -16,6 +16,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -26,16 +28,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { AddUserDialog } from "./user-roles/AddUserDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { Input } from "@/components/ui/input";
-import { UserCog } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -100,7 +103,6 @@ export const UserRolesManagement = ({
       description: "Użytkownik został utworzony i dodany do listy.",
     });
     
-    // Fetch updated user list
     fetchUsers();
   };
 
@@ -177,13 +179,42 @@ export const UserRolesManagement = ({
       const user = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
       
       if (!user) {
-        console.error(`No user found with email: ${memberEmail}`);
-        toast({
-          title: "Błąd",
-          description: `Nie znaleziono użytkownika z emailem ${memberEmail}`,
-          variant: "destructive"
-        });
-        return;
+        console.log(`No user found with email: ${memberEmail}`);
+        
+        // Check if we have a password - required for new account creation
+        if (!memberPassword) {
+          toast({
+            title: "Błąd",
+            description: "Hasło jest wymagane aby utworzyć nowe konto",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Create a new user since we didn't find an existing one
+        try {
+          const createdEmail = await useUserRoles().createUserAndSetRole(
+            memberEmail, 
+            memberPassword, 
+            selectedRole,
+            selectedMember?.name
+          );
+          
+          toast({
+            title: "Utworzono nowego użytkownika",
+            description: `Pomyślnie utworzono konto ${createdEmail} z rolą ${selectedRole}`
+          });
+          
+          fetchUsers();
+          setMemberEmail('');
+          setMemberPassword('');
+          setSelectedRole('user');
+          setSelectedMember(null);
+          return;
+        } catch (createError) {
+          console.error("Error creating user:", createError);
+          throw new Error(`Nie udało się utworzyć nowego użytkownika: ${createError.message}`);
+        }
       }
       
       // If a new password was provided, update it
@@ -291,7 +322,6 @@ export const UserRolesManagement = ({
     return 0;
   });
 
-  // Loading state when we have no users yet
   if (loading && users.length === 0) {
     return (
       <div className="flex justify-center items-center p-10">
@@ -301,7 +331,6 @@ export const UserRolesManagement = ({
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="p-6 space-y-4">

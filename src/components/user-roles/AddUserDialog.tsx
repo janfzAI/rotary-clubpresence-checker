@@ -42,13 +42,12 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
       }
 
       // Create user with auto-confirm enabled
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      const { data: authData, error: signUpError } = await supabase.auth.admin.createUser({
         email: newUserEmail,
         password: newUserPassword,
-        options: {
-          data: {
-            role: newUserRole
-          }
+        email_confirm: true,
+        user_metadata: {
+          role: newUserRole
         }
       });
 
