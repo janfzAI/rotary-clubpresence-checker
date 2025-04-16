@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -154,6 +155,8 @@ export const useUserRoles = () => {
 
   const createUserAndSetRole = async (email: string, password: string, role: AppRole, memberName?: string) => {
     try {
+      console.log("Starting user creation process for:", email);
+      
       // First, check if the user already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
@@ -161,35 +164,47 @@ export const useUserRoles = () => {
         .eq('email', email)
         .maybeSingle();
 
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error("Error checking for existing user:", checkError);
+        throw checkError;
+      }
 
       let userId;
       
       if (existingUser) {
-        // User exists, update their role
+        // User exists, we'll just update their role
         userId = existingUser.id;
-        console.log("User already exists, updating role for:", email);
+        console.log("User already exists, will update role for:", email);
       } else {
-        // User doesn't exist, create them using the admin API instead of signUp
+        // User doesn't exist, create them using the admin API
         console.log("Creating new user with email:", email);
         
-        // Use the admin.createUser function to avoid auto-login
+        if (!password) {
+          throw new Error("Password is required to create a new user");
+        }
+        
+        // Use the admin.createUser function
         const { data: userData, error: createError } = await supabase.auth.admin.createUser({
           email,
           password,
           email_confirm: true, // Auto-confirm email
           user_metadata: {
-            name: memberName
+            name: memberName,
+            role: role
           }
         });
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error("Error creating user account:", createError);
+          throw createError;
+        }
         
         if (!userData.user) {
           throw new Error("Failed to create user account");
         }
         
         userId = userData.user.id;
+        console.log("New user created with ID:", userId);
         
         // Create profile for the user
         const { error: profileError } = await supabase
@@ -199,11 +214,17 @@ export const useUserRoles = () => {
             email: email
           });
           
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          throw profileError;
+        }
+        
+        console.log("User profile created successfully");
       }
       
       // Set or update the user's role
       if (role !== 'user') {
+        console.log(`Setting role '${role}' for user:`, userId);
         const { error: roleError } = await supabase
           .from('user_roles')
           .upsert({
@@ -213,7 +234,25 @@ export const useUserRoles = () => {
             onConflict: 'user_id'
           });
           
-        if (roleError) throw roleError;
+        if (roleError) {
+          console.error("Error setting user role:", roleError);
+          throw roleError;
+        }
+        
+        console.log("User role set successfully");
+      } else {
+        // For 'user' role, we might want to remove any existing elevated roles
+        const { error: deleteRoleError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId);
+          
+        if (deleteRoleError && deleteRoleError.code !== 'PGRST116') { // Ignore if no rows were deleted
+          console.error("Error removing existing roles:", deleteRoleError);
+          throw deleteRoleError;
+        }
+        
+        console.log("Default user role applied (existing roles removed if any)");
       }
       
       // Refresh the users list

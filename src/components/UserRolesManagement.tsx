@@ -37,7 +37,6 @@ import type { Database } from "@/integrations/supabase/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -174,25 +173,24 @@ export const UserRolesManagement = ({
       return;
     }
 
+    if (!memberPassword && !users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase())) {
+      toast({
+        title: "Błąd",
+        description: "Hasło jest wymagane aby utworzyć nowe konto",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       console.log(`Attempting to change role for ${memberEmail} to ${selectedRole}`);
       const user = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
       
       if (!user) {
-        console.log(`No user found with email: ${memberEmail}`);
+        console.log(`No user found with email: ${memberEmail}, will attempt to create one`);
         
-        // Check if we have a password - required for new account creation
-        if (!memberPassword) {
-          toast({
-            title: "Błąd",
-            description: "Hasło jest wymagane aby utworzyć nowe konto",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        // Create a new user since we didn't find an existing one
         try {
+          console.log(`Creating new user with email: ${memberEmail}, role: ${selectedRole}`);
           const createdEmail = await createUserAndSetRole(
             memberEmail, 
             memberPassword, 
@@ -200,18 +198,19 @@ export const UserRolesManagement = ({
             selectedMember?.name
           );
           
+          console.log(`Successfully created user: ${createdEmail}`);
           toast({
             title: "Utworzono nowego użytkownika",
             description: `Pomyślnie utworzono konto ${createdEmail} z rolą ${selectedRole}`
           });
           
-          fetchUsers();
+          await fetchUsers();
           setMemberEmail('');
           setMemberPassword('');
           setSelectedRole('user');
           setSelectedMember(null);
           return;
-        } catch (createError) {
+        } catch (createError: any) {
           console.error("Error creating user:", createError);
           toast({
             title: "Błąd",
@@ -222,7 +221,6 @@ export const UserRolesManagement = ({
         }
       }
       
-      // If a new password was provided, update it
       if (memberPassword) {
         const { error: updateError } = await supabase.auth.admin.updateUserById(
           user.id,
@@ -239,7 +237,6 @@ export const UserRolesManagement = ({
         });
       }
       
-      // Update role
       const updatedEmail = await handleRoleChange(user.id, selectedRole);
       
       if (updatedEmail) {
@@ -255,7 +252,7 @@ export const UserRolesManagement = ({
       setMemberPassword('');
       setSelectedRole('user');
       setSelectedMember(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error managing user:", error);
       toast({
         title: "Błąd",
@@ -268,10 +265,8 @@ export const UserRolesManagement = ({
   const findBestMatchingUser = (memberName: string) => {
     console.log(`Searching for user match for member: ${memberName}`);
     
-    // Try exact matching by converting both strings to lowercase and removing whitespace
     const normalizedName = memberName.toLowerCase().replace(/\s+/g, '');
     
-    // First attempt: look for exact partial matches in either direction
     for (const user of users) {
       const normalizedEmail = user.email.toLowerCase().replace(/\s+/g, '');
       const nameInEmail = normalizedEmail.includes(normalizedName);
@@ -286,7 +281,6 @@ export const UserRolesManagement = ({
       }
     }
     
-    // Second attempt: look for name parts in email or vice versa
     const nameParts = memberName.toLowerCase().split(/\s+/);
     for (const user of users) {
       for (const part of nameParts) {
@@ -297,7 +291,6 @@ export const UserRolesManagement = ({
       }
     }
     
-    // No match found
     console.log('No matching user found');
     return null;
   };
