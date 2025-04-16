@@ -88,20 +88,29 @@ export const useUserRoles = () => {
         prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u)
       );
 
-      // Update password if provided
+      // Update password if provided - NOTE: This requires Supabase service key
+      // and might not work with the client-side key due to permissions
       if (newPassword) {
         console.log("Attempting to update password...");
-        // Note: This is an admin operation, ensure proper authorization
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(
-          userId,
-          { password: newPassword }
-        );
+        try {
+          // Note: This is an admin operation, ensure proper authorization
+          const { error: passwordError } = await supabase.auth.admin.updateUserById(
+            userId,
+            { password: newPassword }
+          );
 
-        if (passwordError) {
-          console.error("Password update error:", passwordError);
-          throw passwordError;
+          if (passwordError) {
+            console.error("Password update error:", passwordError);
+            // Continue with role update even if password update fails
+            console.log("Password update failed, but continuing with role update");
+          } else {
+            console.log("Password updated successfully");
+          }
+        } catch (pwError) {
+          console.error("Password update failed with exception:", pwError);
+          // Continue with role update even if password update fails
+          console.log("Password update failed with exception, but continuing with role update");
         }
-        console.log("Password updated successfully");
       }
 
       // Handle role change

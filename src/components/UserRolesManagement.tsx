@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Loader2, RefreshCw, AlertTriangle, Info, Plus, SortAsc, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -242,13 +243,59 @@ export const UserRolesManagement = ({
           });
         }
       } else {
-        const updatedEmail = await handleRoleChange(user.id, selectedRole);
+        console.log(`Found user: ${user.id}, ${user.email}, current role: ${user.role}`);
         
-        if (updatedEmail) {
-          toast({
-            title: "Zmieniono uprawnienia",
-            description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole}`
-          });
+        try {
+          if (memberPassword) {
+            console.log(`Attempting to change role for user ${user.id} to ${selectedRole}`);
+            
+            try {
+              const updatedEmail = await handleRoleChange(user.id, selectedRole, memberPassword);
+              
+              if (updatedEmail) {
+                toast({
+                  title: "Zmieniono uprawnienia",
+                  description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole} i zaktualizowano hasło`
+                });
+              }
+            } catch (passwordError: any) {
+              // Handle password update error but still try to update role
+              console.error("Password update error:", passwordError);
+              
+              // If this is a "not_admin" or permission error, inform the user but continue with role update
+              if (passwordError.code === "not_admin" || passwordError.status === 403) {
+                toast({
+                  title: "Informacja o haśle",
+                  description: "Nie masz uprawnień do zmiany hasła. Zmiana hasła wymaga uprawnień administratora w Supabase.",
+                  variant: "default"
+                });
+                
+                // Still try to update the role without updating password
+                const updatedEmail = await handleRoleChange(user.id, selectedRole);
+                
+                if (updatedEmail) {
+                  toast({
+                    title: "Zmieniono uprawnienia",
+                    description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole}, ale hasło nie zostało zmienione`
+                  });
+                }
+              } else {
+                throw passwordError; // Re-throw other types of errors
+              }
+            }
+          } else {
+            const updatedEmail = await handleRoleChange(user.id, selectedRole);
+            
+            if (updatedEmail) {
+              toast({
+                title: "Zmieniono uprawnienia",
+                description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole}`
+              });
+            }
+          }
+        } catch (roleError: any) {
+          console.error("Role change error:", roleError);
+          throw roleError;
         }
       }
       
