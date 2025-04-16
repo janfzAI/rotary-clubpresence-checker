@@ -1,0 +1,169 @@
+
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+
+interface UserRole {
+  id: string;
+  email: string;
+  role: string;
+}
+
+export const UserRolesManagement = () => {
+  const [users, setUsers] = useState<UserRole[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all users that have profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email');
+      
+      if (profilesError) {
+        throw profilesError;
+      }
+
+      // For each user, check their roles
+      const usersWithRoles = await Promise.all(
+        profiles.map(async (profile) => {
+          // Check admin role
+          const { data: isAdmin } = await supabase.rpc('has_role', {
+            _user_id: profile.id,
+            _role: 'admin'
+          });
+
+          // Check manager role
+          const { data: isManager } = await supabase.rpc('has_role', {
+            _user_id: profile.id,
+            _role: 'manager'
+          });
+
+          // Determine highest role
+          let role = 'user';
+          if (isAdmin) role = 'admin';
+          else if (isManager) role = 'manager';
+
+          return {
+            id: profile.id,
+            email: profile.email,
+            role
+          };
+        })
+      );
+
+      setUsers(usersWithRoles);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Błąd pobierania użytkowników",
+        description: "Nie udało się pobrać listy użytkowników. Sprawdź konsolę.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    try {
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+
+      // First remove all roles
+      const { error: deleteError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (deleteError) throw deleteError;
+
+      // Then add the new role if it's not 'user'
+      if (newRole !== 'user') {
+        const { error: insertError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: newRole
+          });
+          
+        if (insertError) throw insertError;
+      }
+
+      // Update local state
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, role: newRole } : u
+      ));
+
+      toast({
+        title: "Zmieniono uprawnienia",
+        description: `Użytkownik ${user.email} ma teraz uprawnienia: ${newRole}`
+      });
+    } catch (error) {
+      console.error('Error changing role:', error);
+      toast({
+        title: "Błąd zmiany uprawnień",
+        description: "Nie udało się zmienić uprawnień użytkownika. Sprawdź konsolę.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Ładowanie użytkowników...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">Zarządzanie uprawnieniami użytkowników</h2>
+      <div className="space-y-3">
+        {users.length === 0 ? (
+          <p className="text-muted-foreground">Brak użytkowników w systemie.</p>
+        ) : (
+          users.map((user) => (
+            <Card key={user.id} className="p-4 flex flex-wrap justify-between items-center gap-4">
+              <span className="flex-grow min-w-[200px]">{user.email}</span>
+              <div className="flex items-center gap-4">
+                <Select 
+                  value={user.role} 
+                  onValueChange={(value) => handleRoleChange(user.id, value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Wybierz uprawnienia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Użytkownik</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="admin">Administrator</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};

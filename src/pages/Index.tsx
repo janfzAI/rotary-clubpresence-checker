@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
@@ -9,6 +10,7 @@ import { AttendanceStats } from '@/components/AttendanceStats';
 import { AttendanceExport } from '@/components/AttendanceExport';
 import { AttendanceFileHandler } from '@/components/AttendanceFileHandler';
 import { DatabaseStructure } from '@/components/DatabaseStructure';
+import { UserRolesManagement } from '@/components/UserRolesManagement';
 import { useAttendanceState } from '@/hooks/useAttendanceState';
 import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
 import { useAuth } from '@/hooks/useAuth';
@@ -146,6 +148,10 @@ const Index = () => {
 
       {activeTab === 'database' && isAdmin && (
         <DatabaseStructure />
+      )}
+
+      {activeTab === 'usersRoles' && isAdmin && (
+        <UserRolesManagement />
       )}
     </div>
   );
