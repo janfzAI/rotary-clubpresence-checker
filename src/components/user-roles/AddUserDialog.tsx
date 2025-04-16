@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -36,6 +36,7 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { createUserAndSetRole } = useUserRoles();
 
   const validateInputs = () => {
     if (!newUserEmail) {
@@ -64,62 +65,19 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
       
       console.log("Attempting to create user:", newUserEmail);
       
-      // Create user with auto-confirm enabled
-      const { data: authData, error: signUpError } = await supabase.auth.admin.createUser({
-        email: newUserEmail,
-        password: newUserPassword,
-        email_confirm: true,
-        user_metadata: {
-          role: newUserRole
-        }
-      });
+      // Use the createUserAndSetRole function from useUserRoles hook
+      const createdEmail = await createUserAndSetRole(
+        newUserEmail,
+        newUserPassword,
+        newUserRole
+      );
 
-      if (signUpError) {
-        console.error("Error creating user:", signUpError);
-        throw signUpError;
-      }
-
-      if (!authData || !authData.user) {
-        console.error("No user data returned");
-        throw new Error("Nie udało się utworzyć użytkownika");
-      }
-
-      console.log("User created successfully:", authData.user.id);
-
-      // Add user to profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: newUserEmail
-        });
-
-      if (profileError) {
-        console.error("Error creating profile:", profileError);
-        throw profileError;
-      }
-
-      console.log("Profile created successfully");
-
-      // Add role for the new user
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: newUserRole
-        });
-
-      if (roleError) {
-        console.error("Error setting role:", roleError);
-        throw roleError;
-      }
-
-      console.log("Role set successfully");
+      console.log("User created successfully:", createdEmail);
 
       // Success!
       toast({
         title: "Utworzono użytkownika",
-        description: `Użytkownik ${newUserEmail} został utworzony z rolą ${newUserRole}`
+        description: `Użytkownik ${createdEmail} został utworzony z rolą ${newUserRole}`
       });
       
       onSuccess();

@@ -88,12 +88,23 @@ export const useUserRoles = () => {
         prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u)
       );
 
-      // Update password if provided - NOTE: This requires Supabase service key
-      // and might not work with the client-side key due to permissions
+      // Check if the user exists before proceeding
+      const { data: userExists } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+        
+      if (!userExists) {
+        console.error(`User with ID ${userId} does not exist`);
+        throw new Error('User not found');
+      }
+
+      // Handle password update if provided
       if (newPassword) {
-        console.log("Attempting to update password...");
         try {
-          // Note: This is an admin operation, ensure proper authorization
+          console.log("Attempting to update password...");
+          
           const { error: passwordError } = await supabase.auth.admin.updateUserById(
             userId,
             { password: newPassword }
@@ -101,14 +112,14 @@ export const useUserRoles = () => {
 
           if (passwordError) {
             console.error("Password update error:", passwordError);
-            // Continue with role update even if password update fails
+            // We'll continue with role update even if password update fails
             console.log("Password update failed, but continuing with role update");
           } else {
             console.log("Password updated successfully");
           }
         } catch (pwError) {
           console.error("Password update failed with exception:", pwError);
-          // Continue with role update even if password update fails
+          // We'll continue with role update even if password update fails
           console.log("Password update failed with exception, but continuing with role update");
         }
       }
@@ -167,17 +178,17 @@ export const useUserRoles = () => {
       console.log("Starting user creation process for:", email);
       
       // First, check if the user already exists
-      const { data: existingUser, error: checkError } = await supabase
+      const { data: existingProfiles, error: checkError } = await supabase
         .from('profiles')
         .select('id, email')
-        .eq('email', email)
-        .maybeSingle();
+        .eq('email', email);
 
       if (checkError) {
         console.error("Error checking for existing user:", checkError);
         throw checkError;
       }
 
+      const existingUser = existingProfiles && existingProfiles.length > 0 ? existingProfiles[0] : null;
       let userId;
       
       if (existingUser) {
@@ -185,15 +196,14 @@ export const useUserRoles = () => {
         userId = existingUser.id;
         console.log("User already exists, will update role for:", email);
       } else {
-        // User doesn't exist, create them using the admin API
+        // User doesn't exist, create them
         console.log("Creating new user with email:", email);
         
         if (!password) {
           throw new Error("Password is required to create a new user");
         }
         
-        // Use the admin createUser function which is available on the client
-        // for the Supabase instance with the correct service key
+        // Create new user
         const { data: userData, error: createError } = await supabase.auth.admin.createUser({
           email,
           password,
