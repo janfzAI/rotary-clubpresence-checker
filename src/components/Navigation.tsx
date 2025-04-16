@@ -1,7 +1,6 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { List, History, BarChart2, Users, User, Database } from "lucide-react";
-import { UserMenu } from "@/components/UserMenu";
 
 export const Navigation = ({ activeTab, onTabChange, isAdmin }: { 
   activeTab: string;
@@ -12,7 +11,6 @@ export const Navigation = ({ activeTab, onTabChange, isAdmin }: {
     <div className="w-full mb-6">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Rotary Club Szczecin</h1>
-        <UserMenu />
       </div>
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList className="grid w-full" style={{ 
