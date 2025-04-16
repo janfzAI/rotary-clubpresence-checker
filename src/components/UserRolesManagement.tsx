@@ -59,7 +59,7 @@ export const UserRolesManagement = ({
   onRemoveMember: (id: number) => void;
   onToggleActive?: (id: number) => void;
 }) => {
-  const { users, loading, error, fetchUsers, handleRoleChange } = useUserRoles();
+  const { users, loading, error, fetchUsers, handleRoleChange, createUserAndSetRole } = useUserRoles();
   const { toast } = useToast();
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -193,7 +193,7 @@ export const UserRolesManagement = ({
         
         // Create a new user since we didn't find an existing one
         try {
-          const createdEmail = await useUserRoles().createUserAndSetRole(
+          const createdEmail = await createUserAndSetRole(
             memberEmail, 
             memberPassword, 
             selectedRole,
@@ -213,7 +213,12 @@ export const UserRolesManagement = ({
           return;
         } catch (createError) {
           console.error("Error creating user:", createError);
-          throw new Error(`Nie udało się utworzyć nowego użytkownika: ${createError.message}`);
+          toast({
+            title: "Błąd",
+            description: `Nie udało się utworzyć nowego użytkownika: ${createError.message || "Nieznany błąd"}`,
+            variant: "destructive"
+          });
+          return;
         }
       }
       
