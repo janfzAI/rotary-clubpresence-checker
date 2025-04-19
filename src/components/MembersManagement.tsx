@@ -62,24 +62,6 @@ export const MembersManagement = ({
     }
   }, [lastRefreshTimestamp]);
 
-  const userRoleCache = useMemo(() => {
-    const cache = new Map();
-    members.forEach(member => {
-      const role = findUserRole(member.name, member.id);
-      if (role) {
-        cache.set(member.id, role);
-      }
-    });
-    return cache;
-  }, [members, users, lastRefreshTimestamp]);
-
-  const getCachedUserRole = (memberName: string, memberId: number) => {
-    if (userRoleCache.has(memberId)) {
-      return userRoleCache.get(memberId);
-    }
-    return findUserRole(memberName, memberId);
-  };
-
   const findUserRole = (memberName: string, memberId: number) => {
     console.log(`Finding role for member: ${memberName} (ID: ${memberId}), available users: ${users.length}`);
     
@@ -128,24 +110,6 @@ export const MembersManagement = ({
     }
     
     return undefined;
-  };
-
-  const emailCache = useMemo(() => {
-    const cache = new Map();
-    members.forEach(member => {
-      const email = findCurrentEmailForMember(member.name);
-      if (email) {
-        cache.set(member.id, email);
-      }
-    });
-    return cache;
-  }, [members, users, lastRefreshTimestamp]);
-
-  const getCachedEmail = (memberName: string, memberId: number) => {
-    if (emailCache.has(memberId)) {
-      return emailCache.get(memberId);
-    }
-    return findCurrentEmailForMember(memberName);
   };
 
   const findCurrentEmailForMember = (memberName: string): string => {
@@ -213,6 +177,42 @@ export const MembersManagement = ({
     }
     
     return '';
+  };
+
+  const userRoleCache = useMemo(() => {
+    const cache = new Map();
+    members.forEach(member => {
+      const role = findUserRole(member.name, member.id);
+      if (role) {
+        cache.set(member.id, role);
+      }
+    });
+    return cache;
+  }, [members, users, lastRefreshTimestamp]);
+
+  const getCachedUserRole = (memberName: string, memberId: number) => {
+    if (userRoleCache.has(memberId)) {
+      return userRoleCache.get(memberId);
+    }
+    return findUserRole(memberName, memberId);
+  };
+
+  const emailCache = useMemo(() => {
+    const cache = new Map();
+    members.forEach(member => {
+      const email = findCurrentEmailForMember(member.name);
+      if (email) {
+        cache.set(member.id, email);
+      }
+    });
+    return cache;
+  }, [members, users, lastRefreshTimestamp]);
+
+  const getCachedEmail = (memberName: string, memberId: number) => {
+    if (emailCache.has(memberId)) {
+      return emailCache.get(memberId);
+    }
+    return findCurrentEmailForMember(memberName);
   };
 
   const handleAddMember = () => {
