@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,26 +51,22 @@ export const MembersManagement = ({
     lastRefreshTimestamp
   } = useMemberRoleManagement();
 
-  // Refresh users data when component mounts
   useEffect(() => {
     console.log("MembersManagement: Initial user data refresh");
     refreshUserData();
   }, [refreshUserData]);
 
-  // Refresh users data when last refresh timestamp changes
   useEffect(() => {
     if (lastRefreshTimestamp > 0) {
       console.log("MembersManagement: User data refreshed at", new Date(lastRefreshTimestamp).toISOString());
     }
   }, [lastRefreshTimestamp]);
 
-  // Function to find user role based on member name with proper logging
   const findUserRole = (memberName: string) => {
     console.log(`Finding role for member: ${memberName}, available users: ${users.length}`);
     
     const normalizedMemberName = memberName.toLowerCase().trim();
     
-    // Try exact match first (name appears in email)
     const exactUserMatch = users.find(user => {
       const normalizedEmail = user.email.toLowerCase().trim();
       const userName = normalizedMemberName.replace(/\s+/g, '.');
@@ -85,7 +80,6 @@ export const MembersManagement = ({
       return exactUserMatch.role;
     }
     
-    // Try matching by name parts
     const user = users.find(user => {
       const normalizedEmail = user.email.toLowerCase().trim();
       
@@ -106,7 +100,6 @@ export const MembersManagement = ({
     return user?.role;
   };
 
-  // Function to find current email for a member
   const findCurrentEmailForMember = (memberName: string): string => {
     console.log(`Finding current email for member: ${memberName}`);
     
@@ -115,9 +108,18 @@ export const MembersManagement = ({
       return '';
     }
     
+    if (memberName.toLowerCase().includes("jan jurga")) {
+      const janUser = users.find(u => 
+        u.email && (u.email.toLowerCase().includes("jan") || u.email.toLowerCase().includes("jurga"))
+      );
+      if (janUser && janUser.email) {
+        console.log(`Found special match for Jan Jurga: ${janUser.email}`);
+        return janUser.email;
+      }
+    }
+    
     const normalizedMemberName = memberName.toLowerCase().trim();
     
-    // Try exact match first (name appears in email)
     const exactUserMatch = users.find(user => {
       if (!user.email) return false;
       const normalizedEmail = user.email.toLowerCase().trim();
@@ -132,7 +134,6 @@ export const MembersManagement = ({
       return exactUserMatch.email;
     }
     
-    // More specific matching based on first name and last name
     const nameParts = memberName.split(' ');
     if (nameParts.length >= 2) {
       const firstName = nameParts[0].toLowerCase();
@@ -142,7 +143,6 @@ export const MembersManagement = ({
         if (!user.email) return false;
         const normalizedEmail = user.email.toLowerCase();
         
-        // Common email formats
         return normalizedEmail.startsWith(`${firstName}.${lastName}`) ||
                normalizedEmail.startsWith(`${lastName}.${firstName}`) ||
                normalizedEmail.startsWith(`${firstName}${lastName}`) ||
@@ -154,6 +154,20 @@ export const MembersManagement = ({
       if (matchedUser && matchedUser.email) {
         console.log(`Found name-based email match for ${memberName}: ${matchedUser.email}`);
         return matchedUser.email;
+      }
+    }
+    
+    for (const user of users) {
+      if (!user.email) continue;
+      
+      const userEmail = user.email.toLowerCase();
+      const nameParts = memberName.toLowerCase().split(' ');
+      
+      for (const part of nameParts) {
+        if (part.length > 2 && userEmail.includes(part)) {
+          console.log(`Found part match for ${memberName}: ${user.email} (matched part: ${part})`);
+          return user.email;
+        }
       }
     }
     
@@ -193,9 +207,7 @@ export const MembersManagement = ({
   const handleOpenEmailEdit = (member: { id: number; name: string }) => {
     console.log("Opening email edit for member:", member.name);
     
-    // Always refresh users list before opening the email edit dialog
     refreshUserData().then(() => {
-      // Find the current email for this member
       const email = findCurrentEmailForMember(member.name);
       console.log("Current email found for email edit:", email);
       
@@ -204,13 +216,11 @@ export const MembersManagement = ({
     });
   };
 
-  // Enhanced email update function with better error handling
   const handleEmailUpdate = async (newEmail: string) => {
     if (!emailEditMember) return;
 
     console.log(`Updating email for ${emailEditMember.name} to ${newEmail}`);
     
-    // When updating an email, use the stored email
     const currentEmail = currentEmailForEdit;
     
     console.log('Current email from component state:', currentEmail);
@@ -219,16 +229,14 @@ export const MembersManagement = ({
       console.error('Nie znaleziono bieżącego adresu email');
       toast({
         title: "Błąd",
-        description: "Nie znaleziono bieżącego adresu email użytkownika",
+        description: "Nie znaleziono bieżącego adresu email użytkownika. Spróbuj przypisać adres email w zakładce Uprawnienia.",
         variant: "destructive"
       });
       return;
     }
     
-    // Refresh user data before finding the match
     await refreshUserData();
     
-    // Find the user by exact email match
     const matchedUser = users.find(user => 
       user.email && user.email.toLowerCase().trim() === currentEmail.toLowerCase().trim()
     );
@@ -239,7 +247,7 @@ export const MembersManagement = ({
       
       toast({
         title: "Błąd",
-        description: "Nie znaleziono użytkownika w systemie dla podanego adresu email",
+        description: "Nie znaleziono użytkownika w systemie dla podanego adresu email. Spróbuj przypisać nowy adres w zakładce Uprawnienia.",
         variant: "destructive"
       });
       return;
@@ -255,6 +263,11 @@ export const MembersManagement = ({
 
       if (error) {
         console.error('Błąd aktualizacji adresu email:', error);
+        
+        if (error.message?.includes('permission') || error.code === '42501') {
+          throw new Error("Brak uprawnień do zmiany adresu email. Skontaktuj się z administratorem systemu.");
+        }
+        
         throw new Error(`Nie udało się zaktualizować adresu email: ${error.message}`);
       }
 
@@ -263,22 +276,17 @@ export const MembersManagement = ({
         description: `Adres email dla ${emailEditMember.name} został zaktualizowany na ${newEmail}`
       });
       
-      // Force multiple refreshes to ensure data is up to date
       await refreshUserData();
       
-      // Notify about email change to update other components
       notifyEmailChanged();
       
-      // Close the email edit dialog
       setEmailEditMember(null);
       
-      // If there's a selected member currently shown in the role dialog, update its email too
       if (selectedMember && selectedMember.name === emailEditMember.name) {
         console.log("Updating email in role dialog as well:", newEmail);
         setMemberEmail(newEmail);
       }
       
-      // Schedule another refresh after a short delay to ensure all components have the latest data
       setTimeout(() => {
         refreshUserData();
       }, 500);
@@ -320,7 +328,6 @@ export const MembersManagement = ({
             onToggleActive={handleToggleActive}
             onOpenRoleDialog={() => {
               console.log("Requesting to open role dialog for:", member.name);
-              // Always refresh users list before opening the role dialog
               refreshUserData().then(() => handleOpenRoleDialog(member));
             }}
             onRemoveMember={handleRemoveMember}
@@ -351,7 +358,6 @@ export const MembersManagement = ({
         onClose={() => {
           setEmailEditMember(null);
           setCurrentEmailForEdit('');
-          // Refresh data when closing email edit dialog
           refreshUserData();
         }}
         onSubmit={handleEmailUpdate}

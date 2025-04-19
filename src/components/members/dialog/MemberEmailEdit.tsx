@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface MemberEmailEditProps {
   isOpen: boolean;
@@ -62,6 +64,11 @@ export const MemberEmailEdit = ({
 
   const handleSubmit = async (values: z.infer<typeof emailSchema>) => {
     try {
+      if (!currentEmail) {
+        setErrorMessage('Nie można znaleźć bieżącego adresu email. Spróbuj przypisać adres email w zakładce "Uprawnienia".');
+        return;
+      }
+      
       setIsSubmitting(true);
       setErrorMessage(null);
       await onSubmit(values.email);
@@ -92,9 +99,20 @@ export const MemberEmailEdit = ({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <div className="text-sm text-muted-foreground mb-2">
-                  Obecny adres email: <span id="current-member-email" data-email={currentEmail} className="font-medium">{currentEmail || 'Brak'}</span>
-                </div>
+                {!currentEmail && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Nie znaleziono bieżącego adresu email dla użytkownika. Zalecamy przypisanie adresu email w zakładce "Uprawnienia".
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {currentEmail && (
+                  <div className="text-sm text-muted-foreground mb-2">
+                    Obecny adres email: <span id="current-member-email" data-email={currentEmail} className="font-medium">{currentEmail || 'Brak'}</span>
+                  </div>
+                )}
                 
                 <FormField
                   control={form.control}
@@ -124,9 +142,9 @@ export const MemberEmailEdit = ({
               <AlertDialogCancel type="button">Anuluj</AlertDialogCancel>
               <Button 
                 type="submit"
-                disabled={isSubmitting || !isEmailValid}
+                disabled={isSubmitting || !isEmailValid || !currentEmail}
                 className={`
-                  ${isEmailValid 
+                  ${isEmailValid && currentEmail
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                     : 'bg-muted text-muted-foreground'
                   }

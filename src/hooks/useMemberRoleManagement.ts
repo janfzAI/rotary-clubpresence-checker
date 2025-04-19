@@ -86,11 +86,21 @@ export const useMemberRoleManagement = () => {
       handleCloseDialog();
     } catch (error: any) {
       console.error("Error managing user:", error);
-      toast({
-        title: "Błąd",
-        description: error instanceof Error ? error.message : "Nie udało się zmienić uprawnień użytkownika",
-        variant: "destructive"
-      });
+      
+      // Bardziej szczegółowa obsługa błędów
+      if (error.message && error.message.includes('not_admin')) {
+        toast({
+          title: "Brak uprawnień",
+          description: "Twoje konto nie posiada uprawnień administratora Supabase do wykonania tej operacji. Skontaktuj się z administratorem systemu.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Błąd",
+          description: error instanceof Error ? error.message : "Nie udało się zmienić uprawnień użytkownika",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -153,6 +163,17 @@ export const useMemberRoleManagement = () => {
       if (normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace)) {
         console.log("Found exact match by name in email:", user.email);
         return user;
+      }
+    }
+    
+    // Handling for "Jan Jurga" specifically
+    if (memberName.toLowerCase().includes("jan jurga")) {
+      const janUser = users.find(u => 
+        u.email && (u.email.toLowerCase().includes("jan") || u.email.toLowerCase().includes("jurga"))
+      );
+      if (janUser) {
+        console.log("Found special match for Jan Jurga:", janUser.email);
+        return janUser;
       }
     }
     
