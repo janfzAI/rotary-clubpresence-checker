@@ -13,10 +13,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MemberRoleDialogProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ interface MemberRoleDialogProps {
   selectedRole: AppRole;
   memberPassword: string;
   isSubmitting: boolean;
-  users: Array<{ email: string; role: AppRole }>;
+  users: Array<{ id: string; email: string; role: AppRole }>;
   onClose: () => void;
   onSubmit: () => void;
   onEmailChange: (email: string) => void;
@@ -51,6 +52,7 @@ export const MemberRoleDialog = ({
   const isNewUser = memberEmail && !existingUser;
   const { sendPasswordResetEmail } = useRoleManagement();
   const [resetEmailSent, setResetEmailSent] = React.useState(false);
+  const [refreshingEmailList, setRefreshingEmailList] = React.useState(false);
   
   // Reset the resetEmailSent state when the dialog opens
   useEffect(() => {
@@ -81,7 +83,10 @@ export const MemberRoleDialog = ({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Zarządzaj uprawnieniami - {selectedMember?.name}</AlertDialogTitle>
+          <AlertDialogTitle className="flex items-center justify-between">
+            <span>Zarządzaj uprawnieniami - {selectedMember?.name}</span>
+            <div id="current-member-email" data-email={memberEmail} className="hidden"></div>
+          </AlertDialogTitle>
           <AlertDialogDescription>
             {memberEmail ? (
               <>
