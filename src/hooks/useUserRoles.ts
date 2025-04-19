@@ -1,19 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
-
-export interface UserRole {
-  id: string;
-  email: string;
-  role: AppRole;
-}
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useRoleManagement } from './useRoleManagement';
+import { useUserCreation } from './useUserCreation';
+import type { UserRole, AppRole, RoleChangeResult } from '@/types/userRoles';
 
 export const useUserRoles = () => {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  const { handleRoleChange } = useRoleManagement();
+  const { createUserAndSetRole } = useUserCreation();
 
   const fetchUsers = async () => {
     try {
@@ -22,7 +20,6 @@ export const useUserRoles = () => {
       
       console.log("Starting to fetch users...");
       
-      // Get all profiles from the profiles table
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email');
@@ -37,11 +34,9 @@ export const useUserRoles = () => {
       if (!profiles || profiles.length === 0) {
         console.log("No profiles found in the database");
         setUsers([]);
-        setLoading(false);
         return;
       }
       
-      // Fetch all user_roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
@@ -51,24 +46,16 @@ export const useUserRoles = () => {
         throw rolesError;
       }
 
-      console.log("Fetched user roles:", userRoles, "Count:", userRoles?.length || 0);
-      
-      // Map users to roles
       const usersWithRoles = profiles.map((profile) => {
         const userRole = userRoles ? userRoles.find(role => role.user_id === profile.id) : null;
-        
-        console.log(`Mapping profile ${profile.id} (${profile.email}) with role:`, 
-          userRole ? userRole.role : 'user (default)');
         
         return {
           id: profile.id,
           email: profile.email || 'No email',
-          // Default to 'user' if no role is found
           role: userRole ? userRole.role : 'user' as AppRole
         };
       });
 
-      console.log("Final mapped users with roles:", usersWithRoles, "Count:", usersWithRoles.length);
       setUsers(usersWithRoles);
     } catch (error) {
       console.error("Error in fetchUsers:", error);
@@ -78,258 +65,12 @@ export const useUserRoles = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: AppRole, newPassword?: string) => {
-    try {
-      console.log(`Attempting to change role for user ${userId} to ${newRole}`);
-      
-      // Optimistically update the local state
-      setUsers(prevUsers => 
-        prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u)
-      );
-
-      let passwordUpdateSuccessful = true;
-      
-      // Update password if provided
-      if (newPassword) {
-        console.log("Attempting to update password...");
-        
-        try {
-          // Note: This requires admin privileges
-          const { error: passwordError } = await supabase.auth.admin.updateUserById(
-            userId,
-            { password: newPassword }
-          );
-
-          if (passwordError) {
-            console.error("Password update error:", passwordError);
-            passwordUpdateSuccessful = false;
-            
-            // If the error is due to permissions, we'll continue with role change
-            if (!passwordError.message.includes('not_admin')) {
-              throw passwordError;
-            }
-            
-            console.log("Continuing with role update despite password update failure");
-          } else {
-            console.log("Password updated successfully");
-          }
-        } catch (e) {
-          console.warn("Password update failed, but will continue with role update:", e);
-          passwordUpdateSuccessful = false;
-        }
-      }
-
-      // Handle role change
-      if (newRole === 'user') {
-        // Remove role entry for 'user' (default role)
-        const { error: deleteError } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId);
-
-        if (deleteError) {
-          console.error("Error removing user role:", deleteError);
-          throw deleteError;
-        }
-        console.log("User role removed successfully");
-      } else {
-        // Insert or update role
-        const { error: upsertError } = await supabase
-          .from('user_roles')
-          .upsert({
-            user_id: userId,
-            role: newRole
-          }, {
-            onConflict: 'user_id' 
-          });
-          
-        if (upsertError) {
-          console.error("Detailed upsert error:", upsertError);
-          throw upsertError;
-        }
-        console.log(`Role updated to ${newRole} successfully`);
-      }
-
-      // Refresh the users list to ensure we have the latest data
-      await fetchUsers();
-
-      // Return the email for confirmation
-      const userEmail = users.find(u => u.id === userId)?.email;
-      console.log(`Role change completed for ${userEmail}`);
-      
-      // Zapisz email użytkownika, dla którego zmieniono uprawnienia
-      if (userEmail) {
-        localStorage.setItem('currentUserEmail', userEmail);
-      }
-      
-      // Return email and password update status
-      return { 
-        email: userEmail, 
-        passwordUpdated: newPassword ? true : undefined 
-      };
-    } catch (error) {
-      console.error('Comprehensive role change error:', error);
-      
-      // Revert the optimistic update
-      await fetchUsers();
-      
-      // Rethrow to allow calling component to handle the error
-      throw error;
-    }
-  };
-
-  const createUserAndSetRole = async (email: string, password: string, role: AppRole, memberName?: string) => {
-    try {
-      console.log(`Attempting to create/update user ${email} with role ${role}`);
-      
-      // First, check if the user already exists
-      const { data: existingUsers, error: checkError } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .eq('email', email);
-
-      if (checkError) {
-        console.error("Error checking for existing user:", checkError);
-        throw checkError;
-      }
-
-      const existingUser = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
-      let userId;
-      let isNewUser = false;
-      
-      if (existingUser) {
-        // User exists, update their role
-        userId = existingUser.id;
-        console.log("User already exists, updating role for:", email);
-      } else {
-        isNewUser = true;
-        // User doesn't exist, create them
-        console.log("Creating new user with email:", email);
-        
-        try {
-          // Use the auth signup method first
-          const { data: signupData, error: signupError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                name: memberName
-              },
-              emailRedirectTo: window.location.origin
-            }
-          });
-          
-          if (signupError) {
-            console.error("Sign up error:", signupError);
-            throw signupError;
-          }
-          
-          if (!signupData.user) {
-            throw new Error("Failed to create user account");
-          }
-          
-          userId = signupData.user.id;
-          console.log("User created successfully:", userId);
-          
-          // Wait a moment for the user to be fully created
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-        } catch (authError) {
-          console.error("Failed to create user via signup:", authError);
-          
-          // Fallback to admin.createUser if possible
-          try {
-            console.log("Attempting to create user with admin API...");
-            const { data: userData, error: createError } = await supabase.auth.admin.createUser({
-              email,
-              password,
-              email_confirm: true,
-              user_metadata: {
-                name: memberName
-              }
-            });
-            
-            if (createError) {
-              console.error("Admin user creation error:", createError);
-              throw createError;
-            }
-            
-            if (!userData.user) {
-              throw new Error("Failed to create user account with admin API");
-            }
-            
-            userId = userData.user.id;
-            console.log("User created successfully with admin API:", userId);
-            
-            // Wait a moment for the user to be fully created
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-          } catch (adminError) {
-            console.error("Failed to create user with admin API:", adminError);
-            throw new Error("Nie można utworzyć konta użytkownika. Sprawdź swoje uprawnienia lub spróbuj inny adres email.");
-          }
-        }
-        
-        // Create profile for the user
-        if (userId) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              email: email
-            });
-            
-          if (profileError) {
-            console.error("Error creating profile:", profileError);
-            if (profileError.code !== '23505') { // Not a duplicate key error
-              throw profileError;
-            }
-          }
-        }
-      }
-      
-      // Set or update the user's role
-      if (role !== 'user') {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert({
-            user_id: userId,
-            role: role
-          }, {
-            onConflict: 'user_id'
-          });
-          
-        if (roleError) {
-          console.error("Error setting role:", roleError);
-          throw roleError;
-        }
-      } else {
-        // For 'user' role, we delete any existing role entry
-        const { error: deleteError } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId);
-          
-        if (deleteError && deleteError.code !== 'PGRST116') { // Not found is ok
-          console.error("Error removing role:", deleteError);
-          throw deleteError;
-        }
-      }
-      
-      // Zapisz email utworzonego użytkownika
-      localStorage.setItem('currentUserEmail', email);
-      
-      // Refresh the users list
-      await fetchUsers();
-      
-      return { email, isNewUser };
-    } catch (error) {
-      console.error('Error creating user and setting role:', error);
-      throw error;
-    }
-  };
-
-  const handleMemberRoleChange = async (memberName: string, email: string, role: AppRole, password?: string) => {
+  const handleMemberRoleChange = async (
+    memberName: string, 
+    email: string, 
+    role: AppRole, 
+    password?: string
+  ): Promise<RoleChangeResult> => {
     try {
       if (!email) {
         throw new Error("Email jest wymagany aby zarządzać uprawnieniami");
@@ -337,7 +78,6 @@ export const useUserRoles = () => {
       
       console.log(`Attempting to manage permissions for ${memberName} with email ${email} and role ${role}`);
       
-      // First check if user with this email exists
       const { data: existingUsers, error: userCheckError } = await supabase
         .from('profiles')
         .select('id, email')
@@ -351,22 +91,15 @@ export const useUserRoles = () => {
       const existingUser = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
       
       if (existingUser) {
-        // User exists, update their role
         console.log(`User exists with email ${email}, updating role to ${role}`);
         return await handleRoleChange(existingUser.id, role, password);
       } else {
-        // User doesn't exist, create them first
         if (!password || password.length < 6) {
           throw new Error("Hasło jest wymagane (minimum 6 znaków) dla nowego użytkownika");
         }
         
         console.log(`No user found with email ${email}, creating new user`);
-        const result = await createUserAndSetRole(email, password, role, memberName);
-        
-        return {
-          email: result.email,
-          passwordUpdated: true
-        };
+        return await createUserAndSetRole(email, password, role, memberName);
       }
     } catch (error) {
       console.error("Error in handleMemberRoleChange:", error);
