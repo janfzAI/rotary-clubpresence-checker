@@ -70,6 +70,11 @@ export const MemberEmailEdit = ({
     }
   };
 
+  // Check if email has changed and is valid
+  const emailValue = form.watch('email');
+  const isEmailChanged = emailValue !== currentEmail;
+  const isEmailValid = form.formState.isValid;
+
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
@@ -112,9 +117,9 @@ export const MemberEmailEdit = ({
               <AlertDialogCancel type="button">Anuluj</AlertDialogCancel>
               <Button 
                 type="submit"
-                disabled={isSubmitting || !form.formState.isDirty || !form.formState.isValid || form.getValues('email') === currentEmail}
+                disabled={isSubmitting || !isEmailValid}
                 className={`
-                  ${form.formState.isValid && form.getValues('email') !== currentEmail 
+                  ${isEmailValid 
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                     : 'bg-muted text-muted-foreground'
                   }
