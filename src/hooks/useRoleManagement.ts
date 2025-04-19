@@ -6,36 +6,44 @@ import type { AppRole, RoleChangeResult } from '@/types/userRoles';
 export const useRoleManagement = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const sendPasswordResetEmail = async (email: string): Promise<boolean> => {
+    try {
+      console.log(`Sending password reset email to ${email}`);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin
+      });
+
+      if (error) {
+        console.error("Password reset email error:", error);
+        return false;
+      }
+      
+      console.log("Password reset email sent successfully");
+      return true;
+    } catch (e) {
+      console.error("Error sending password reset email:", e);
+      return false;
+    }
+  };
+
   const handleRoleChange = async (userId: string, newRole: AppRole, newPassword?: string): Promise<RoleChangeResult> => {
     try {
       console.log(`Attempting to change role for user ${userId} to ${newRole}`);
       
-      let passwordUpdateSuccessful = true;
+      let passwordResetSent = false;
       
       if (newPassword) {
-        console.log("Attempting to update password...");
+        console.log("Password update requested - will send reset email instead");
         
-        try {
-          const { error: passwordError } = await supabase.auth.admin.updateUserById(
-            userId,
-            { password: newPassword }
-          );
-
-          if (passwordError) {
-            console.error("Password update error:", passwordError);
-            passwordUpdateSuccessful = false;
-            
-            if (!passwordError.message.includes('not_admin')) {
-              throw passwordError;
-            }
-            
-            console.log("Continuing with role update despite password update failure");
-          } else {
-            console.log("Password updated successfully");
-          }
-        } catch (e) {
-          console.warn("Password update failed, but will continue with role update:", e);
-          passwordUpdateSuccessful = false;
+        // Pobierz email użytkownika
+        const { data: userData } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+          
+        if (userData?.email) {
+          passwordResetSent = await sendPasswordResetEmail(userData.email);
         }
       }
 
@@ -75,7 +83,7 @@ export const useRoleManagement = () => {
       
       return { 
         email: userData?.email || '', 
-        passwordUpdated: newPassword ? passwordUpdateSuccessful : undefined 
+        passwordUpdated: newPassword ? passwordResetSent : undefined 
       };
     } catch (error) {
       console.error('Error in handleRoleChange:', error);
@@ -85,6 +93,7 @@ export const useRoleManagement = () => {
 
   return {
     handleRoleChange,
+    sendPasswordResetEmail,
     isSubmitting
   };
 };

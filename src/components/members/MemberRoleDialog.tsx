@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useRoleManagement } from "@/hooks/useRoleManagement";
 
 interface MemberRoleDialogProps {
   isOpen: boolean;
@@ -47,6 +49,21 @@ export const MemberRoleDialog = ({
 }: MemberRoleDialogProps) => {
   const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
   const isNewUser = memberEmail && !existingUser;
+  const { sendPasswordResetEmail } = useRoleManagement();
+  const [resetEmailSent, setResetEmailSent] = React.useState(false);
+  
+  const handleSendPasswordReset = async () => {
+    if (!memberEmail) return;
+    
+    try {
+      const result = await sendPasswordResetEmail(memberEmail);
+      if (result) {
+        setResetEmailSent(true);
+      }
+    } catch (error) {
+      console.error("Failed to send password reset email:", error);
+    }
+  };
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -87,6 +104,27 @@ export const MemberRoleDialog = ({
             onEmailChange={onEmailChange}
             onPasswordChange={onPasswordChange}
           />
+          
+          {existingUser && (
+            <div className="mt-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleSendPasswordReset}
+                disabled={resetEmailSent}
+                className="w-full"
+              >
+                {resetEmailSent 
+                  ? "Link do resetowania hasła wysłany" 
+                  : "Wyślij link do resetowania hasła"}
+              </Button>
+              {resetEmailSent && (
+                <p className="text-sm text-green-600 mt-1">
+                  Email z linkiem do resetowania hasła został wysłany na adres {memberEmail}
+                </p>
+              )}
+            </div>
+          )}
           
           <MemberRoleSelect
             selectedRole={selectedRole}
