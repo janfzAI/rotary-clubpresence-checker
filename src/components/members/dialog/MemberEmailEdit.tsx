@@ -13,6 +13,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface MemberEmailEditProps {
   isOpen: boolean;
@@ -22,6 +32,11 @@ interface MemberEmailEditProps {
   onSubmit: (newEmail: string) => Promise<void>;
 }
 
+// Email validation schema
+const emailSchema = z.object({
+  email: z.string().email({ message: "Proszę podać prawidłowy adres email" }),
+});
+
 export const MemberEmailEdit = ({
   isOpen,
   memberName,
@@ -29,18 +44,25 @@ export const MemberEmailEdit = ({
   onClose,
   onSubmit,
 }: MemberEmailEditProps) => {
-  const [newEmail, setNewEmail] = React.useState(currentEmail);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-
+  
+  // Set up form with validation
+  const form = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: {
+      email: currentEmail,
+    },
+  });
+  
+  // Update form values when currentEmail changes
   React.useEffect(() => {
-    // Update the newEmail state when currentEmail changes
-    setNewEmail(currentEmail);
-  }, [currentEmail]);
+    form.reset({ email: currentEmail });
+  }, [currentEmail, form]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (values: z.infer<typeof emailSchema>) => {
     try {
       setIsSubmitting(true);
-      await onSubmit(newEmail);
+      await onSubmit(values.email);
       onClose();
     } catch (error) {
       console.error('Error updating email:', error);
@@ -59,29 +81,45 @@ export const MemberEmailEdit = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground mb-2">
-              Obecny adres email: <span id="current-member-email" data-email={currentEmail} className="font-medium">{currentEmail || 'Brak'}</span>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground mb-2">
+                  Obecny adres email: <span id="current-member-email" data-email={currentEmail} className="font-medium">{currentEmail || 'Brak'}</span>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          {...field}
+                          placeholder="Nowy adres email"
+                          className="w-full"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
-            <Input
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="Nowy adres email"
-            />
-          </div>
-        </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel>Anuluj</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleSubmit}
-            disabled={isSubmitting || !newEmail || newEmail === currentEmail}
-          >
-            {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+            <AlertDialogFooter>
+              <AlertDialogCancel type="button">Anuluj</AlertDialogCancel>
+              <Button 
+                type="submit"
+                disabled={isSubmitting || !form.formState.isDirty || !form.formState.isValid}
+              >
+                {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
+              </Button>
+            </AlertDialogFooter>
+          </form>
+        </Form>
       </AlertDialogContent>
     </AlertDialog>
   );
