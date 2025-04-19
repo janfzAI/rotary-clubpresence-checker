@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,10 +46,20 @@ export const MembersManagement = ({
   } = useMemberRoleManagement();
 
   const findUserRole = (memberName: string) => {
-    const user = users.find(user => 
-      user.email.toLowerCase().includes(memberName.toLowerCase()) || 
-      memberName.toLowerCase().includes(user.email.toLowerCase())
-    );
+    const normalizedMemberName = memberName.toLowerCase().trim();
+    const user = users.find(user => {
+      const normalizedEmail = user.email.toLowerCase().trim();
+      
+      // More precise matching logic
+      const emailParts = normalizedEmail.split('@')[0].split('.');
+      const nameParts = normalizedMemberName.split(' ');
+
+      // Check if any part of the email matches any part of the name
+      return emailParts.some(part => 
+        nameParts.some(namePart => part.includes(namePart))
+      );
+    });
+    
     return user?.role;
   };
 
