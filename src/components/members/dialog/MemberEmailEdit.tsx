@@ -2,7 +2,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -70,7 +69,7 @@ export const MemberEmailEdit = ({
     }
   };
 
-  // Check if email has changed and is valid
+  // Check if email is valid
   const emailValue = form.watch('email');
   const isEmailValid = form.formState.isValid;
 
