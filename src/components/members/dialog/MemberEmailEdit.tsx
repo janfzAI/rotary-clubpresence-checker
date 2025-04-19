@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Mail } from "lucide-react";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -113,7 +112,13 @@ export const MemberEmailEdit = ({
               <AlertDialogCancel type="button">Anuluj</AlertDialogCancel>
               <Button 
                 type="submit"
-                disabled={isSubmitting || !form.formState.isDirty || !form.formState.isValid}
+                disabled={isSubmitting || !form.formState.isDirty || !form.formState.isValid || form.getValues('email') === currentEmail}
+                className={`
+                  ${form.formState.isValid && form.getValues('email') !== currentEmail 
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                    : 'bg-muted text-muted-foreground'
+                  }
+                `}
               >
                 {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
               </Button>
