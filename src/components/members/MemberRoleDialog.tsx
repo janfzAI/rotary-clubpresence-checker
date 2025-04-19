@@ -13,6 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface MemberRoleDialogProps {
   isOpen: boolean;
@@ -44,6 +46,7 @@ export const MemberRoleDialog = ({
   onRoleChange
 }: MemberRoleDialogProps) => {
   const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
+  const isNewUser = memberEmail && !existingUser;
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -54,7 +57,7 @@ export const MemberRoleDialog = ({
             {memberEmail ? (
               <>
                 Wybierz rolę dla użytkownika <strong>{memberEmail}</strong>
-                {!existingUser && " (nowe konto zostanie utworzone)"}
+                {isNewUser && " (nowe konto zostanie utworzone)"}
               </>
             ) : (
               <>
@@ -66,6 +69,17 @@ export const MemberRoleDialog = ({
         </AlertDialogHeader>
 
         <div className="space-y-4 py-4">
+          {isNewUser && (
+            <Alert variant="warning" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Uwaga:</strong> Aby utworzyć nowego użytkownika, konto używane do logowania musi 
+                mieć uprawnienia administratora w Supabase. Jeśli operacja się nie powiedzie, 
+                użyj istniejącego adresu e-mail lub skontaktuj się z administratorem systemu.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <MemberAuthFields
             memberEmail={memberEmail}
             memberPassword={memberPassword}

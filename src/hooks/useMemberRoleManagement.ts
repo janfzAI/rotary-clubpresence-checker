@@ -47,7 +47,7 @@ export const useMemberRoleManagement = () => {
         let message = `Pomyślnie ${isNewUser ? 'utworzono użytkownika' : 'zmieniono rolę użytkownika'} ${memberEmail} na ${selectedRole}`;
         if (memberPassword && result.passwordUpdated) {
           message += isNewUser ? ' z podanym hasłem' : ' i zaktualizowano hasło';
-        } else if (memberPassword && !result.passwordUpdated) {
+        } else if (memberPassword && result.passwordUpdated === false) {
           message += '. Uwaga: Nie udało się zaktualizować hasła (wymagane uprawnienia administratora).';
         }
         
@@ -95,19 +95,24 @@ export const useMemberRoleManagement = () => {
   };
 
   const findBestMatchingUser = (memberName: string) => {
-    const normalizedName = memberName.toLowerCase().replace(/\s+/g, '');
+    // Funkcja pomocnicza do normalizacji tekstu do porównania
+    const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
+    const normalizedName = normalize(memberName);
+    
+    // Próba dokładnego dopasowania po e-mailu lub części imienia i nazwiska
     for (const user of users) {
-      const normalizedEmail = user.email.toLowerCase().replace(/\s+/g, '');
+      const normalizedEmail = normalize(user.email);
       if (normalizedEmail.includes(normalizedName) || normalizedName.includes(normalizedEmail)) {
         return user;
       }
     }
     
+    // Próba dopasowania po częściach imienia/nazwiska
     const nameParts = memberName.toLowerCase().split(/\s+/);
     for (const user of users) {
       for (const part of nameParts) {
-        if (part.length > 2 && user.email.toLowerCase().includes(part)) {
+        if (part.length > 2 && normalize(user.email).includes(normalize(part))) {
           return user;
         }
       }

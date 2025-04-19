@@ -78,10 +78,11 @@ export const useUserRoles = () => {
       
       console.log(`Attempting to manage permissions for ${memberName} with email ${email} and role ${role}`);
       
+      // First check if user exists in auth system by checking profiles table
       const { data: existingUsers, error: userCheckError } = await supabase
         .from('profiles')
         .select('id, email')
-        .eq('email', email);
+        .ilike('email', email);
         
       if (userCheckError) {
         console.error("Error checking for existing user:", userCheckError);
@@ -99,7 +100,22 @@ export const useUserRoles = () => {
         }
         
         console.log(`No user found with email ${email}, creating new user`);
-        return await createUserAndSetRole(email, password, role, memberName);
+        try {
+          return await createUserAndSetRole(email, password, role, memberName);
+        } catch (error: any) {
+          // Check if error is about user already existing
+          if (error.message && (error.message.includes('User already registered') || 
+              (error.code === 'user_already_exists'))) {
+            throw new Error("Użytkownik o podanym adresie email już istnieje w systemie, ale nie został znaleziony w profilu. Skontaktuj się z administratorem systemu.");
+          }
+          
+          // Check if error is about permissions
+          if (error.message && (error.message.includes('not_admin') || error.message.includes('User not allowed'))) {
+            throw new Error("Twoje konto nie posiada uprawnień administratora Supabase do tworzenia użytkowników. Użyj istniejącego adresu email lub skontaktuj się z administratorem systemu.");
+          }
+          
+          throw error;
+        }
       }
     } catch (error) {
       console.error("Error in handleMemberRoleChange:", error);
