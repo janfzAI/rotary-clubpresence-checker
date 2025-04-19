@@ -29,11 +29,11 @@ interface MemberListItemProps {
 const getRoleBadgeStyle = (role?: AppRole) => {
   switch (role) {
     case 'admin':
-      return 'bg-primary text-primary-foreground';
+      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
     case 'manager':
-      return 'bg-secondary text-secondary-foreground';
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300';
     default:
-      return 'bg-muted text-muted-foreground';
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
   }
 };
 
@@ -57,15 +57,13 @@ export const MemberListItem = ({
   onOpenRoleDialog,
   onRemoveMember
 }: MemberListItemProps) => {
-  const showBadge = userRole === 'admin' || userRole === 'manager';
-
   return (
     <div key={member.id} className="p-4 flex justify-between items-center border rounded-md">
       <span className="flex items-center gap-2 flex-1">
         <span className="text-sm text-muted-foreground">{index + 1}.</span>
         <span className="flex items-center gap-2">
           {member.name}
-          {showBadge && (
+          {userRole && (
             <Badge variant="outline" className={getRoleBadgeStyle(userRole)}>
               {getRoleLabel(userRole)}
             </Badge>
