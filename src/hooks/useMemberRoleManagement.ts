@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserData } from './useUserData';
 import { useRoleDialogState } from './useRoleDialogState';
 import { findEmailMatch } from '@/utils/emailMatching';
+import { useUserRoles } from './useUserRoles';
 import type { Member } from '@/types/members';
 
 export const useMemberRoleManagement = () => {
