@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
@@ -62,6 +62,24 @@ export const MembersManagement = ({
     }
   }, [lastRefreshTimestamp]);
 
+  const userRoleCache = useMemo(() => {
+    const cache = new Map();
+    members.forEach(member => {
+      const role = findUserRole(member.name, member.id);
+      if (role) {
+        cache.set(member.id, role);
+      }
+    });
+    return cache;
+  }, [members, users, lastRefreshTimestamp]);
+
+  const getCachedUserRole = (memberName: string, memberId: number) => {
+    if (userRoleCache.has(memberId)) {
+      return userRoleCache.get(memberId);
+    }
+    return findUserRole(memberName, memberId);
+  };
+
   const findUserRole = (memberName: string, memberId: number) => {
     console.log(`Finding role for member: ${memberName} (ID: ${memberId}), available users: ${users.length}`);
     
@@ -83,7 +101,6 @@ export const MembersManagement = ({
     });
     
     if (exactUserMatch) {
-      console.log(`Found exact match for ${memberName}: ${exactUserMatch.email} with role ${exactUserMatch.role}`);
       return exactUserMatch.role;
     }
     
@@ -98,7 +115,6 @@ export const MembersManagement = ({
     });
     
     if (partialMatch) {
-      console.log(`Found partial match for ${memberName}: ${partialMatch.email} with role ${partialMatch.role}`);
       return partialMatch.role;
     }
     
@@ -107,20 +123,33 @@ export const MembersManagement = ({
         u.email && (u.email.toLowerCase().includes("jan") && u.email.toLowerCase().includes("jurga"))
       );
       if (janUser) {
-        console.log(`Found special match for Jan Jurga: ${janUser.email} with role ${janUser.role}`);
         return janUser.role;
       }
     }
     
-    console.log(`No role match found for ${memberName}`);
     return undefined;
   };
 
+  const emailCache = useMemo(() => {
+    const cache = new Map();
+    members.forEach(member => {
+      const email = findCurrentEmailForMember(member.name);
+      if (email) {
+        cache.set(member.id, email);
+      }
+    });
+    return cache;
+  }, [members, users, lastRefreshTimestamp]);
+
+  const getCachedEmail = (memberName: string, memberId: number) => {
+    if (emailCache.has(memberId)) {
+      return emailCache.get(memberId);
+    }
+    return findCurrentEmailForMember(memberName);
+  };
+
   const findCurrentEmailForMember = (memberName: string): string => {
-    console.log(`Finding current email for member: ${memberName}`);
-    
     if (!memberName || !users || users.length === 0) {
-      console.log("No member name provided or no users available");
       return '';
     }
     
@@ -129,7 +158,6 @@ export const MembersManagement = ({
         u.email && (u.email.toLowerCase().includes("jan") || u.email.toLowerCase().includes("jurga"))
       );
       if (janUser && janUser.email) {
-        console.log(`Found special match for Jan Jurga: ${janUser.email}`);
         return janUser.email;
       }
     }
@@ -146,7 +174,6 @@ export const MembersManagement = ({
     });
     
     if (exactUserMatch && exactUserMatch.email) {
-      console.log(`Found exact email match for ${memberName}: ${exactUserMatch.email}`);
       return exactUserMatch.email;
     }
     
@@ -168,7 +195,6 @@ export const MembersManagement = ({
       });
       
       if (matchedUser && matchedUser.email) {
-        console.log(`Found name-based email match for ${memberName}: ${matchedUser.email}`);
         return matchedUser.email;
       }
     }
@@ -181,13 +207,11 @@ export const MembersManagement = ({
       
       for (const part of nameParts) {
         if (part.length > 2 && userEmail.includes(part)) {
-          console.log(`Found part match for ${memberName}: ${user.email} (matched part: ${part})`);
           return user.email;
         }
       }
     }
     
-    console.log(`No email found for member ${memberName}`);
     return '';
   };
 
@@ -223,13 +247,21 @@ export const MembersManagement = ({
   const handleOpenEmailEdit = (member: { id: number; name: string }) => {
     console.log("Opening email edit for member:", member.name);
     
-    refreshUserData().then(() => {
-      const email = findCurrentEmailForMember(member.name);
-      console.log("Current email found for email edit:", email);
-      
+    const cachedEmail = getCachedEmail(member.name, member.id);
+    
+    if (cachedEmail) {
+      console.log("Using cached email for edit:", cachedEmail);
       setEmailEditMember(member);
-      setCurrentEmailForEdit(email);
-    });
+      setCurrentEmailForEdit(cachedEmail);
+    } else {
+      refreshUserData().then(() => {
+        const email = findCurrentEmailForMember(member.name);
+        console.log("Current email found for email edit:", email);
+        
+        setEmailEditMember(member);
+        setCurrentEmailForEdit(email);
+      });
+    }
   };
 
   const handleEmailUpdate = async (newEmail: string) => {
@@ -340,11 +372,16 @@ export const MembersManagement = ({
             member={member}
             index={index}
             isAdmin={true}
-            userRole={findUserRole(member.name, member.id)}
+            userRole={getCachedUserRole(member.name, member.id)}
             onToggleActive={handleToggleActive}
             onOpenRoleDialog={() => {
               console.log("Requesting to open role dialog for:", member.name);
-              refreshUserData().then(() => handleOpenRoleDialog(member));
+              const currentTime = Date.now();
+              if (currentTime - lastRefreshTimestamp > 10000) {
+                refreshUserData().then(() => handleOpenRoleDialog(member));
+              } else {
+                handleOpenRoleDialog(member);
+              }
             }}
             onRemoveMember={handleRemoveMember}
             onOpenEmailEdit={handleOpenEmailEdit}
@@ -374,7 +411,6 @@ export const MembersManagement = ({
         onClose={() => {
           setEmailEditMember(null);
           setCurrentEmailForEdit('');
-          refreshUserData();
         }}
         onSubmit={handleEmailUpdate}
       />

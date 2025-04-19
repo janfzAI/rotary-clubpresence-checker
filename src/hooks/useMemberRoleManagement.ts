@@ -27,6 +27,7 @@ export const useMemberRoleManagement = () => {
     notifyEmailChanged
   } = useRoleDialogState();
 
+  // Only refresh when email changes
   useEffect(() => {
     if (emailChangeTimestamp > 0) {
       console.log("Email change detected, refreshing user data", emailChangeTimestamp);
@@ -36,7 +37,12 @@ export const useMemberRoleManagement = () => {
 
   const handleOpenRoleDialog = async (member: Member) => {
     console.log("Opening role dialog for member:", member.name);
-    await refreshUserData();
+    
+    // Don't refresh data every time, only if it's been more than 10 seconds since last refresh
+    const currentTime = Date.now();
+    if (currentTime - lastRefreshTimestamp > 10000) {
+      await refreshUserData();
+    }
     
     setSelectedMember(member);
     const matchedEmail = findEmailMatch(member.name, users.map(u => u.email));
