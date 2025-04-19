@@ -70,7 +70,7 @@ export const MemberRoleDialog = ({
 
         <div className="space-y-4 py-4">
           {isNewUser && (
-            <Alert variant="warning" className="mb-4">
+            <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 <strong>Uwaga:</strong> Aby utworzyć nowego użytkownika, konto używane do logowania musi 
