@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ export const PasswordReset = () => {
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate password
     if (password !== confirmPassword) {
       setPasswordError('Hasła muszą być identyczne');
       return;
@@ -50,13 +49,12 @@ export const PasswordReset = () => {
       } else {
         toast({
           title: "Hasło zmienione",
-          description: "Twoje hasło zostało pomyślnie zmienione"
+          description: "Twoje hasło zostało pomyślnie zmienione. Zaloguj się ponownie."
         });
         
-        // Redirect to main page after successful password change
-        setTimeout(() => {
-          navigate('/');
-        }, 1500);
+        // Sign out the user and redirect to auth page
+        await supabase.auth.signOut();
+        navigate('/auth');
       }
     } catch (error: any) {
       console.error('Unexpected error during password reset:', error);
@@ -113,3 +111,4 @@ export const PasswordReset = () => {
     </div>
   );
 };
+
