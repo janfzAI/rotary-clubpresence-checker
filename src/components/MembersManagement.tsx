@@ -98,66 +98,45 @@ export const MembersManagement = ({
     setEmailEditMember(member);
   };
 
+  // Improved email update function with more specific matching
   const handleEmailUpdate = async (newEmail: string) => {
     if (!emailEditMember) return;
 
     console.log(`Próba aktualizacji adresu email dla ${emailEditMember.name} na ${newEmail}`);
-    console.log('Dostępni użytkownicy:', users);
-
-    // Bardziej elastyczne wyszukiwanie użytkownika
-    const matchedUser = users.find(user => {
-      // Przygotowanie danych do porównania
-      const userName = emailEditMember.name.toLowerCase().trim();
-      const userEmail = user.email.toLowerCase().trim();
-      
-      console.log(`Porównuję użytkownika ${userName} z emailem ${userEmail}`);
-      
-      // Sprawdź bezpośrednie dopasowanie w emailu
-      if (userEmail.includes(userName.replace(/\s+/g, '.')) || 
-          userEmail.includes(userName.replace(/\s+/g, ''))) {
-        console.log('Dopasowanie bezpośrednie');
-        return true;
-      }
-      
-      // Sprawdź dopasowanie części imienia/nazwiska
-      const nameParts = userName.split(' ');
-      for (const part of nameParts) {
-        if (part.length > 2 && userEmail.includes(part.toLowerCase())) {
-          console.log(`Dopasowanie części imienia: ${part}`);
-          return true;
-        }
-      }
-      
-      // Sprawdź dopasowanie adresu email do części imienia/nazwiska
-      if (userEmail.split('@')[0]) {
-        const emailParts = userEmail.split('@')[0].split('.');
-        for (const emailPart of emailParts) {
-          for (const namePart of nameParts) {
-            if (emailPart.includes(namePart.toLowerCase()) || 
-                namePart.toLowerCase().includes(emailPart)) {
-              console.log(`Dopasowanie części imienia i emaila: ${namePart} - ${emailPart}`);
-              return true;
-            }
-          }
-        }
-      }
-      
-      return false;
-    });
+    
+    // When updating an email, we should use the exact email shown in the dialog
+    // rather than trying to match it again, as that's what's causing the issue
+    const currentEmailElement = document.getElementById('current-member-email');
+    const currentEmail = currentEmailElement ? currentEmailElement.getAttribute('data-email') : '';
+    
+    console.log('Current email from UI:', currentEmail);
+    
+    if (!currentEmail) {
+      console.error('Nie można odnaleźć bieżącego adresu email');
+      toast({
+        title: "Błąd",
+        description: "Nie można odnaleźć bieżącego adresu email użytkownika",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Find the user by exact email match
+    const matchedUser = users.find(user => user.email.toLowerCase().trim() === currentEmail.toLowerCase().trim());
 
     if (!matchedUser) {
-      console.error('Nie znaleziono użytkownika dla:', emailEditMember.name);
+      console.error('Nie znaleziono użytkownika dla adresu email:', currentEmail);
       console.error('Dostępni użytkownicy:', users.map(u => u.email));
       
       toast({
         title: "Błąd",
-        description: "Nie znaleziono użytkownika w systemie",
+        description: "Nie znaleziono użytkownika w systemie dla podanego adresu email",
         variant: "destructive"
       });
       return;
     }
 
-    console.log('Znaleziono użytkownika:', matchedUser);
+    console.log('Znaleziono użytkownika do aktualizacji:', matchedUser);
 
     try {
       const { error } = await supabase
@@ -241,29 +220,28 @@ export const MembersManagement = ({
         currentEmail={users.find(u => {
           if (!emailEditMember) return false;
           
-          const userName = emailEditMember.name.toLowerCase();
-          const userEmail = u.email.toLowerCase();
+          // Try to find an exact match first by name in email
+          const userName = emailEditMember.name.toLowerCase().replace(/\s+/g, '.');
+          const userNameNoSpace = emailEditMember.name.toLowerCase().replace(/\s+/g, '');
           
-          // Sprawdź różne warianty dopasowania
-          if (userEmail.includes(userName.replace(/\s+/g, '.')) || 
-              userEmail.includes(userName.replace(/\s+/g, '')))
+          if (u.email.toLowerCase().includes(userName) || 
+              u.email.toLowerCase().includes(userNameNoSpace)) {
             return true;
-            
-          const nameParts = userName.split(' ');
-          const emailParts = userEmail.split('@')[0].split('.');
-          
-          // Sprawdź czy jakakolwiek część imienia pasuje do części maila
-          for (const part of nameParts) {
-            if (part.length > 2 && userEmail.includes(part.toLowerCase()))
-              return true;
           }
           
-          // Sprawdź dopasowanie części email do imienia
-          for (const emailPart of emailParts) {
-            for (const namePart of nameParts) {
-              if (emailPart.includes(namePart.toLowerCase()) || 
-                  namePart.toLowerCase().includes(emailPart))
-                return true;
+          // More specific matching based on first name and last name
+          const nameParts = emailEditMember.name.toLowerCase().split(' ');
+          if (nameParts.length === 2) {
+            const [firstName, lastName] = nameParts;
+            
+            // Common email formats
+            if (u.email.toLowerCase().startsWith(`${firstName}.${lastName}`) ||
+                u.email.toLowerCase().startsWith(`${lastName}.${firstName}`) ||
+                u.email.toLowerCase().startsWith(`${firstName}${lastName}`) ||
+                u.email.toLowerCase().startsWith(`${lastName}${firstName}`) ||
+                u.email.toLowerCase().startsWith(`${firstName[0]}${lastName}`) ||
+                u.email.toLowerCase().startsWith(`${lastName[0]}${firstName}`)) {
+              return true;
             }
           }
           

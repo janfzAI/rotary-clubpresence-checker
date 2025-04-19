@@ -32,6 +32,11 @@ export const MemberEmailEdit = ({
   const [newEmail, setNewEmail] = React.useState(currentEmail);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  React.useEffect(() => {
+    // Update the newEmail state when currentEmail changes
+    setNewEmail(currentEmail);
+  }, [currentEmail]);
+
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -56,6 +61,9 @@ export const MemberEmailEdit = ({
 
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
+            <div className="text-sm text-muted-foreground mb-2">
+              Obecny adres email: <span id="current-member-email" data-email={currentEmail} className="font-medium">{currentEmail || 'Brak'}</span>
+            </div>
             <Input
               type="email"
               value={newEmail}
