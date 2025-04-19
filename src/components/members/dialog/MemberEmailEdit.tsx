@@ -43,6 +43,7 @@ export const MemberEmailEdit = ({
   onSubmit,
 }: MemberEmailEditProps) => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   
   // Set up form with validation
   const form = useForm<z.infer<typeof emailSchema>>({
@@ -55,15 +56,19 @@ export const MemberEmailEdit = ({
   // Update form values when currentEmail changes
   React.useEffect(() => {
     form.reset({ email: currentEmail });
-  }, [currentEmail, form]);
+    // Reset error message when dialog opens or email changes
+    setErrorMessage(null);
+  }, [currentEmail, form, isOpen]);
 
   const handleSubmit = async (values: z.infer<typeof emailSchema>) => {
     try {
       setIsSubmitting(true);
+      setErrorMessage(null);
       await onSubmit(values.email);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating email:', error);
+      setErrorMessage(error.message || 'Wystąpił błąd podczas aktualizacji adresu email');
     } finally {
       setIsSubmitting(false);
     }
@@ -110,6 +115,10 @@ export const MemberEmailEdit = ({
                 />
               </div>
             </div>
+
+            {errorMessage && (
+              <div className="text-sm text-destructive font-medium">{errorMessage}</div>
+            )}
 
             <AlertDialogFooter>
               <AlertDialogCancel type="button">Anuluj</AlertDialogCancel>

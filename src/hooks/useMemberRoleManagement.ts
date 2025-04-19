@@ -22,11 +22,17 @@ export const useMemberRoleManagement = () => {
   const { toast } = useToast();
   const { users, handleMemberRoleChange, fetchUsers } = useUserRoles();
 
-  // Enhanced refresh function with timestamp tracking
+  // Enhanced refresh function with timestamp tracking and better error handling
   const refreshUserData = useCallback(async () => {
     console.log("Refreshing user data in useMemberRoleManagement");
-    await fetchUsers();
-    setLastRefreshTimestamp(Date.now());
+    try {
+      await fetchUsers();
+      setLastRefreshTimestamp(Date.now());
+      return true;
+    } catch (error) {
+      console.error("Error refreshing user data:", error);
+      return false;
+    }
   }, [fetchUsers]);
 
   // Refresh user data when email changes
@@ -40,8 +46,8 @@ export const useMemberRoleManagement = () => {
   const handleRoleChangeSubmit = async () => {
     if (!memberEmail || !selectedRole || !selectedMember) {
       toast({
-        title: "Error",
-        description: "Please provide an email and select a role",
+        title: "Błąd",
+        description: "Proszę podać adres email i wybrać rolę",
         variant: "destructive"
       });
       return;
@@ -61,15 +67,15 @@ export const useMemberRoleManagement = () => {
         const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
         const isNewUser = !existingUser;
         
-        let message = `Successfully ${isNewUser ? 'created user' : 'changed user role'} ${memberEmail} to ${selectedRole}`;
+        let message = `Pomyślnie ${isNewUser ? 'utworzono użytkownika' : 'zmieniono rolę użytkownika'} ${memberEmail} na ${selectedRole}`;
         if (memberPassword && result.passwordUpdated) {
-          message += isNewUser ? ' with the provided password' : ' and updated password';
+          message += isNewUser ? ' z podanym hasłem' : ' i zaktualizowano hasło';
         } else if (memberPassword && result.passwordUpdated === false) {
-          message += '. Note: Failed to update password (administrator privileges required).';
+          message += '. Uwaga: Nie udało się zaktualizować hasła (wymagane uprawnienia administratora).';
         }
         
         toast({
-          title: isNewUser ? "User Created" : "Permissions Changed",
+          title: isNewUser ? "Utworzono użytkownika" : "Zmieniono uprawnienia",
           description: message
         });
         
@@ -81,8 +87,8 @@ export const useMemberRoleManagement = () => {
     } catch (error: any) {
       console.error("Error managing user:", error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to change user permissions",
+        title: "Błąd",
+        description: error instanceof Error ? error.message : "Nie udało się zmienić uprawnień użytkownika",
         variant: "destructive"
       });
     } finally {
@@ -124,7 +130,15 @@ export const useMemberRoleManagement = () => {
     console.log("Finding best matching user for:", memberName);
     console.log("Current users:", users.map(u => ({ email: u.email, timestamp: lastRefreshTimestamp })));
     
-    const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (!memberName || !users || users.length === 0) {
+      console.log("No member name provided or no users available");
+      return null;
+    }
+    
+    const normalize = (text: string) => {
+      if (!text) return '';
+      return text.toLowerCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    };
     
     const normalizedName = normalize(memberName);
     console.log("Normalized member name:", normalizedName);
@@ -134,6 +148,7 @@ export const useMemberRoleManagement = () => {
     const userNameNoSpace = memberName.toLowerCase().replace(/\s+/g, '');
     
     for (const user of users) {
+      if (!user.email) continue;
       const normalizedEmail = normalize(user.email);
       if (normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace)) {
         console.log("Found exact match by name in email:", user.email);
@@ -143,6 +158,7 @@ export const useMemberRoleManagement = () => {
     
     // Second priority: Email includes normalized name
     for (const user of users) {
+      if (!user.email) continue;
       const normalizedEmail = normalize(user.email);
       if (normalizedEmail.includes(normalizedName) || normalizedName.includes(normalizedEmail)) {
         console.log("Found match by email inclusion:", user.email);
@@ -155,6 +171,7 @@ export const useMemberRoleManagement = () => {
     console.log("Name parts for matching:", nameParts);
     
     for (const user of users) {
+      if (!user.email) continue;
       for (const part of nameParts) {
         if (part.length > 2 && normalize(user.email).includes(normalize(part))) {
           console.log("Found match by name part:", part, "in email:", user.email);
