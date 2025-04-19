@@ -57,9 +57,12 @@ export const MemberEmailEdit = ({
   
   // Update form values when currentEmail changes
   React.useEffect(() => {
-    form.reset({ email: currentEmail });
-    // Reset error message when dialog opens or email changes
-    setErrorMessage(null);
+    if (isOpen) {
+      console.log("MemberEmailEdit: Current email for form reset:", currentEmail);
+      form.reset({ email: currentEmail });
+      // Reset error message when dialog opens or email changes
+      setErrorMessage(null);
+    }
   }, [currentEmail, form, isOpen]);
 
   const handleSubmit = async (values: z.infer<typeof emailSchema>) => {

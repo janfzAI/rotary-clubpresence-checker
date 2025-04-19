@@ -52,7 +52,13 @@ export const MemberRoleDialog = ({
   const isNewUser = memberEmail && !existingUser;
   const { sendPasswordResetEmail } = useRoleManagement();
   const [resetEmailSent, setResetEmailSent] = React.useState(false);
-  const [refreshingEmailList, setRefreshingEmailList] = React.useState(false);
+  
+  // Debug the current email value
+  useEffect(() => {
+    if (isOpen && selectedMember) {
+      console.log(`MemberRoleDialog: Current email for ${selectedMember.name}:`, memberEmail);
+    }
+  }, [isOpen, memberEmail, selectedMember]);
   
   // Reset the resetEmailSent state when the dialog opens
   useEffect(() => {
@@ -153,7 +159,7 @@ export const MemberRoleDialog = ({
           <AlertDialogCancel>Anuluj</AlertDialogCancel>
           <AlertDialogAction 
             onClick={onSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !memberEmail}
           >
             {isSubmitting ? 'Przetwarzanie...' : 'Zapisz'}
           </AlertDialogAction>

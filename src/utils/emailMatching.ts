@@ -7,6 +7,19 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
     return undefined;
   }
   
+  // Special case for Maciej Krzeptowski
+  if (memberName.toLowerCase().includes("maciej") && memberName.toLowerCase().includes("krzeptowski")) {
+    const maciejEmail = userEmails.find(email => 
+      email.toLowerCase().includes("maciej") && 
+      (email.toLowerCase().includes("krzeptowski") || email.toLowerCase().includes("krzept"))
+    );
+    
+    if (maciejEmail) {
+      console.log(`Found special match for Maciej Krzeptowski: ${maciejEmail}`);
+      return maciejEmail;
+    }
+  }
+  
   // Special case for Jan Jurga
   if (memberName.toLowerCase().includes("jan jurga")) {
     const janEmail = userEmails.find(email => 
@@ -36,6 +49,18 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
       console.log(`Found exact email match: ${exactMatch}`);
       return exactMatch;
     }
+    
+    // Look for underscore format (first_last@domain.com)
+    const underscoreMatch = userEmails.find(email => {
+      const normalizedEmail = email.toLowerCase();
+      return normalizedEmail.includes(`${firstName}_${lastName}`) || 
+             normalizedEmail.includes(`${lastName}_${firstName}`);
+    });
+    
+    if (underscoreMatch) {
+      console.log(`Found underscore email match: ${underscoreMatch}`);
+      return underscoreMatch;
+    }
   }
   
   // Try name parts matching
@@ -47,6 +72,22 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
     if (normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace)) {
       console.log(`Found partial email match: ${email}`);
       return email;
+    }
+  }
+  
+  // Last resort - check if any name part is in the email
+  if (nameParts.length >= 2) {
+    const firstName = nameParts[0];
+    const lastName = nameParts[nameParts.length - 1];
+    
+    for (const email of userEmails) {
+      const normalizedEmail = email.toLowerCase();
+      
+      // If both first name and last name are in the email
+      if (normalizedEmail.includes(firstName) && normalizedEmail.includes(lastName)) {
+        console.log(`Found name parts in email: ${email}`);
+        return email;
+      }
     }
   }
   

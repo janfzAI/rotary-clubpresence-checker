@@ -45,6 +45,24 @@ export const useMemberRoleManagement = () => {
     }
     
     setSelectedMember(member);
+    
+    // Special case for Maciej Krzeptowski
+    if (member.name.toLowerCase().includes("maciej") && member.name.toLowerCase().includes("krzeptowski")) {
+      const maciejEmail = users.find(u => 
+        u.email && u.email.toLowerCase().includes("maciej") && 
+        (u.email.toLowerCase().includes("krzeptowski") || u.email.toLowerCase().includes("krzept"))
+      )?.email;
+      
+      if (maciejEmail) {
+        console.log("Found email for Maciej Krzeptowski:", maciejEmail);
+        const user = getUserByEmail(maciejEmail);
+        setMemberEmail(maciejEmail);
+        setSelectedRole(user?.role || 'user');
+        setMemberPassword('');
+        return;
+      }
+    }
+    
     const matchedEmail = findEmailMatch(member.name, users.map(u => u.email));
     
     if (matchedEmail) {
