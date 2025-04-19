@@ -96,27 +96,29 @@ export const MembersManagement = ({
   };
 
   const handleOpenEmailEdit = (member: { id: number; name: string }) => {
-    setEmailEditMember(member);
+    // Before opening the email edit dialog, make sure we have the latest user data
+    fetchUsers().then(() => {
+      setEmailEditMember(member);
+    });
   };
 
-  // Improved email update function with more specific matching
+  // Improved email update function with better data synchronization
   const handleEmailUpdate = async (newEmail: string) => {
     if (!emailEditMember) return;
 
-    console.log(`Próba aktualizacji adresu email dla ${emailEditMember.name} na ${newEmail}`);
+    console.log(`Updating email for ${emailEditMember.name} to ${newEmail}`);
     
-    // When updating an email, we should use the exact email shown in the dialog
-    // rather than trying to match it again, as that's what's causing the issue
+    // When updating an email, use the exact email shown in the dialog
     const currentEmailElement = document.getElementById('current-member-email');
     const currentEmail = currentEmailElement ? currentEmailElement.getAttribute('data-email') : '';
     
     console.log('Current email from UI:', currentEmail);
     
     if (!currentEmail) {
-      console.error('Nie można odnaleźć bieżącego adresu email');
+      console.error('Cannot find current email');
       toast({
-        title: "Błąd",
-        description: "Nie można odnaleźć bieżącego adresu email użytkownika",
+        title: "Error",
+        description: "Cannot find current email of the user",
         variant: "destructive"
       });
       return;
@@ -126,18 +128,18 @@ export const MembersManagement = ({
     const matchedUser = users.find(user => user.email.toLowerCase().trim() === currentEmail.toLowerCase().trim());
 
     if (!matchedUser) {
-      console.error('Nie znaleziono użytkownika dla adresu email:', currentEmail);
-      console.error('Dostępni użytkownicy:', users.map(u => u.email));
+      console.error('User not found for email:', currentEmail);
+      console.error('Available users:', users.map(u => u.email));
       
       toast({
-        title: "Błąd",
-        description: "Nie znaleziono użytkownika w systemie dla podanego adresu email",
+        title: "Error",
+        description: "User not found in the system for the given email",
         variant: "destructive"
       });
       return;
     }
 
-    console.log('Znaleziono użytkownika do aktualizacji:', matchedUser);
+    console.log('Found user to update:', matchedUser);
 
     try {
       const { error } = await supabase
@@ -146,13 +148,13 @@ export const MembersManagement = ({
         .eq('id', matchedUser.id);
 
       if (error) {
-        console.error('Błąd aktualizacji email:', error);
+        console.error('Email update error:', error);
         throw error;
       }
 
       toast({
-        title: "Sukces",
-        description: `Adres email dla ${emailEditMember.name} został zaktualizowany na ${newEmail}`
+        title: "Success",
+        description: `Email address for ${emailEditMember.name} has been updated to ${newEmail}`
       });
       
       // Force refresh of users data
@@ -168,8 +170,8 @@ export const MembersManagement = ({
     } catch (error: any) {
       console.error('Error updating email:', error);
       toast({
-        title: "Błąd",
-        description: error.message || "Nie udało się zaktualizować adresu email",
+        title: "Error",
+        description: error.message || "Failed to update email address",
         variant: "destructive"
       });
     }
@@ -180,14 +182,14 @@ export const MembersManagement = ({
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex gap-2 flex-1">
           <Input
-            placeholder="Imię i nazwisko"
+            placeholder="First and last name"
             value={newMemberName}
             onChange={(e) => setNewMemberName(e.target.value)}
             className="flex-1"
           />
           <Button onClick={handleAddMember}>
             <Plus className="w-4 h-4 mr-2" />
-            Dodaj
+            Add
           </Button>
         </div>
       </div>
@@ -201,7 +203,10 @@ export const MembersManagement = ({
             isAdmin={true}
             userRole={findUserRole(member.name)}
             onToggleActive={handleToggleActive}
-            onOpenRoleDialog={handleOpenRoleDialog}
+            onOpenRoleDialog={() => {
+              // Refresh users list before opening the role dialog to ensure we have the most up-to-date data
+              fetchUsers().then(() => handleOpenRoleDialog(member));
+            }}
             onRemoveMember={handleRemoveMember}
             onOpenEmailEdit={handleOpenEmailEdit}
           />

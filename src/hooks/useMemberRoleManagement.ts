@@ -23,8 +23,8 @@ export const useMemberRoleManagement = () => {
   const handleRoleChangeSubmit = async () => {
     if (!memberEmail || !selectedRole || !selectedMember) {
       toast({
-        title: "Błąd",
-        description: "Proszę podać email i wybrać rolę",
+        title: "Error",
+        description: "Please provide an email and select a role",
         variant: "destructive"
       });
       return;
@@ -44,15 +44,15 @@ export const useMemberRoleManagement = () => {
         const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
         const isNewUser = !existingUser;
         
-        let message = `Pomyślnie ${isNewUser ? 'utworzono użytkownika' : 'zmieniono rolę użytkownika'} ${memberEmail} na ${selectedRole}`;
+        let message = `Successfully ${isNewUser ? 'created user' : 'changed user role'} ${memberEmail} to ${selectedRole}`;
         if (memberPassword && result.passwordUpdated) {
-          message += isNewUser ? ' z podanym hasłem' : ' i zaktualizowano hasło';
+          message += isNewUser ? ' with the provided password' : ' and updated password';
         } else if (memberPassword && result.passwordUpdated === false) {
-          message += '. Uwaga: Nie udało się zaktualizować hasła (wymagane uprawnienia administratora).';
+          message += '. Note: Failed to update password (administrator privileges required).';
         }
         
         toast({
-          title: isNewUser ? "Utworzono użytkownika" : "Zmieniono uprawnienia",
+          title: isNewUser ? "User Created" : "Permissions Changed",
           description: message
         });
         
@@ -64,8 +64,8 @@ export const useMemberRoleManagement = () => {
     } catch (error: any) {
       console.error("Error managing user:", error);
       toast({
-        title: "Błąd",
-        description: error instanceof Error ? error.message : "Nie udało się zmienić uprawnień użytkownika",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to change user permissions",
         variant: "destructive"
       });
     } finally {
@@ -98,13 +98,14 @@ export const useMemberRoleManagement = () => {
     setSelectedMember(null);
   };
 
+  // Improved user matching with more specific criteria
   const findBestMatchingUser = (memberName: string) => {
-    // Funkcja pomocnicza do normalizacji tekstu do porównania
+    // Helper function to normalize text for comparison
     const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
     const normalizedName = normalize(memberName);
     
-    // Próba dokładnego dopasowania po e-mailu lub części imienia i nazwiska
+    // Try exact matching by email or name parts
     for (const user of users) {
       const normalizedEmail = normalize(user.email);
       if (normalizedEmail.includes(normalizedName) || normalizedName.includes(normalizedEmail)) {
@@ -112,7 +113,7 @@ export const useMemberRoleManagement = () => {
       }
     }
     
-    // Próba dopasowania po częściach imienia/nazwiska
+    // Try matching by partial name parts
     const nameParts = memberName.toLowerCase().split(/\s+/);
     for (const user of users) {
       for (const part of nameParts) {
