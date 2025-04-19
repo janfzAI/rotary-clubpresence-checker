@@ -33,14 +33,34 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<AppRole>('user');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateInputs = () => {
+    if (!newUserEmail.trim()) {
+      onError("Email jest wymagany");
+      return false;
+    }
+    
+    if (!newUserEmail.includes('@') || !newUserEmail.includes('.')) {
+      onError("Podaj prawidłowy adres email");
+      return false;
+    }
+
+    if (!newUserPassword || newUserPassword.length < 6) {
+      onError("Hasło musi mieć co najmniej 6 znaków");
+      return false;
+    }
+
+    return true;
+  };
 
   const handleAddUser = async () => {
-    try {
-      if (!newUserEmail || !newUserPassword) {
-        onError("Email i hasło są wymagane");
-        return;
-      }
+    if (!validateInputs() || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    console.log(`Attempting to add user: ${newUserEmail} with role: ${newUserRole}`);
 
+    try {
       // Create user with auto-confirm enabled
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: newUserEmail,
@@ -52,11 +72,23 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
         }
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error('Sign up error:', signUpError);
+        
+        // Check for specific error messages
+        if (signUpError.message.includes('already')) {
+          onError("Użytkownik z tym adresem email już istnieje");
+        } else {
+          onError(signUpError.message || "Nie udało się utworzyć użytkownika");
+        }
+        return;
+      }
 
       if (!authData.user) {
-        throw new Error("Nie udało się utworzyć użytkownika");
+        throw new Error("Nie udało się utworzyć użytkownika - brak danych użytkownika");
       }
+
+      console.log('User created successfully:', authData.user.id);
 
       // Add user to profiles table
       const { error: profileError } = await supabase
@@ -66,7 +98,15 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
           email: newUserEmail
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        
+        if (profileError.code === '23505') { // Duplicate key violation
+          console.log('Profile already exists, continuing with role assignment');
+        } else {
+          throw profileError;
+        }
+      }
 
       // Add role for the new user
       const { error: roleError } = await supabase
@@ -76,8 +116,23 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
           role: newUserRole
         });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('Role assignment error:', roleError);
+        
+        if (roleError.code === '23505') { // Duplicate key violation
+          // Try to update instead
+          const { error: updateError } = await supabase
+            .from('user_roles')
+            .update({ role: newUserRole })
+            .eq('user_id', authData.user.id);
+            
+          if (updateError) throw updateError;
+        } else {
+          throw roleError;
+        }
+      }
 
+      console.log('User creation completed successfully');
       onSuccess();
       setNewUserEmail('');
       setNewUserPassword('');
@@ -87,6 +142,8 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
     } catch (error: any) {
       console.error('Error adding user:', error);
       onError(error.message || "Nie udało się utworzyć użytkownika");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -138,8 +195,12 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleAddUser} className="w-full">
-            Dodaj użytkownika
+          <Button 
+            onClick={handleAddUser} 
+            className="w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Dodawanie...' : 'Dodaj użytkownika'}
           </Button>
         </div>
       </DialogContent>

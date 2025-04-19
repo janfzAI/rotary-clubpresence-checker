@@ -78,18 +78,25 @@ export const UserRolesManagement = () => {
 
   const onRoleChange = async (userId: string, newRole: AppRole) => {
     try {
-      const userEmail = await handleRoleChange(userId, newRole);
-      if (userEmail) {
+      const result = await handleRoleChange(userId, newRole);
+      
+      if (result && result.email) {
+        let message = `Użytkownik ${result.email} ma teraz uprawnienia: ${newRole}`;
+        
+        if (result.passwordUpdated === false) {
+          message += ". Uwaga: Nie udało się zaktualizować hasła (wymagane uprawnienia administratora).";
+        }
+        
         toast({
           title: "Zmieniono uprawnienia",
-          description: `Użytkownik ${userEmail} ma teraz uprawnienia: ${newRole}`
+          description: message
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error changing role:', error);
       toast({
         title: "Błąd zmiany uprawnień",
-        description: "Nie udało się zmienić uprawnień użytkownika.",
+        description: error.message || "Nie udało się zmienić uprawnień użytkownika.",
         variant: "destructive"
       });
     }
@@ -153,7 +160,8 @@ export const UserRolesManagement = () => {
             <Info className="h-4 w-4" />
             <AlertTitle>Informacja</AlertTitle>
             <AlertDescription>
-              Proszę kliknąć "Odśwież listę", aby zobaczyć wszystkich użytkowników. Upewnij się, że wszyscy użytkownicy zostali dodani do tabeli "profiles" w bazie danych.
+              Zmiana uprawnień użytkowników wymaga odpowiednich uprawnień administratora w bazie danych. 
+              Nie wszystkie operacje mogą być dostępne dla Twojego konta.
             </AlertDescription>
           </Alert>
           

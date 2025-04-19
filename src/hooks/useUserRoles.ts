@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -87,20 +88,36 @@ export const useUserRoles = () => {
         prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u)
       );
 
+      let passwordUpdateSuccessful = true;
+      
       // Update password if provided
       if (newPassword) {
         console.log("Attempting to update password...");
-        // Note: This is an admin operation, ensure proper authorization
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(
-          userId,
-          { password: newPassword }
-        );
+        
+        try {
+          // Note: This requires admin privileges
+          const { error: passwordError } = await supabase.auth.admin.updateUserById(
+            userId,
+            { password: newPassword }
+          );
 
-        if (passwordError) {
-          console.error("Password update error:", passwordError);
-          throw passwordError;
+          if (passwordError) {
+            console.error("Password update error:", passwordError);
+            passwordUpdateSuccessful = false;
+            
+            // If the error is due to permissions, we'll continue with role change
+            if (!passwordError.message.includes('not_admin')) {
+              throw passwordError;
+            }
+            
+            console.log("Continuing with role update despite password update failure");
+          } else {
+            console.log("Password updated successfully");
+          }
+        } catch (e) {
+          console.warn("Password update failed, but will continue with role update:", e);
+          passwordUpdateSuccessful = false;
         }
-        console.log("Password updated successfully");
       }
 
       // Handle role change
@@ -140,7 +157,12 @@ export const useUserRoles = () => {
       // Return the email for confirmation
       const userEmail = users.find(u => u.id === userId)?.email;
       console.log(`Role change completed for ${userEmail}`);
-      return userEmail;
+      
+      // Return email and password update status
+      return { 
+        email: userEmail, 
+        passwordUpdated: passwordUpdateSuccessful 
+      };
     } catch (error) {
       console.error('Comprehensive role change error:', error);
       
@@ -154,6 +176,8 @@ export const useUserRoles = () => {
 
   const createUserAndSetRole = async (email: string, password: string, role: AppRole, memberName?: string) => {
     try {
+      console.log(`Attempting to create/update user ${email} with role ${role}`);
+      
       // First, check if the user already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
@@ -161,45 +185,97 @@ export const useUserRoles = () => {
         .eq('email', email)
         .maybeSingle();
 
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error("Error checking for existing user:", checkError);
+        throw checkError;
+      }
 
       let userId;
+      let isNewUser = false;
       
       if (existingUser) {
         // User exists, update their role
         userId = existingUser.id;
         console.log("User already exists, updating role for:", email);
       } else {
-        // User doesn't exist, create them using the admin API instead of signUp
+        isNewUser = true;
+        // User doesn't exist, create them
         console.log("Creating new user with email:", email);
         
-        // Use the admin.createUser function to avoid auto-login
-        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true, // Auto-confirm email
-          user_metadata: {
-            name: memberName
-          }
-        });
-
-        if (createError) throw createError;
-        
-        if (!userData.user) {
-          throw new Error("Failed to create user account");
-        }
-        
-        userId = userData.user.id;
-        
-        // Create profile for the user
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: email
+        try {
+          // Use the auth signup method first
+          const { data: signupData, error: signupError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                name: memberName
+              },
+              emailRedirectTo: window.location.origin
+            }
           });
           
-        if (profileError) throw profileError;
+          if (signupError) {
+            console.error("Sign up error:", signupError);
+            throw signupError;
+          }
+          
+          if (!signupData.user) {
+            throw new Error("Failed to create user account");
+          }
+          
+          userId = signupData.user.id;
+          console.log("User created successfully:", userId);
+          
+        } catch (authError) {
+          console.error("Failed to create user via signup:", authError);
+          
+          // Fallback to admin.createUser if possible
+          try {
+            console.log("Attempting to create user with admin API...");
+            const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+              email,
+              password,
+              email_confirm: true,
+              user_metadata: {
+                name: memberName
+              }
+            });
+            
+            if (createError) {
+              console.error("Admin user creation error:", createError);
+              throw createError;
+            }
+            
+            if (!userData.user) {
+              throw new Error("Failed to create user account with admin API");
+            }
+            
+            userId = userData.user.id;
+            console.log("User created successfully with admin API:", userId);
+            
+          } catch (adminError) {
+            console.error("Failed to create user with admin API:", adminError);
+            throw new Error("Could not create user account. Please check your permissions or try another email.");
+          }
+        }
+        
+        // Create profile for the user
+        if (userId) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              email: email
+            });
+            
+          if (profileError) {
+            console.error("Error creating profile:", profileError);
+            if (profileError.code !== '23505') { // Not a duplicate key error
+              throw profileError;
+            }
+          }
+        }
       }
       
       // Set or update the user's role
@@ -213,13 +289,27 @@ export const useUserRoles = () => {
             onConflict: 'user_id'
           });
           
-        if (roleError) throw roleError;
+        if (roleError) {
+          console.error("Error setting role:", roleError);
+          throw roleError;
+        }
+      } else {
+        // For 'user' role, we delete any existing role entry
+        const { error: deleteError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId);
+          
+        if (deleteError && deleteError.code !== 'PGRST116') { // Not found is ok
+          console.error("Error removing role:", deleteError);
+          throw deleteError;
+        }
       }
       
       // Refresh the users list
       await fetchUsers();
       
-      return email;
+      return { email, isNewUser };
     } catch (error) {
       console.error('Error creating user and setting role:', error);
       throw error;
