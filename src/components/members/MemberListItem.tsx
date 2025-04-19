@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -33,8 +32,6 @@ const getRoleBadgeStyle = (role?: AppRole) => {
       return 'bg-primary text-primary-foreground';
     case 'manager':
       return 'bg-secondary text-secondary-foreground';
-    case 'user':
-      return 'bg-muted text-muted-foreground';
     default:
       return 'bg-muted text-muted-foreground';
   }
@@ -46,10 +43,8 @@ const getRoleLabel = (role?: AppRole) => {
       return 'Administrator';
     case 'manager':
       return 'Manager';
-    case 'user':
-      return 'Użytkownik';
     default:
-      return 'Brak roli';
+      return 'Użytkownik';
   }
 };
 
@@ -62,15 +57,19 @@ export const MemberListItem = ({
   onOpenRoleDialog,
   onRemoveMember
 }: MemberListItemProps) => {
+  const showBadge = userRole === 'admin' || userRole === 'manager';
+
   return (
     <div key={member.id} className="p-4 flex justify-between items-center border rounded-md">
       <span className="flex items-center gap-2 flex-1">
         <span className="text-sm text-muted-foreground">{index + 1}.</span>
         <span className="flex items-center gap-2">
           {member.name}
-          <Badge variant="outline" className={getRoleBadgeStyle(userRole)}>
-            {getRoleLabel(userRole)}
-          </Badge>
+          {showBadge && (
+            <Badge variant="outline" className={getRoleBadgeStyle(userRole)}>
+              {getRoleLabel(userRole)}
+            </Badge>
+          )}
         </span>
         {member.active === false && (
           <span className="text-sm text-red-500 font-medium ml-2">(nieaktywny)</span>
