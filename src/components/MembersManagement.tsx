@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,8 @@ export const MembersManagement = ({
     handleCloseDialog,
     setMemberEmail,
     setMemberPassword,
-    setSelectedRole
+    setSelectedRole,
+    fetchUsers
   } = useMemberRoleManagement();
 
   const findUserRole = (memberName: string) => {
@@ -102,6 +104,7 @@ export const MembersManagement = ({
     const matchedUser = users.find(user => {
       const normalizedEmail = user.email.toLowerCase().trim();
       const nameParts = emailEditMember.name.split(' ');
+      const emailParts = normalizedEmail.split('@')[0].split('.');
       return emailParts.some(part => 
         nameParts.some(namePart => part.includes(namePart))
       );

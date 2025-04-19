@@ -133,6 +133,7 @@ export const useMemberRoleManagement = () => {
     handleCloseDialog,
     setMemberEmail,
     setMemberPassword,
-    setSelectedRole
+    setSelectedRole,
+    fetchUsers // Expose the fetchUsers function from useUserRoles
   };
 };
