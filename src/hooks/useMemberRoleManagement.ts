@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import type { AppRole } from "@/types/userRoles";
@@ -16,15 +17,25 @@ export const useMemberRoleManagement = () => {
   const [memberPassword, setMemberPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailChangeTimestamp, setEmailChangeTimestamp] = useState(0);
+  const [lastRefreshTimestamp, setLastRefreshTimestamp] = useState(0);
   
   const { toast } = useToast();
   const { users, handleMemberRoleChange, fetchUsers } = useUserRoles();
 
+  // Enhanced refresh function with timestamp tracking
+  const refreshUserData = useCallback(async () => {
+    console.log("Refreshing user data in useMemberRoleManagement");
+    await fetchUsers();
+    setLastRefreshTimestamp(Date.now());
+  }, [fetchUsers]);
+
+  // Refresh user data when email changes
   useEffect(() => {
     if (emailChangeTimestamp > 0) {
-      fetchUsers();
+      console.log("Email change detected, refreshing user data", emailChangeTimestamp);
+      refreshUserData();
     }
-  }, [emailChangeTimestamp, fetchUsers]);
+  }, [emailChangeTimestamp, refreshUserData]);
 
   const handleRoleChangeSubmit = async () => {
     if (!memberEmail || !selectedRole || !selectedMember) {
@@ -62,7 +73,8 @@ export const useMemberRoleManagement = () => {
           description: message
         });
         
-        await fetchUsers();
+        // Refresh user data after role change
+        await refreshUserData();
       }
       
       handleCloseDialog();
@@ -81,7 +93,8 @@ export const useMemberRoleManagement = () => {
   const handleOpenRoleDialog = async (member: Member) => {
     console.log("Opening role dialog for member:", member.name);
     
-    await fetchUsers();
+    // Refresh users list before finding a match
+    await refreshUserData();
     
     setSelectedMember(member);
     const matchedUser = findBestMatchingUser(member.name);
@@ -106,25 +119,38 @@ export const useMemberRoleManagement = () => {
     setSelectedMember(null);
   };
 
+  // Improved user matching algorithm with better logging
   const findBestMatchingUser = (memberName: string) => {
     console.log("Finding best matching user for:", memberName);
-    console.log("Current users:", users.map(u => u.email));
+    console.log("Current users:", users.map(u => ({ email: u.email, timestamp: lastRefreshTimestamp })));
     
     const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
     const normalizedName = normalize(memberName);
     console.log("Normalized member name:", normalizedName);
     
+    // First priority: Exact match by name in email (case insensitive)
+    const userName = memberName.toLowerCase().replace(/\s+/g, '.');
+    const userNameNoSpace = memberName.toLowerCase().replace(/\s+/g, '');
+    
     for (const user of users) {
       const normalizedEmail = normalize(user.email);
-      console.log("Checking user email:", user.email, "normalized:", normalizedEmail);
-      
+      if (normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace)) {
+        console.log("Found exact match by name in email:", user.email);
+        return user;
+      }
+    }
+    
+    // Second priority: Email includes normalized name
+    for (const user of users) {
+      const normalizedEmail = normalize(user.email);
       if (normalizedEmail.includes(normalizedName) || normalizedName.includes(normalizedEmail)) {
         console.log("Found match by email inclusion:", user.email);
         return user;
       }
     }
     
+    // Third priority: Name parts matching
     const nameParts = memberName.toLowerCase().split(/\s+/);
     console.log("Name parts for matching:", nameParts);
     
@@ -160,6 +186,8 @@ export const useMemberRoleManagement = () => {
     setMemberPassword,
     setSelectedRole,
     fetchUsers,
-    notifyEmailChanged
+    refreshUserData,
+    notifyEmailChanged,
+    lastRefreshTimestamp
   };
 };

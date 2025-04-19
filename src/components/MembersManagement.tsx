@@ -46,18 +46,45 @@ export const MembersManagement = ({
     setMemberEmail,
     setMemberPassword,
     setSelectedRole,
-    fetchUsers,
-    notifyEmailChanged
+    refreshUserData,
+    notifyEmailChanged,
+    lastRefreshTimestamp
   } = useMemberRoleManagement();
 
   // Refresh users data when component mounts
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    console.log("MembersManagement: Initial user data refresh");
+    refreshUserData();
+  }, [refreshUserData]);
 
-  // Function to find user role based on member name
+  // Refresh users data when last refresh timestamp changes
+  useEffect(() => {
+    if (lastRefreshTimestamp > 0) {
+      console.log("MembersManagement: User data refreshed at", new Date(lastRefreshTimestamp).toISOString());
+    }
+  }, [lastRefreshTimestamp]);
+
+  // Function to find user role based on member name with proper logging
   const findUserRole = (memberName: string) => {
+    console.log(`Finding role for member: ${memberName}, available users: ${users.length}`);
+    
     const normalizedMemberName = memberName.toLowerCase().trim();
+    
+    // Try exact match first (name appears in email)
+    const exactUserMatch = users.find(user => {
+      const normalizedEmail = user.email.toLowerCase().trim();
+      const userName = normalizedMemberName.replace(/\s+/g, '.');
+      const userNameNoSpace = normalizedMemberName.replace(/\s+/g, '');
+      
+      return normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace);
+    });
+    
+    if (exactUserMatch) {
+      console.log(`Found exact match for ${memberName}: ${exactUserMatch.email} with role ${exactUserMatch.role}`);
+      return exactUserMatch.role;
+    }
+    
+    // Try matching by name parts
     const user = users.find(user => {
       const normalizedEmail = user.email.toLowerCase().trim();
       
@@ -65,9 +92,15 @@ export const MembersManagement = ({
       const nameParts = normalizedMemberName.split(' ');
 
       return emailParts.some(part => 
-        nameParts.some(namePart => part.includes(namePart))
+        nameParts.some(namePart => part.includes(namePart) || namePart.includes(part))
       );
     });
+    
+    if (user) {
+      console.log(`Found partial match for ${memberName}: ${user.email} with role ${user.role}`);
+    } else {
+      console.log(`No role match found for ${memberName}`);
+    }
     
     return user?.role;
   };
@@ -102,9 +135,9 @@ export const MembersManagement = ({
   };
 
   const handleOpenEmailEdit = (member: { id: number; name: string }) => {
-    // Always refresh users list before opening the email edit dialog
     console.log("Opening email edit for member:", member.name);
-    fetchUsers().then(() => {
+    // Always refresh users list before opening the email edit dialog
+    refreshUserData().then(() => {
       setEmailEditMember(member);
     });
   };
@@ -130,6 +163,9 @@ export const MembersManagement = ({
       });
       return;
     }
+    
+    // Refresh user data before finding the match
+    await refreshUserData();
     
     // Find the user by exact email match
     const matchedUser = users.find(user => user.email.toLowerCase().trim() === currentEmail.toLowerCase().trim());
@@ -164,8 +200,8 @@ export const MembersManagement = ({
         description: `Email address for ${emailEditMember.name} has been updated to ${newEmail}`
       });
       
-      // Force refresh of users data
-      await fetchUsers();
+      // Force multiple refreshes to ensure data is up to date
+      await refreshUserData();
       
       // Notify about email change to update other components
       notifyEmailChanged();
@@ -175,8 +211,14 @@ export const MembersManagement = ({
       
       // If there's a selected member currently shown in the role dialog, update its email too
       if (selectedMember && selectedMember.name === emailEditMember.name) {
+        console.log("Updating email in role dialog as well:", newEmail);
         setMemberEmail(newEmail);
       }
+      
+      // Schedule another refresh after a short delay to ensure all components have the latest data
+      setTimeout(() => {
+        refreshUserData();
+      }, 500);
     } catch (error: any) {
       console.error('Error updating email:', error);
       toast({
@@ -215,8 +257,8 @@ export const MembersManagement = ({
             onToggleActive={handleToggleActive}
             onOpenRoleDialog={() => {
               console.log("Requesting to open role dialog for:", member.name);
-              // Refresh users list before opening the role dialog
-              fetchUsers().then(() => handleOpenRoleDialog(member));
+              // Always refresh users list before opening the role dialog
+              refreshUserData().then(() => handleOpenRoleDialog(member));
             }}
             onRemoveMember={handleRemoveMember}
             onOpenEmailEdit={handleOpenEmailEdit}
@@ -245,7 +287,7 @@ export const MembersManagement = ({
         currentEmail={users.find(u => {
           if (!emailEditMember) return false;
           
-          // Try to find an exact match first by name in email
+          // Try to find an exact match by name in email
           const userName = emailEditMember.name.toLowerCase().replace(/\s+/g, '.');
           const userNameNoSpace = emailEditMember.name.toLowerCase().replace(/\s+/g, '');
           
@@ -272,7 +314,11 @@ export const MembersManagement = ({
           
           return false;
         })?.email || ''}
-        onClose={() => setEmailEditMember(null)}
+        onClose={() => {
+          setEmailEditMember(null);
+          // Refresh data when closing email edit dialog
+          refreshUserData();
+        }}
         onSubmit={handleEmailUpdate}
       />
     </div>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { AppRole } from '@/types/userRoles';
 import { MemberAuthFields } from './dialog/MemberAuthFields';
 import { MemberRoleSelect } from './dialog/MemberRoleSelect';
@@ -52,6 +52,13 @@ export const MemberRoleDialog = ({
   const { sendPasswordResetEmail } = useRoleManagement();
   const [resetEmailSent, setResetEmailSent] = React.useState(false);
   
+  // Reset the resetEmailSent state when the dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setResetEmailSent(false);
+    }
+  }, [isOpen, memberEmail]);
+  
   const handleSendPasswordReset = async () => {
     if (!memberEmail) return;
     
@@ -66,7 +73,12 @@ export const MemberRoleDialog = ({
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Zarządzaj uprawnieniami - {selectedMember?.name}</AlertDialogTitle>
