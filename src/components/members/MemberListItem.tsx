@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, UserCog } from "lucide-react";
+import { Trash2, UserCog, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -25,6 +24,7 @@ interface MemberListItemProps {
   onToggleActive: (id: number, name: string, isCurrentlyActive: boolean) => void;
   onOpenRoleDialog: (member: { id: number; name: string; active?: boolean }) => void;
   onRemoveMember: (id: number, name: string) => void;
+  onOpenEmailEdit?: (member: { id: number; name: string }) => void;
 }
 
 const getRoleBadgeStyle = (role?: AppRole) => {
@@ -56,7 +56,8 @@ export const MemberListItem = ({
   userRole,
   onToggleActive,
   onOpenRoleDialog,
-  onRemoveMember
+  onRemoveMember,
+  onOpenEmailEdit
 }: MemberListItemProps) => {
   return (
     <div key={member.id} className="p-4 flex justify-between items-center border rounded-md">
@@ -85,14 +86,27 @@ export const MemberListItem = ({
         </div>
 
         {isAdmin && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => onOpenRoleDialog(member)}
-          >
-            <UserCog className="w-4 h-4 mr-2" />
-            Uprawnienia
-          </Button>
+          <>
+            {onOpenEmailEdit && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => onOpenEmailEdit(member)}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Email
+              </Button>
+            )}
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onOpenRoleDialog(member)}
+            >
+              <UserCog className="w-4 h-4 mr-2" />
+              Uprawnienia
+            </Button>
+          </>
         )}
 
         <TooltipProvider>

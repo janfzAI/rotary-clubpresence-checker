@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { useMemberRoleManagement } from "@/hooks/useMemberRoleManagement";
 import { MemberListItem } from './members/MemberListItem';
 import { MemberRoleDialog } from './members/MemberRoleDialog';
+import { MemberEmailEdit } from './members/dialog/MemberEmailEdit';
+import { supabase } from "@/integrations/supabase/client";
 
 interface Member {
   id: number;
@@ -28,6 +29,7 @@ export const MembersManagement = ({
   onToggleActive
 }: MembersManagementProps) => {
   const [newMemberName, setNewMemberName] = useState('');
+  const [emailEditMember, setEmailEditMember] = useState<{ id: number; name: string } | null>(null);
   const { toast } = useToast();
   
   const {
@@ -50,11 +52,9 @@ export const MembersManagement = ({
     const user = users.find(user => {
       const normalizedEmail = user.email.toLowerCase().trim();
       
-      // More precise matching logic
       const emailParts = normalizedEmail.split('@')[0].split('.');
       const nameParts = normalizedMemberName.split(' ');
 
-      // Check if any part of the email matches any part of the name
       return emailParts.some(part => 
         nameParts.some(namePart => part.includes(namePart))
       );
@@ -92,6 +92,54 @@ export const MembersManagement = ({
     });
   };
 
+  const handleOpenEmailEdit = (member: { id: number; name: string }) => {
+    setEmailEditMember(member);
+  };
+
+  const handleEmailUpdate = async (newEmail: string) => {
+    if (!emailEditMember) return;
+
+    const matchedUser = users.find(user => {
+      const normalizedEmail = user.email.toLowerCase().trim();
+      const nameParts = emailEditMember.name.split(' ');
+      return emailParts.some(part => 
+        nameParts.some(namePart => part.includes(namePart))
+      );
+    });
+
+    if (!matchedUser) {
+      toast({
+        title: "Błąd",
+        description: "Nie znaleziono użytkownika w systemie",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ email: newEmail })
+        .eq('id', matchedUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sukces",
+        description: `Adres email dla ${emailEditMember.name} został zaktualizowany`
+      });
+      
+      await fetchUsers();
+    } catch (error: any) {
+      console.error('Error updating email:', error);
+      toast({
+        title: "Błąd",
+        description: error.message || "Nie udało się zaktualizować adresu email",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
@@ -120,6 +168,7 @@ export const MembersManagement = ({
             onToggleActive={handleToggleActive}
             onOpenRoleDialog={handleOpenRoleDialog}
             onRemoveMember={handleRemoveMember}
+            onOpenEmailEdit={handleOpenEmailEdit}
           />
         ))}
       </div>
@@ -137,6 +186,19 @@ export const MembersManagement = ({
         onEmailChange={setMemberEmail}
         onPasswordChange={setMemberPassword}
         onRoleChange={setSelectedRole}
+      />
+
+      <MemberEmailEdit
+        isOpen={!!emailEditMember}
+        memberName={emailEditMember?.name || ''}
+        currentEmail={users.find(u => {
+          const nameParts = (emailEditMember?.name || '').split(' ');
+          return nameParts.some(part => 
+            u.email.toLowerCase().includes(part.toLowerCase())
+          );
+        })?.email || ''}
+        onClose={() => setEmailEditMember(null)}
+        onSubmit={handleEmailUpdate}
       />
     </div>
   );
