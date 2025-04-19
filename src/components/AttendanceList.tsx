@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 interface Member {
   id: number;
@@ -86,7 +87,12 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
 
       <div className="space-y-4">
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold">Członkowie</h3>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            Członkowie
+            <Badge variant="default" className="ml-2">
+              {sortedMembers.filter(m => m.present).length}/{sortedMembers.length}
+            </Badge>
+          </h3>
           {sortedMembers.map((member, index) => (
             <Card
               key={member.id}
@@ -122,7 +128,12 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
           <>
             <Separator className="my-4" />
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold">Goście</h3>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                Goście
+                <Badge variant="secondary" className="ml-2">
+                  {sortedGuests.filter(g => g.present).length}/{sortedGuests.length}
+                </Badge>
+              </h3>
               {sortedGuests.map((guest, index) => (
                 <Card
                   key={guest.id}

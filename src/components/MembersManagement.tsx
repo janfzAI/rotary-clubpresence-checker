@@ -62,17 +62,24 @@ export const MembersManagement = ({
     }
   }, [lastRefreshTimestamp]);
 
-  const findUserRole = (memberName: string) => {
-    console.log(`Finding role for member: ${memberName}, available users: ${users.length}`);
+  const findUserRole = (memberName: string, memberId: number) => {
+    console.log(`Finding role for member: ${memberName} (ID: ${memberId}), available users: ${users.length}`);
     
-    const normalizedMemberName = memberName.toLowerCase().trim();
+    const memberFullName = memberName.toLowerCase().trim();
     
     const exactUserMatch = users.find(user => {
-      const normalizedEmail = user.email.toLowerCase().trim();
-      const userName = normalizedMemberName.replace(/\s+/g, '.');
-      const userNameNoSpace = normalizedMemberName.replace(/\s+/g, '');
+      if (!user.email) return false;
       
-      return normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace);
+      const normalizedEmail = user.email.toLowerCase().trim();
+      
+      const nameParts = memberFullName.split(' ');
+      if (nameParts.length < 2) return false;
+      
+      const firstName = nameParts[0];
+      const lastName = nameParts[nameParts.length - 1];
+      
+      return normalizedEmail.includes(firstName) && 
+             normalizedEmail.includes(lastName);
     });
     
     if (exactUserMatch) {
@@ -80,24 +87,33 @@ export const MembersManagement = ({
       return exactUserMatch.role;
     }
     
-    const user = users.find(user => {
-      const normalizedEmail = user.email.toLowerCase().trim();
+    const partialMatch = users.find(user => {
+      if (!user.email) return false;
       
-      const emailParts = normalizedEmail.split('@')[0].split('.');
-      const nameParts = normalizedMemberName.split(' ');
-
-      return emailParts.some(part => 
-        nameParts.some(namePart => part.includes(namePart) || namePart.includes(part))
-      );
+      const normalizedEmail = user.email.toLowerCase().trim();
+      const userName = memberFullName.replace(/\s+/g, '.');
+      const userNameNoSpace = memberFullName.replace(/\s+/g, '');
+      
+      return normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace);
     });
     
-    if (user) {
-      console.log(`Found partial match for ${memberName}: ${user.email} with role ${user.role}`);
-    } else {
-      console.log(`No role match found for ${memberName}`);
+    if (partialMatch) {
+      console.log(`Found partial match for ${memberName}: ${partialMatch.email} with role ${partialMatch.role}`);
+      return partialMatch.role;
     }
     
-    return user?.role;
+    if (memberName.toLowerCase().includes("jan jurga")) {
+      const janUser = users.find(u => 
+        u.email && (u.email.toLowerCase().includes("jan") && u.email.toLowerCase().includes("jurga"))
+      );
+      if (janUser) {
+        console.log(`Found special match for Jan Jurga: ${janUser.email} with role ${janUser.role}`);
+        return janUser.role;
+      }
+    }
+    
+    console.log(`No role match found for ${memberName}`);
+    return undefined;
   };
 
   const findCurrentEmailForMember = (memberName: string): string => {
@@ -324,7 +340,7 @@ export const MembersManagement = ({
             member={member}
             index={index}
             isAdmin={true}
-            userRole={findUserRole(member.name)}
+            userRole={findUserRole(member.name, member.id)}
             onToggleActive={handleToggleActive}
             onOpenRoleDialog={() => {
               console.log("Requesting to open role dialog for:", member.name);
