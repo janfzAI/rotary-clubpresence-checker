@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -35,6 +36,7 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createUserAndSetRole } = useUserRoles();
+  const { refreshUserRoles } = useAuth();
 
   const validateInputs = () => {
     if (!newUserEmail.trim()) {
@@ -65,6 +67,12 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
       const result = await createUserAndSetRole(newUserEmail, newUserPassword, newUserRole);
       
       console.log('User creation completed successfully:', result);
+      
+      // Odśwież uprawnienia użytkownika, jeśli to aktualnie zalogowany użytkownik
+      if (result.email === localStorage.getItem('currentUserEmail')) {
+        await refreshUserRoles();
+      }
+      
       onSuccess();
       setNewUserEmail('');
       setNewUserPassword('');

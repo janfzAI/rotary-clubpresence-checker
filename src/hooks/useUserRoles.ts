@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -158,10 +157,15 @@ export const useUserRoles = () => {
       const userEmail = users.find(u => u.id === userId)?.email;
       console.log(`Role change completed for ${userEmail}`);
       
+      // Zapisz email użytkownika, dla którego zmieniono uprawnienia
+      if (userEmail) {
+        localStorage.setItem('currentUserEmail', userEmail);
+      }
+      
       // Return email and password update status
       return { 
         email: userEmail, 
-        passwordUpdated: passwordUpdateSuccessful 
+        passwordUpdated: newPassword ? true : undefined 
       };
     } catch (error) {
       console.error('Comprehensive role change error:', error);
@@ -312,6 +316,9 @@ export const useUserRoles = () => {
         }
       }
       
+      // Zapisz email utworzonego użytkownika
+      localStorage.setItem('currentUserEmail', email);
+      
       // Refresh the users list
       await fetchUsers();
       
@@ -322,7 +329,6 @@ export const useUserRoles = () => {
     }
   };
 
-  // Update the AlertDialog component to properly handle members with no existing user account
   const handleMemberRoleChange = async (memberName: string, email: string, role: AppRole, password?: string) => {
     try {
       if (!email) {

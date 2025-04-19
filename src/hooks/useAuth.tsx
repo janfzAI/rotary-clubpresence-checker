@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAuth = () => {
@@ -8,6 +8,84 @@ export const useAuth = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isManager, setIsManager] = useState(false);
 
+  // Oddzielna funkcja do sprawdzania roli użytkownika
+  const checkUserRoles = useCallback(async (userId: string) => {
+    try {
+      console.log("Checking roles for user:", userId);
+      
+      // Check if user has admin role
+      const { data: isAdminData, error: adminError } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin'
+      });
+      
+      if (adminError) {
+        console.error('Error checking admin role:', adminError);
+      } else {
+        setIsAdmin(!!isAdminData);
+        console.log('User is admin:', !!isAdminData);
+      }
+
+      // Check if user has manager role
+      const { data: isManagerData, error: managerError } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'manager'
+      });
+      
+      if (managerError) {
+        console.error('Error checking manager role:', managerError);
+      } else {
+        setIsManager(!!isManagerData);
+        console.log('User is manager:', !!isManagerData);
+      }
+    } catch (error) {
+      console.error("Error checking user roles:", error);
+    }
+  }, []);
+
+  // Funkcja do sprawdzania istnienia profilu i tworzenia go, jeśli nie istnieje
+  const ensureProfileExists = useCallback(async (userId: string, userEmail: string | null) => {
+    try {
+      if (!userEmail) return;
+      
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !profileData) {
+        console.log('Creating profile for user:', userId);
+        // Profile doesn't exist, create it
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            email: userEmail
+          });
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+        }
+      }
+    } catch (error) {
+      console.error("Error ensuring profile exists:", error);
+    }
+  }, []);
+
+  // Funkcja do odświeżania uprawnień użytkownika - może być wywoływana z zewnątrz
+  const refreshUserRoles = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        await checkUserRoles(session.user.id);
+      }
+    } catch (error) {
+      console.error("Error refreshing user roles:", error);
+    }
+  }, [checkUserRoles]);
+
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
@@ -15,54 +93,8 @@ export const useAuth = () => {
         setUserEmail(session?.user?.email ?? null);
         
         if (session?.user) {
-          console.log("Checking roles for user:", session.user.id);
-          // Check if user has admin role
-          const { data: isAdminData, error: adminError } = await supabase.rpc('has_role', {
-            _user_id: session.user.id,
-            _role: 'admin'
-          });
-          
-          if (adminError) {
-            console.error('Error checking admin role:', adminError);
-          } else {
-            setIsAdmin(!!isAdminData);
-            console.log('User is admin:', !!isAdminData);
-          }
-
-          // Check if user has manager role
-          const { data: isManagerData, error: managerError } = await supabase.rpc('has_role', {
-            _user_id: session.user.id,
-            _role: 'manager'
-          });
-          
-          if (managerError) {
-            console.error('Error checking manager role:', managerError);
-          } else {
-            setIsManager(!!isManagerData);
-            console.log('User is manager:', !!isManagerData);
-          }
-
-          // Ensure the user exists in the profiles table
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileError || !profileData) {
-            console.log('Creating profile for user:', session.user.id);
-            // Profile doesn't exist, create it
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert({
-                id: session.user.id,
-                email: session.user.email
-              });
-
-            if (insertError) {
-              console.error('Error creating profile:', insertError);
-            }
-          }
+          await checkUserRoles(session.user.id);
+          await ensureProfileExists(session.user.id, session.user.email);
         }
       } catch (error) {
         console.error("Error getting user session:", error);
@@ -78,54 +110,11 @@ export const useAuth = () => {
       setUserEmail(session?.user?.email ?? null);
       
       if (session?.user) {
-        // Update admin status when auth state changes
-        supabase.rpc('has_role', {
-          _user_id: session.user.id,
-          _role: 'admin'
-        }).then(({ data, error }) => {
-          if (error) {
-            console.error('Error checking admin role on auth state change:', error);
-          } else {
-            setIsAdmin(!!data);
-            console.log('User is admin (auth state change):', !!data);
-          }
-        });
-
-        // Update manager status when auth state changes
-        supabase.rpc('has_role', {
-          _user_id: session.user.id,
-          _role: 'manager'
-        }).then(({ data, error }) => {
-          if (error) {
-            console.error('Error checking manager role on auth state change:', error);
-          } else {
-            setIsManager(!!data);
-            console.log('User is manager (auth state change):', !!data);
-          }
-        });
-
-        // Ensure profile exists
-        supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (error || !data) {
-              // Profile doesn't exist, create it
-              supabase
-                .from('profiles')
-                .insert({
-                  id: session.user.id,
-                  email: session.user.email
-                })
-                .then(({ error: insertError }) => {
-                  if (insertError) {
-                    console.error('Error creating profile on auth state change:', insertError);
-                  }
-                });
-            }
-          });
+        // Używaj setTimeout aby uniknąć potencjalnych problemów z deadlockiem
+        setTimeout(() => {
+          checkUserRoles(session.user.id);
+          ensureProfileExists(session.user.id, session.user.email);
+        }, 0);
       } else {
         setIsAdmin(false);
         setIsManager(false);
@@ -133,7 +122,7 @@ export const useAuth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkUserRoles, ensureProfileExists]);
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -145,6 +134,7 @@ export const useAuth = () => {
     isLoading,
     isAdmin,
     isManager,
-    signOut
+    signOut,
+    refreshUserRoles
   };
 };

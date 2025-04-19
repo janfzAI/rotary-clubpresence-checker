@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useAuth } from "@/hooks/useAuth";
 import { AddUserDialog } from "./user-roles/AddUserDialog";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -36,6 +37,7 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 
 export const UserRolesManagement = () => {
   const { users, loading, error, fetchUsers, handleRoleChange } = useUserRoles();
+  const { refreshUserRoles, userEmail } = useAuth();
   const { toast } = useToast();
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -91,6 +93,12 @@ export const UserRolesManagement = () => {
           title: "Zmieniono uprawnienia",
           description: message
         });
+        
+        // Jeśli zmieniono uprawnienia aktualnie zalogowanego użytkownika, odśwież jego stan
+        if (result.email === userEmail) {
+          console.log("Refreshing current user's roles after role change");
+          await refreshUserRoles();
+        }
       }
     } catch (error: any) {
       console.error('Error changing role:', error);
