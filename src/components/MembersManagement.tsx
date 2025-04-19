@@ -49,6 +49,7 @@ export const MembersManagement = ({
     fetchUsers
   } = useMemberRoleManagement();
 
+  // Function to find user role based on member name
   const findUserRole = (memberName: string) => {
     const normalizedMemberName = memberName.toLowerCase().trim();
     const user = users.find(user => {
@@ -154,8 +155,16 @@ export const MembersManagement = ({
         description: `Adres email dla ${emailEditMember.name} został zaktualizowany na ${newEmail}`
       });
       
+      // Force refresh of users data
       await fetchUsers();
+      
+      // Close the email edit dialog
       setEmailEditMember(null);
+      
+      // If there's a selected member currently shown in the role dialog, update its email too
+      if (selectedMember && selectedMember.name === emailEditMember.name) {
+        setMemberEmail(newEmail);
+      }
     } catch (error: any) {
       console.error('Error updating email:', error);
       toast({

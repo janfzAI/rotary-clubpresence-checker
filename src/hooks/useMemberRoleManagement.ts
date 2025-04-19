@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import type { AppRole } from "@/types/userRoles";
@@ -56,7 +56,8 @@ export const useMemberRoleManagement = () => {
           description: message
         });
         
-        fetchUsers();
+        // Make sure we refresh the users list
+        await fetchUsers();
       }
       
       handleCloseDialog();
@@ -72,7 +73,10 @@ export const useMemberRoleManagement = () => {
     }
   };
 
-  const handleOpenRoleDialog = (member: Member) => {
+  const handleOpenRoleDialog = async (member: Member) => {
+    // First refresh the users list to ensure we have the latest data
+    await fetchUsers();
+    
     setSelectedMember(member);
     const matchedUser = findBestMatchingUser(member.name);
     
@@ -121,6 +125,11 @@ export const useMemberRoleManagement = () => {
     return null;
   };
 
+  // Add an effect to refresh the users list when needed
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
   return {
     selectedMember,
     selectedRole,
@@ -134,6 +143,6 @@ export const useMemberRoleManagement = () => {
     setMemberEmail,
     setMemberPassword,
     setSelectedRole,
-    fetchUsers // Expose the fetchUsers function from useUserRoles
+    fetchUsers
   };
 };

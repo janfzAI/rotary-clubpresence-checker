@@ -72,7 +72,6 @@ export const MemberEmailEdit = ({
 
   // Check if email has changed and is valid
   const emailValue = form.watch('email');
-  const isEmailChanged = emailValue !== currentEmail;
   const isEmailValid = form.formState.isValid;
 
   return (
