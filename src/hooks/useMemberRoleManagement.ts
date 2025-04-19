@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -16,9 +15,16 @@ export const useMemberRoleManagement = () => {
   const [memberEmail, setMemberEmail] = useState('');
   const [memberPassword, setMemberPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailChangeTimestamp, setEmailChangeTimestamp] = useState(0);
   
   const { toast } = useToast();
   const { users, handleMemberRoleChange, fetchUsers } = useUserRoles();
+
+  useEffect(() => {
+    if (emailChangeTimestamp > 0) {
+      fetchUsers();
+    }
+  }, [emailChangeTimestamp, fetchUsers]);
 
   const handleRoleChangeSubmit = async () => {
     if (!memberEmail || !selectedRole || !selectedMember) {
@@ -56,7 +62,6 @@ export const useMemberRoleManagement = () => {
           description: message
         });
         
-        // Make sure we refresh the users list
         await fetchUsers();
       }
       
@@ -74,16 +79,19 @@ export const useMemberRoleManagement = () => {
   };
 
   const handleOpenRoleDialog = async (member: Member) => {
-    // First refresh the users list to ensure we have the latest data
+    console.log("Opening role dialog for member:", member.name);
+    
     await fetchUsers();
     
     setSelectedMember(member);
     const matchedUser = findBestMatchingUser(member.name);
     
     if (matchedUser) {
+      console.log("Found matching user for member:", matchedUser.email);
       setMemberEmail(matchedUser.email);
       setSelectedRole(matchedUser.role);
     } else {
+      console.log("No matching user found for member:", member.name);
       setMemberEmail('');
       setSelectedRole('user');
     }
@@ -98,38 +106,45 @@ export const useMemberRoleManagement = () => {
     setSelectedMember(null);
   };
 
-  // Improved user matching with more specific criteria
   const findBestMatchingUser = (memberName: string) => {
-    // Helper function to normalize text for comparison
+    console.log("Finding best matching user for:", memberName);
+    console.log("Current users:", users.map(u => u.email));
+    
     const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
     const normalizedName = normalize(memberName);
+    console.log("Normalized member name:", normalizedName);
     
-    // Try exact matching by email or name parts
     for (const user of users) {
       const normalizedEmail = normalize(user.email);
+      console.log("Checking user email:", user.email, "normalized:", normalizedEmail);
+      
       if (normalizedEmail.includes(normalizedName) || normalizedName.includes(normalizedEmail)) {
+        console.log("Found match by email inclusion:", user.email);
         return user;
       }
     }
     
-    // Try matching by partial name parts
     const nameParts = memberName.toLowerCase().split(/\s+/);
+    console.log("Name parts for matching:", nameParts);
+    
     for (const user of users) {
       for (const part of nameParts) {
         if (part.length > 2 && normalize(user.email).includes(normalize(part))) {
+          console.log("Found match by name part:", part, "in email:", user.email);
           return user;
         }
       }
     }
     
+    console.log("No matching user found after all attempts");
     return null;
   };
 
-  // Add an effect to refresh the users list when needed
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const notifyEmailChanged = () => {
+    console.log("Email change notification received");
+    setEmailChangeTimestamp(Date.now());
+  };
 
   return {
     selectedMember,
@@ -144,6 +159,7 @@ export const useMemberRoleManagement = () => {
     setMemberEmail,
     setMemberPassword,
     setSelectedRole,
-    fetchUsers
+    fetchUsers,
+    notifyEmailChanged
   };
 };

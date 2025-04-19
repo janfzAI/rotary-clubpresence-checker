@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
@@ -46,8 +46,14 @@ export const MembersManagement = ({
     setMemberEmail,
     setMemberPassword,
     setSelectedRole,
-    fetchUsers
+    fetchUsers,
+    notifyEmailChanged
   } = useMemberRoleManagement();
+
+  // Refresh users data when component mounts
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   // Function to find user role based on member name
   const findUserRole = (memberName: string) => {
@@ -96,13 +102,14 @@ export const MembersManagement = ({
   };
 
   const handleOpenEmailEdit = (member: { id: number; name: string }) => {
-    // Before opening the email edit dialog, make sure we have the latest user data
+    // Always refresh users list before opening the email edit dialog
+    console.log("Opening email edit for member:", member.name);
     fetchUsers().then(() => {
       setEmailEditMember(member);
     });
   };
 
-  // Improved email update function with better data synchronization
+  // Enhanced email update function with better synchronization
   const handleEmailUpdate = async (newEmail: string) => {
     if (!emailEditMember) return;
 
@@ -160,6 +167,9 @@ export const MembersManagement = ({
       // Force refresh of users data
       await fetchUsers();
       
+      // Notify about email change to update other components
+      notifyEmailChanged();
+      
       // Close the email edit dialog
       setEmailEditMember(null);
       
@@ -204,7 +214,8 @@ export const MembersManagement = ({
             userRole={findUserRole(member.name)}
             onToggleActive={handleToggleActive}
             onOpenRoleDialog={() => {
-              // Refresh users list before opening the role dialog to ensure we have the most up-to-date data
+              console.log("Requesting to open role dialog for:", member.name);
+              // Refresh users list before opening the role dialog
               fetchUsers().then(() => handleOpenRoleDialog(member));
             }}
             onRemoveMember={handleRemoveMember}
