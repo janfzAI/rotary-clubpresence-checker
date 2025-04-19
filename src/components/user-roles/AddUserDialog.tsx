@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -34,6 +34,7 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
   const [newUserRole, setNewUserRole] = useState<AppRole>('user');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { createUserAndSetRole } = useUserRoles();
 
   const validateInputs = () => {
     if (!newUserEmail.trim()) {
@@ -61,84 +62,14 @@ export const AddUserDialog = ({ onSuccess, onError }: AddUserDialogProps) => {
     console.log(`Attempting to add user: ${newUserEmail} with role: ${newUserRole}`);
 
     try {
-      // Create user with auto-confirm enabled
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: newUserEmail,
-        password: newUserPassword,
-        options: {
-          data: {
-            role: newUserRole
-          }
-        }
-      });
-
-      if (signUpError) {
-        console.error('Sign up error:', signUpError);
-        
-        // Check for specific error messages
-        if (signUpError.message.includes('already')) {
-          onError("Użytkownik z tym adresem email już istnieje");
-        } else {
-          onError(signUpError.message || "Nie udało się utworzyć użytkownika");
-        }
-        return;
-      }
-
-      if (!authData.user) {
-        throw new Error("Nie udało się utworzyć użytkownika - brak danych użytkownika");
-      }
-
-      console.log('User created successfully:', authData.user.id);
-
-      // Add user to profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: newUserEmail
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        
-        if (profileError.code === '23505') { // Duplicate key violation
-          console.log('Profile already exists, continuing with role assignment');
-        } else {
-          throw profileError;
-        }
-      }
-
-      // Add role for the new user
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: newUserRole
-        });
-
-      if (roleError) {
-        console.error('Role assignment error:', roleError);
-        
-        if (roleError.code === '23505') { // Duplicate key violation
-          // Try to update instead
-          const { error: updateError } = await supabase
-            .from('user_roles')
-            .update({ role: newUserRole })
-            .eq('user_id', authData.user.id);
-            
-          if (updateError) throw updateError;
-        } else {
-          throw roleError;
-        }
-      }
-
-      console.log('User creation completed successfully');
+      const result = await createUserAndSetRole(newUserEmail, newUserPassword, newUserRole);
+      
+      console.log('User creation completed successfully:', result);
       onSuccess();
       setNewUserEmail('');
       setNewUserPassword('');
       setNewUserRole('user');
       setDialogOpen(false);
-
     } catch (error: any) {
       console.error('Error adding user:', error);
       onError(error.message || "Nie udało się utworzyć użytkownika");

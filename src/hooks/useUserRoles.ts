@@ -179,17 +179,17 @@ export const useUserRoles = () => {
       console.log(`Attempting to create/update user ${email} with role ${role}`);
       
       // First, check if the user already exists
-      const { data: existingUser, error: checkError } = await supabase
+      const { data: existingUsers, error: checkError } = await supabase
         .from('profiles')
         .select('id, email')
-        .eq('email', email)
-        .maybeSingle();
+        .eq('email', email);
 
       if (checkError) {
         console.error("Error checking for existing user:", checkError);
         throw checkError;
       }
 
+      const existingUser = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
       let userId;
       let isNewUser = false;
       
@@ -227,6 +227,9 @@ export const useUserRoles = () => {
           userId = signupData.user.id;
           console.log("User created successfully:", userId);
           
+          // Wait a moment for the user to be fully created
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
         } catch (authError) {
           console.error("Failed to create user via signup:", authError);
           
@@ -254,9 +257,12 @@ export const useUserRoles = () => {
             userId = userData.user.id;
             console.log("User created successfully with admin API:", userId);
             
+            // Wait a moment for the user to be fully created
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
           } catch (adminError) {
             console.error("Failed to create user with admin API:", adminError);
-            throw new Error("Could not create user account. Please check your permissions or try another email.");
+            throw new Error("Nie można utworzyć konta użytkownika. Sprawdź swoje uprawnienia lub spróbuj inny adres email.");
           }
         }
         
@@ -316,6 +322,52 @@ export const useUserRoles = () => {
     }
   };
 
+  // Update the AlertDialog component to properly handle members with no existing user account
+  const handleMemberRoleChange = async (memberName: string, email: string, role: AppRole, password?: string) => {
+    try {
+      if (!email) {
+        throw new Error("Email jest wymagany aby zarządzać uprawnieniami");
+      }
+      
+      console.log(`Attempting to manage permissions for ${memberName} with email ${email} and role ${role}`);
+      
+      // First check if user with this email exists
+      const { data: existingUsers, error: userCheckError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('email', email);
+        
+      if (userCheckError) {
+        console.error("Error checking for existing user:", userCheckError);
+        throw userCheckError;
+      }
+      
+      const existingUser = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
+      
+      if (existingUser) {
+        // User exists, update their role
+        console.log(`User exists with email ${email}, updating role to ${role}`);
+        return await handleRoleChange(existingUser.id, role, password);
+      } else {
+        // User doesn't exist, create them first
+        if (!password || password.length < 6) {
+          throw new Error("Hasło jest wymagane (minimum 6 znaków) dla nowego użytkownika");
+        }
+        
+        console.log(`No user found with email ${email}, creating new user`);
+        const result = await createUserAndSetRole(email, password, role, memberName);
+        
+        return {
+          email: result.email,
+          passwordUpdated: true
+        };
+      }
+    } catch (error) {
+      console.error("Error in handleMemberRoleChange:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -326,6 +378,7 @@ export const useUserRoles = () => {
     error,
     fetchUsers,
     handleRoleChange,
-    createUserAndSetRole
+    createUserAndSetRole,
+    handleMemberRoleChange
   };
 };

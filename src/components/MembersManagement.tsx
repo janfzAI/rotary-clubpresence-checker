@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,8 +63,9 @@ export const MembersManagement = ({
   const [selectedRole, setSelectedRole] = useState<AppRole>('user');
   const [memberEmail, setMemberEmail] = useState('');
   const [memberPassword, setMemberPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { users, handleRoleChange, fetchUsers, createUserAndSetRole } = useUserRoles();
+  const { users, handleMemberRoleChange, fetchUsers } = useUserRoles();
   const { isAdmin } = useAuth();
 
   const handleAddMember = () => {
@@ -106,7 +108,7 @@ export const MembersManagement = ({
   };
 
   const handleRoleChangeSubmit = async () => {
-    if (!memberEmail || !selectedRole) {
+    if (!memberEmail || !selectedRole || !selectedMember) {
       toast({
         title: "Błąd",
         description: "Proszę podać email i wybrać rolę",
@@ -114,48 +116,53 @@ export const MembersManagement = ({
       });
       return;
     }
+    
+    setIsSubmitting(true);
 
     try {
-      console.log(`Attempting to change role for ${memberEmail} to ${selectedRole}`);
-      const user = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
+      console.log(`Attempting to manage permissions for ${selectedMember.name} with email ${memberEmail} and role ${selectedRole}`);
       
-      if (!user) {
-        console.error(`No user found with email: ${memberEmail}`);
+      const result = await handleMemberRoleChange(
+        selectedMember.name,
+        memberEmail,
+        selectedRole,
+        memberPassword || undefined
+      );
+      
+      if (result) {
+        // Determine if this was a new user or existing user update
+        const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
+        const isNewUser = !existingUser;
+        
+        let message = `Pomyślnie ${isNewUser ? 'utworzono użytkownika' : 'zmieniono rolę użytkownika'} ${memberEmail} na ${selectedRole}`;
+        if (memberPassword && result.passwordUpdated) {
+          message += isNewUser ? ' z podanym hasłem' : ' i zaktualizowano hasło';
+        } else if (memberPassword && !result.passwordUpdated) {
+          message += '. Uwaga: Nie udało się zaktualizować hasła (wymagane uprawnienia administratora).';
+        }
+        
         toast({
-          title: "Błąd",
-          description: `Nie znaleziono użytkownika z emailem ${memberEmail}`,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      console.log(`Found user: ${user.id}, ${user.email}, current role: ${user.role}`);
-      
-      const updatedEmail = await handleRoleChange(user.id, selectedRole, memberPassword || undefined);
-      
-      if (updatedEmail) {
-        toast({
-          title: "Zmieniono uprawnienia",
-          description: `Pomyślnie zmieniono rolę użytkownika ${updatedEmail} na ${selectedRole}${memberPassword ? ' i zaktualizowano hasło' : ''}`
+          title: isNewUser ? "Utworzono użytkownika" : "Zmieniono uprawnienia",
+          description: message
         });
         
         // Refresh users list to ensure we have the latest data
         fetchUsers();
-      } else {
-        throw new Error("Nie udało się zmienić uprawnień użytkownika");
       }
       
       setMemberEmail('');
       setMemberPassword('');
       setSelectedRole('user');
       setSelectedMember(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error managing user:", error);
       toast({
         title: "Błąd",
         description: error instanceof Error ? error.message : "Nie udało się zmienić uprawnień użytkownika",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -377,7 +384,12 @@ export const MembersManagement = ({
                     
                     <AlertDialogFooter>
                       <AlertDialogCancel>Anuluj</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleRoleChangeSubmit}>Zapisz</AlertDialogAction>
+                      <AlertDialogAction 
+                        onClick={handleRoleChangeSubmit}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? 'Przetwarzanie...' : 'Zapisz'}
+                      </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
