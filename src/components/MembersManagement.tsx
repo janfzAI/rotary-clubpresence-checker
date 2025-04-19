@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +43,14 @@ export const MembersManagement = ({
     setMemberPassword,
     setSelectedRole
   } = useMemberRoleManagement();
+
+  const findUserRole = (memberName: string) => {
+    const user = users.find(user => 
+      user.email.toLowerCase().includes(memberName.toLowerCase()) || 
+      memberName.toLowerCase().includes(user.email.toLowerCase())
+    );
+    return user?.role;
+  };
 
   const handleAddMember = () => {
     if (newMemberName.trim()) {
@@ -98,6 +105,7 @@ export const MembersManagement = ({
             member={member}
             index={index}
             isAdmin={true}
+            userRole={findUserRole(member.name)}
             onToggleActive={handleToggleActive}
             onOpenRoleDialog={handleOpenRoleDialog}
             onRemoveMember={handleRemoveMember}
