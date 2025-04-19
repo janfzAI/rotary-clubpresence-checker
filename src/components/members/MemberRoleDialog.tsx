@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { AppRole } from '@/types/userRoles';
+import { MemberAuthFields } from './dialog/MemberAuthFields';
+import { MemberRoleSelect } from './dialog/MemberRoleSelect';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,17 +12,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface MemberRoleDialogProps {
   isOpen: boolean;
@@ -76,53 +66,18 @@ export const MemberRoleDialog = ({
         </AlertDialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="member-email">Email użytkownika</Label>
-            <Input 
-              id="member-email" 
-              value={memberEmail} 
-              onChange={(e) => onEmailChange(e.target.value)} 
-              placeholder="adres@email.com"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="member-password">
-              {existingUser 
-                ? "Nowe hasło (opcjonalne)" 
-                : "Hasło (wymagane dla nowego konta)"}
-            </Label>
-            <Input 
-              id="member-password"
-              type="password"
-              value={memberPassword}
-              onChange={(e) => onPasswordChange(e.target.value)}
-              placeholder={existingUser
-                ? "Pozostaw puste aby nie zmieniać hasła" 
-                : "Podaj hasło dla nowego konta"}
-              required={!existingUser}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="member-role">Rola</Label>
-            <Select 
-              value={selectedRole} 
-              onValueChange={(value) => onRoleChange(value as AppRole)}
-            >
-              <SelectTrigger id="member-role">
-                <SelectValue placeholder="Wybierz rolę" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Role</SelectLabel>
-                  <SelectItem value="admin">Administrator</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="user">Użytkownik</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
+          <MemberAuthFields
+            memberEmail={memberEmail}
+            memberPassword={memberPassword}
+            existingUser={!!existingUser}
+            onEmailChange={onEmailChange}
+            onPasswordChange={onPasswordChange}
+          />
+          
+          <MemberRoleSelect
+            selectedRole={selectedRole}
+            onRoleChange={onRoleChange}
+          />
         </div>
 
         <AlertDialogFooter>
