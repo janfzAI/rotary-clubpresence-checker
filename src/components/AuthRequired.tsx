@@ -1,16 +1,31 @@
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { PasswordReset } from './auth/PasswordReset';
 
 export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Check if we have a password reset token in URL
+        const hashParams = new URLSearchParams(location.hash.substring(1));
+        const type = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
+        
+        if (type === 'recovery' && accessToken) {
+          console.log('Password reset detected in URL');
+          setIsPasswordResetMode(true);
+          setIsLoading(false);
+          return;
+        }
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         console.log('Checking auth session:', session);
         
@@ -55,15 +70,21 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
         navigate('/auth');
       } else if (event === 'SIGNED_IN' && !isAuthenticated) {
         setIsAuthenticated(true);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordResetMode(true);
       }
     });
 
     checkAuth();
     return () => subscription.unsubscribe();
-  }, [navigate, isAuthenticated]);
+  }, [navigate, location, isAuthenticated]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (isPasswordResetMode) {
+    return <PasswordReset />;
   }
 
   return <>{children}</>;

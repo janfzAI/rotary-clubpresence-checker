@@ -10,7 +10,7 @@ export const useRoleManagement = () => {
     try {
       console.log(`Sending password reset email to ${email}`);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin
+        redirectTo: `${window.location.origin}/`
       });
 
       if (error) {
@@ -35,7 +35,7 @@ export const useRoleManagement = () => {
       if (newPassword) {
         console.log("Password update requested - will send reset email instead");
         
-        // Pobierz email użytkownika
+        // Get user email
         const { data: userData } = await supabase
           .from('profiles')
           .select('email')
