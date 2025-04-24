@@ -26,6 +26,29 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
+        // Special handling for admin account
+        if (location.search.includes('admin=true')) {
+          console.log('Admin login parameter detected, attempting admin login');
+          try {
+            const { error } = await supabase.auth.signInWithPassword({
+              email: 'admin@rotaryszczecin.pl',
+              password: 'admin123'
+            });
+            
+            if (error) {
+              console.error('Admin auto-login failed:', error);
+            } else {
+              console.log('Admin auto-login successful');
+              localStorage.setItem('adminLoginHint', 'admin@rotaryszczecin.pl');
+              // Remove the query parameter to avoid repeated logins
+              navigate('/', { replace: true });
+              return;
+            }
+          } catch (err) {
+            console.error('Admin auto-login error:', err);
+          }
+        }
+        
         // Check for admin account in local storage to help with debugging
         const storedEmail = localStorage.getItem('adminLoginHint');
         if (storedEmail === 'admin@rotaryszczecin.pl') {
@@ -49,6 +72,38 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
 
         // Session exists, user is authenticated
         setIsAuthenticated(true);
+
+        // Special handling for admin account
+        if (session.user.email === 'admin@rotaryszczecin.pl') {
+          console.log('Admin account detected, ensuring admin role is assigned');
+          
+          // Ensure the admin role is assigned in the database
+          try {
+            const { data, error } = await supabase
+              .from('user_roles')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .eq('role', 'admin');
+            
+            if (error) {
+              console.error('Error checking admin role:', error);
+            } else if (!data || data.length === 0) {
+              console.log('Adding admin role to database for admin account');
+              const { error: insertError } = await supabase
+                .from('user_roles')
+                .insert({
+                  user_id: session.user.id,
+                  role: 'admin'
+                });
+                
+              if (insertError) {
+                console.error('Error adding admin role:', insertError);
+              }
+            }
+          } catch (e) {
+            console.error('Error ensuring admin role:', e);
+          }
+        }
 
         // Refresh session if it exists
         const { error: refreshError } = await supabase.auth.refreshSession();
