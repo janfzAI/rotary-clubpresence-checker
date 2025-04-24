@@ -61,7 +61,7 @@ export const MemberAuthFields = ({
         />
         
         {!existingUser && !memberPassword && (
-          <Alert variant="warning" className="mt-2 py-2">
+          <Alert variant="destructive" className="mt-2 py-2">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               Hasło jest wymagane dla nowego konta (minimum 6 znaków)
