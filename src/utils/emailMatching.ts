@@ -31,6 +31,28 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
     }
   }
   
+  // Special case for Leszek Zdawski
+  if (memberName.toLowerCase().includes("leszek") && memberName.toLowerCase().includes("zdawski")) {
+    const leszekEmail = userEmails.find(email => 
+      email.toLowerCase().includes("leszek") && email.toLowerCase().includes("zdawski")
+    );
+    if (leszekEmail) {
+      console.log(`Found special match for Leszek Zdawski: ${leszekEmail}`);
+      return leszekEmail;
+    }
+  }
+  
+  // Special case for Krzysztof Dokowski
+  if (memberName.toLowerCase().includes("krzysztof") && memberName.toLowerCase().includes("dokowski")) {
+    const krzysztofEmail = userEmails.find(email => 
+      email.toLowerCase().includes("krzysztof") && email.toLowerCase().includes("dokowski")
+    );
+    if (krzysztofEmail) {
+      console.log(`Found special match for Krzysztof Dokowski: ${krzysztofEmail}`);
+      return krzysztofEmail;
+    }
+  }
+  
   const normalizedName = memberName.toLowerCase().trim();
   const nameParts = normalizedName.split(' ');
   

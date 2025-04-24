@@ -63,6 +63,31 @@ export const useMemberRoleManagement = () => {
       }
     }
     
+    // Special case for Krzysztof Dokowski
+    if (member.name.toLowerCase().includes("krzysztof") && member.name.toLowerCase().includes("dokowski")) {
+      const krzysztofEmail = users.find(u => 
+        u.email && u.email.toLowerCase().includes("krzysztof") && 
+        u.email.toLowerCase().includes("dokowski")
+      )?.email;
+      
+      if (krzysztofEmail) {
+        console.log("Found email for Krzysztof Dokowski:", krzysztofEmail);
+        const user = getUserByEmail(krzysztofEmail);
+        setMemberEmail(krzysztofEmail);
+        setSelectedRole(user?.role || 'user');
+        setMemberPassword('');
+        return;
+      }
+      
+      // Suggest default email based on name if no match found
+      const suggestedEmail = `krzysztof.dokowski@example.com`;
+      console.log("No email found for Krzysztof Dokowski, suggesting:", suggestedEmail);
+      setMemberEmail(suggestedEmail);
+      setSelectedRole('user');
+      setMemberPassword('');
+      return;
+    }
+    
     const matchedEmail = findEmailMatch(member.name, users.map(u => u.email));
     
     if (matchedEmail) {
@@ -72,7 +97,19 @@ export const useMemberRoleManagement = () => {
       setSelectedRole(user?.role || 'user');
     } else {
       console.log("No matching user found for member:", member.name);
-      setMemberEmail('');
+      // Create suggested email based on name
+      const nameParts = member.name.split(' ');
+      let suggestedEmail = '';
+      
+      if (nameParts.length >= 2) {
+        const firstName = nameParts[0].toLowerCase();
+        const lastName = nameParts[nameParts.length - 1].toLowerCase();
+        suggestedEmail = `${firstName}.${lastName}@example.com`;
+      } else {
+        suggestedEmail = `${member.name.toLowerCase().replace(/\s+/g, '.')}@example.com`;
+      }
+      
+      setMemberEmail(suggestedEmail);
       setSelectedRole('user');
     }
     
@@ -89,9 +126,22 @@ export const useMemberRoleManagement = () => {
       return;
     }
     
+    // For new users, ensure password is provided and meets minimum requirements
+    const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
+    if (!existingUser && (!memberPassword || memberPassword.length < 6)) {
+      toast({
+        title: "Błąd",
+        description: "Hasło dla nowego użytkownika musi mieć minimum 6 znaków",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
+      console.log(`Submitting role change for ${selectedMember.name} with email ${memberEmail} and role ${selectedRole}`);
+      
       const result = await handleMemberRoleChange(
         selectedMember.name,
         memberEmail,
@@ -122,7 +172,17 @@ export const useMemberRoleManagement = () => {
     } catch (error: any) {
       console.error("Error managing user:", error);
       
-      if (error.message && error.message.includes('not_admin')) {
+      // Handle specific error cases
+      let errorMessage = error.message || "Nie udało się zmienić uprawnień użytkownika";
+      
+      // Check for password validation errors
+      if (errorMessage.includes('password') && errorMessage.includes('short')) {
+        errorMessage = "Hasło jest za krótkie. Musi mieć minimum 6 znaków.";
+      }
+      
+      // Check for permission errors
+      if (errorMessage.includes('not_admin') || errorMessage.includes('permission denied') ||
+          errorMessage.includes('permission') || errorMessage.includes('uprawnień')) {
         toast({
           title: "Brak uprawnień",
           description: "Twoje konto nie posiada uprawnień administratora Supabase do wykonania tej operacji. Skontaktuj się z administratorem systemu.",
@@ -131,7 +191,7 @@ export const useMemberRoleManagement = () => {
       } else {
         toast({
           title: "Błąd",
-          description: error instanceof Error ? error.message : "Nie udało się zmienić uprawnień użytkownika",
+          description: errorMessage,
           variant: "destructive"
         });
       }

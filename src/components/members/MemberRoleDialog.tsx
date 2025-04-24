@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
@@ -157,12 +157,31 @@ export const MemberRoleDialog = ({
 
         <AlertDialogFooter>
           <AlertDialogCancel>Anuluj</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={onSubmit}
-            disabled={isSubmitting || !memberEmail}
-          >
-            {isSubmitting ? 'Przetwarzanie...' : 'Zapisz'}
-          </AlertDialogAction>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <AlertDialogAction 
+                    onClick={onSubmit}
+                    disabled={isSubmitting || !memberEmail || (isNewUser && !memberPassword)}
+                    className="inline-flex items-center"
+                  >
+                    {isSubmitting ? 'Przetwarzanie...' : 'Zapisz'}
+                  </AlertDialogAction>
+                </span>
+              </TooltipTrigger>
+              {isNewUser && !memberPassword && (
+                <TooltipContent>
+                  <p>Podaj hasło dla nowego konta</p>
+                </TooltipContent>
+              )}
+              {!memberEmail && (
+                <TooltipContent>
+                  <p>Podaj adres email</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
