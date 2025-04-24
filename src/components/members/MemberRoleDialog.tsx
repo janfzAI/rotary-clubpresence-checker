@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
@@ -110,12 +110,12 @@ export const MemberRoleDialog = ({
 
         <div className="space-y-4 py-4">
           {isNewUser && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
+            <Alert variant="warning" className="mb-4">
+              <Info className="h-4 w-4" />
               <AlertDescription>
-                <strong>Uwaga:</strong> Aby utworzyć nowego użytkownika, konto używane do logowania musi 
-                mieć uprawnienia administratora w Supabase. Jeśli operacja się nie powiedzie, 
-                użyj istniejącego adresu e-mail lub skontaktuj się z administratorem systemu.
+                <strong>Ważna informacja:</strong> Aby utworzyć nowe konta użytkowników, zaloguj się 
+                z kontem, które posiada pełne uprawnienia administracyjne Supabase. 
+                Korzystaj z konta <strong>admin@rotaryszczecin.pl</strong> z hasłem <strong>admin123</strong>.
               </AlertDescription>
             </Alert>
           )}
