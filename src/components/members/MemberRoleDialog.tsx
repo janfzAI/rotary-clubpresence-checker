@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertCircle, Info } from "lucide-react";
+import { Info, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
@@ -110,7 +110,7 @@ export const MemberRoleDialog = ({
 
         <div className="space-y-4 py-4">
           {isNewUser && (
-            <Alert variant="warning" className="mb-4">
+            <Alert variant="destructive" className="mb-4">
               <Info className="h-4 w-4" />
               <AlertDescription>
                 <strong>Ważna informacja:</strong> Aby utworzyć nowe konta użytkowników, zaloguj się 

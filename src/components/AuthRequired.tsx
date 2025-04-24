@@ -26,6 +26,12 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
+        // Check for admin account in local storage to help with debugging
+        const storedEmail = localStorage.getItem('adminLoginHint');
+        if (storedEmail === 'admin@rotaryszczecin.pl') {
+          console.log('Admin account detected in local storage');
+        }
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         console.log('Checking auth session:', session);
         
@@ -62,6 +68,11 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session);
+      
+      // Store admin email hint if this is the admin account
+      if (event === 'SIGNED_IN' && session?.user?.email === 'admin@rotaryszczecin.pl') {
+        localStorage.setItem('adminLoginHint', 'admin@rotaryszczecin.pl');
+      }
       
       // Only redirect to auth page if user explicitly signs out
       // Don't redirect for other auth events like SIGNED_IN
