@@ -99,7 +99,10 @@ export const useRoleManagement = () => {
         // Druga próba - użycie alternatywnej metody (rzadziej używana, ale czasami działa)
         try {
           const SUPABASE_URL = "https://oxoxfhhwbavniybllumy.supabase.co";
-          const SUPABASE_KEY = supabase.auth.session()?.access_token || '';
+          
+          // FIX: Pobieramy sesję najpierw, a potem dopiero token z sesji
+          const { data: { session } } = await supabase.auth.getSession();
+          const SUPABASE_KEY = session?.access_token || '';
           
           console.log("[PASSWORD_UPDATE] Próba aktualizacji hasła z użyciem bezpośredniego API");
           
@@ -264,3 +267,4 @@ export const useRoleManagement = () => {
     isSubmitting
   };
 };
+
