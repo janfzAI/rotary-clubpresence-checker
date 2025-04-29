@@ -282,6 +282,16 @@ export const MembersManagement = ({
       });
       return;
     }
+
+    // Skip update if email hasn't changed
+    if (newEmail === currentEmail) {
+      console.log('Email unchanged, skipping update');
+      toast({
+        title: "Informacja",
+        description: "Adres email nie został zmieniony"
+      });
+      return;
+    }
     
     await refreshUserData();
     
@@ -304,6 +314,17 @@ export const MembersManagement = ({
     console.log('Znaleziono użytkownika do aktualizacji:', matchedUser);
 
     try {
+      // Check if the new email is already used by another user
+      const existingUser = users.find(user => 
+        user.email && 
+        user.email.toLowerCase().trim() === newEmail.toLowerCase().trim() &&
+        user.id !== matchedUser.id
+      );
+
+      if (existingUser) {
+        throw new Error("Ten adres email jest już używany przez innego użytkownika. Proszę wybrać inny adres email.");
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ email: newEmail })
@@ -311,6 +332,10 @@ export const MembersManagement = ({
 
       if (error) {
         console.error('Błąd aktualizacji adresu email:', error);
+        
+        if (error.message?.includes('duplicate key') || error.code === '23505') {
+          throw new Error("Ten adres email jest już używany przez innego użytkownika. Proszę wybrać inny adres email.");
+        }
         
         if (error.message?.includes('permission') || error.code === '42501') {
           throw new Error("Brak uprawnień do zmiany adresu email. Skontaktuj się z administratorem systemu.");
@@ -340,11 +365,7 @@ export const MembersManagement = ({
       }, 500);
     } catch (error: any) {
       console.error('Błąd aktualizacji adresu email:', error);
-      toast({
-        title: "Błąd",
-        description: error.message || "Nie udało się zaktualizować adresu email",
-        variant: "destructive"
-      });
+      throw error;
     }
   };
 
