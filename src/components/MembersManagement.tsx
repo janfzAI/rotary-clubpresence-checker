@@ -8,6 +8,7 @@ import { MemberListItem } from './members/MemberListItem';
 import { MemberRoleDialog } from './members/MemberRoleDialog';
 import { MemberEmailEdit } from './members/dialog/MemberEmailEdit';
 import { supabase } from "@/integrations/supabase/client";
+import { findEmailMatch } from "@/utils/emailMatching";
 
 interface Member {
   id: number;
@@ -62,121 +63,35 @@ export const MembersManagement = ({
     }
   }, [lastRefreshTimestamp]);
 
+  // Use the improved email matching utility for finding user roles
   const findUserRole = (memberName: string, memberId: number) => {
     console.log(`Finding role for member: ${memberName} (ID: ${memberId}), available users: ${users.length}`);
     
-    const memberFullName = memberName.toLowerCase().trim();
+    // Use the enhanced findEmailMatch function
+    const matchedEmail = findEmailMatch(memberName, users.map(u => u.email));
     
-    const exactUserMatch = users.find(user => {
-      if (!user.email) return false;
-      
-      const normalizedEmail = user.email.toLowerCase().trim();
-      
-      const nameParts = memberFullName.split(' ');
-      if (nameParts.length < 2) return false;
-      
-      const firstName = nameParts[0];
-      const lastName = nameParts[nameParts.length - 1];
-      
-      return normalizedEmail.includes(firstName) && 
-             normalizedEmail.includes(lastName);
-    });
-    
-    if (exactUserMatch) {
-      return exactUserMatch.role;
-    }
-    
-    const partialMatch = users.find(user => {
-      if (!user.email) return false;
-      
-      const normalizedEmail = user.email.toLowerCase().trim();
-      const userName = memberFullName.replace(/\s+/g, '.');
-      const userNameNoSpace = memberFullName.replace(/\s+/g, '');
-      
-      return normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace);
-    });
-    
-    if (partialMatch) {
-      return partialMatch.role;
-    }
-    
-    if (memberName.toLowerCase().includes("jan jurga")) {
-      const janUser = users.find(u => 
-        u.email && (u.email.toLowerCase().includes("jan") && u.email.toLowerCase().includes("jurga"))
+    if (matchedEmail) {
+      const userMatch = users.find(user => 
+        user.email && user.email.toLowerCase() === matchedEmail.toLowerCase()
       );
-      if (janUser) {
-        return janUser.role;
+      
+      if (userMatch) {
+        return userMatch.role;
       }
     }
     
     return undefined;
   };
 
+  // Use the improved email matching utility for finding emails
   const findCurrentEmailForMember = (memberName: string): string => {
     if (!memberName || !users || users.length === 0) {
       return '';
     }
     
-    if (memberName.toLowerCase().includes("jan jurga")) {
-      const janUser = users.find(u => 
-        u.email && (u.email.toLowerCase().includes("jan") || u.email.toLowerCase().includes("jurga"))
-      );
-      if (janUser && janUser.email) {
-        return janUser.email;
-      }
-    }
-    
-    const normalizedMemberName = memberName.toLowerCase().trim();
-    
-    const exactUserMatch = users.find(user => {
-      if (!user.email) return false;
-      const normalizedEmail = user.email.toLowerCase().trim();
-      const userName = normalizedMemberName.replace(/\s+/g, '.');
-      const userNameNoSpace = normalizedMemberName.replace(/\s+/g, '');
-      
-      return normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace);
-    });
-    
-    if (exactUserMatch && exactUserMatch.email) {
-      return exactUserMatch.email;
-    }
-    
-    const nameParts = memberName.split(' ');
-    if (nameParts.length >= 2) {
-      const firstName = nameParts[0].toLowerCase();
-      const lastName = nameParts[nameParts.length - 1].toLowerCase();
-      
-      const matchedUser = users.find(user => {
-        if (!user.email) return false;
-        const normalizedEmail = user.email.toLowerCase();
-        
-        return normalizedEmail.startsWith(`${firstName}.${lastName}`) ||
-               normalizedEmail.startsWith(`${lastName}.${firstName}`) ||
-               normalizedEmail.startsWith(`${firstName}${lastName}`) ||
-               normalizedEmail.startsWith(`${lastName}${firstName}`) ||
-               normalizedEmail.startsWith(`${firstName[0]}${lastName}`) ||
-               normalizedEmail.startsWith(`${lastName[0]}${firstName}`);
-      });
-      
-      if (matchedUser && matchedUser.email) {
-        return matchedUser.email;
-      }
-    }
-    
-    for (const user of users) {
-      if (!user.email) continue;
-      
-      const userEmail = user.email.toLowerCase();
-      const nameParts = memberName.toLowerCase().split(' ');
-      
-      for (const part of nameParts) {
-        if (part.length > 2 && userEmail.includes(part)) {
-          return user.email;
-        }
-      }
-    }
-    
-    return '';
+    // Use the enhanced findEmailMatch function
+    const matchedEmail = findEmailMatch(memberName, users.map(u => u.email));
+    return matchedEmail || '';
   };
 
   const userRoleCache = useMemo(() => {

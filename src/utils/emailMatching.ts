@@ -7,6 +7,30 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
     return undefined;
   }
   
+  // Special case for specific individuals
+  // Explicit special cases for known people with potential conflicts
+  if (memberName.toLowerCase().includes("krzysztof") && memberName.toLowerCase().includes("dokowski")) {
+    const email = userEmails.find(email => 
+      email.toLowerCase().includes("krzysztof") && 
+      email.toLowerCase().includes("dokowski")
+    );
+    if (email) {
+      console.log(`Found exact match for Krzysztof Dokowski: ${email}`);
+      return email;
+    }
+  }
+  
+  if (memberName.toLowerCase().includes("krzysztof") && memberName.toLowerCase().includes("meisinger")) {
+    const email = userEmails.find(email => 
+      email.toLowerCase().includes("krzysztof") && 
+      email.toLowerCase().includes("meisinger")
+    );
+    if (email) {
+      console.log(`Found exact match for Krzysztof Meisinger: ${email}`);
+      return email;
+    }
+  }
+  
   // Special case for Maciej Krzeptowski
   if (memberName.toLowerCase().includes("maciej") && memberName.toLowerCase().includes("krzeptowski")) {
     const maciejEmail = userEmails.find(email => 
@@ -42,34 +66,35 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
     }
   }
   
-  // Special case for Krzysztof Dokowski
-  if (memberName.toLowerCase().includes("krzysztof") && memberName.toLowerCase().includes("dokowski")) {
-    const krzysztofEmail = userEmails.find(email => 
-      email.toLowerCase().includes("krzysztof") && email.toLowerCase().includes("dokowski")
-    );
-    if (krzysztofEmail) {
-      console.log(`Found special match for Krzysztof Dokowski: ${krzysztofEmail}`);
-      return krzysztofEmail;
-    }
-  }
-  
   const normalizedName = memberName.toLowerCase().trim();
   const nameParts = normalizedName.split(' ');
   
-  // Try exact match (first.last@domain.com)
+  // Try full name exact match first (requires both first and last name in email)
   if (nameParts.length >= 2) {
     const firstName = nameParts[0];
     const lastName = nameParts[nameParts.length - 1];
     
-    const exactMatch = userEmails.find(email => {
+    // Look for emails containing BOTH first AND last name for more precise matching
+    const exactFullNameMatch = userEmails.find(email => {
+      const normalizedEmail = email.toLowerCase();
+      return (normalizedEmail.includes(firstName) && normalizedEmail.includes(lastName));
+    });
+    
+    if (exactFullNameMatch) {
+      console.log(`Found full name exact match: ${exactFullNameMatch}`);
+      return exactFullNameMatch;
+    }
+    
+    // Try exact format match (first.last@domain.com)
+    const formatExactMatch = userEmails.find(email => {
       const normalizedEmail = email.toLowerCase();
       return normalizedEmail.includes(`${firstName}.${lastName}`) || 
              normalizedEmail.includes(`${lastName}.${firstName}`);
     });
     
-    if (exactMatch) {
-      console.log(`Found exact email match: ${exactMatch}`);
-      return exactMatch;
+    if (formatExactMatch) {
+      console.log(`Found exact email format match: ${formatExactMatch}`);
+      return formatExactMatch;
     }
     
     // Look for underscore format (first_last@domain.com)
@@ -85,11 +110,13 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
     }
   }
   
-  // Try name parts matching
+  // Fallback to partial matching only if we haven't found a match yet
+  // This is less precise so we do it last
+  const userName = normalizedName.replace(/\s+/g, '.');
+  const userNameNoSpace = normalizedName.replace(/\s+/g, '');
+  
   for (const email of userEmails) {
     const normalizedEmail = email.toLowerCase();
-    const userName = normalizedName.replace(/\s+/g, '.');
-    const userNameNoSpace = normalizedName.replace(/\s+/g, '');
     
     if (normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace)) {
       console.log(`Found partial email match: ${email}`);
@@ -98,16 +125,18 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
   }
   
   // Last resort - check if any name part is in the email
+  // But only if all name parts are found to reduce false matches
   if (nameParts.length >= 2) {
-    const firstName = nameParts[0];
-    const lastName = nameParts[nameParts.length - 1];
-    
     for (const email of userEmails) {
       const normalizedEmail = email.toLowerCase();
       
-      // If both first name and last name are in the email
-      if (normalizedEmail.includes(firstName) && normalizedEmail.includes(lastName)) {
-        console.log(`Found name parts in email: ${email}`);
+      // Check if ALL name parts are in the email
+      const allPartsFound = nameParts.every(part => 
+        part.length > 2 && normalizedEmail.includes(part)
+      );
+      
+      if (allPartsFound) {
+        console.log(`Found all name parts in email: ${email}`);
         return email;
       }
     }

@@ -46,6 +46,59 @@ export const useMemberRoleManagement = () => {
     
     setSelectedMember(member);
     
+    // Handle special cases for users who might have similar names
+    // Special case for Krzysztof Dokowski
+    if (member.name.toLowerCase().includes("krzysztof") && member.name.toLowerCase().includes("dokowski")) {
+      const email = users.find(u => 
+        u.email && 
+        u.email.toLowerCase().includes("krzysztof") && 
+        u.email.toLowerCase().includes("dokowski")
+      )?.email;
+      
+      if (email) {
+        console.log("Found email for Krzysztof Dokowski:", email);
+        const user = getUserByEmail(email);
+        setMemberEmail(email);
+        setSelectedRole(user?.role || 'user');
+        setMemberPassword('');
+        return;
+      }
+      
+      // Suggest default email based on name if no match found
+      const suggestedEmail = `krzysztof.dokowski@example.com`;
+      console.log("No email found for Krzysztof Dokowski, suggesting:", suggestedEmail);
+      setMemberEmail(suggestedEmail);
+      setSelectedRole('user');
+      setMemberPassword('');
+      return;
+    }
+    
+    // Special case for Krzysztof Meisinger
+    if (member.name.toLowerCase().includes("krzysztof") && member.name.toLowerCase().includes("meisinger")) {
+      const email = users.find(u => 
+        u.email && 
+        u.email.toLowerCase().includes("krzysztof") && 
+        u.email.toLowerCase().includes("meisinger")
+      )?.email;
+      
+      if (email) {
+        console.log("Found email for Krzysztof Meisinger:", email);
+        const user = getUserByEmail(email);
+        setMemberEmail(email);
+        setSelectedRole(user?.role || 'user');
+        setMemberPassword('');
+        return;
+      }
+      
+      // Suggest default email based on name if no match found
+      const suggestedEmail = `krzysztof.meisinger@example.com`;
+      console.log("No email found for Krzysztof Meisinger, suggesting:", suggestedEmail);
+      setMemberEmail(suggestedEmail);
+      setSelectedRole('user');
+      setMemberPassword('');
+      return;
+    }
+    
     // Special case for Maciej Krzeptowski
     if (member.name.toLowerCase().includes("maciej") && member.name.toLowerCase().includes("krzeptowski")) {
       const maciejEmail = users.find(u => 
@@ -63,31 +116,7 @@ export const useMemberRoleManagement = () => {
       }
     }
     
-    // Special case for Krzysztof Dokowski
-    if (member.name.toLowerCase().includes("krzysztof") && member.name.toLowerCase().includes("dokowski")) {
-      const krzysztofEmail = users.find(u => 
-        u.email && u.email.toLowerCase().includes("krzysztof") && 
-        u.email.toLowerCase().includes("dokowski")
-      )?.email;
-      
-      if (krzysztofEmail) {
-        console.log("Found email for Krzysztof Dokowski:", krzysztofEmail);
-        const user = getUserByEmail(krzysztofEmail);
-        setMemberEmail(krzysztofEmail);
-        setSelectedRole(user?.role || 'user');
-        setMemberPassword('');
-        return;
-      }
-      
-      // Suggest default email based on name if no match found
-      const suggestedEmail = `krzysztof.dokowski@example.com`;
-      console.log("No email found for Krzysztof Dokowski, suggesting:", suggestedEmail);
-      setMemberEmail(suggestedEmail);
-      setSelectedRole('user');
-      setMemberPassword('');
-      return;
-    }
-    
+    // Use the improved findEmailMatch function which has better handling for similar names
     const matchedEmail = findEmailMatch(member.name, users.map(u => u.email));
     
     if (matchedEmail) {
