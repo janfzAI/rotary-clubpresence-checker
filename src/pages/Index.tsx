@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
@@ -40,6 +41,13 @@ const Index = () => {
     toast
   } = useAttendanceState();
 
+  // If no activeTab is set (first visit), default to events tab
+  React.useEffect(() => {
+    if (!activeTab) {
+      setActiveTab('events');
+    }
+  }, [activeTab, setActiveTab]);
+
   // Define if user has permission to edit attendance and manage guests/members
   const canEditAttendance = isAdmin || isManager;
   const canManageGuests = isAdmin || isManager;
@@ -59,6 +67,10 @@ const Index = () => {
       
       <RoleNotice isAdmin={isAdmin} isManager={isManager} />
       {!canEditAttendance && <ReadOnlyNotice />}
+      
+      {activeTab === 'events' && (
+        <EventsCalendar />
+      )}
       
       {activeTab === 'attendance' && (
         <div className="space-y-6">
