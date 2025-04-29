@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Info, AlertCircle, Lock } from "lucide-react";
+import { Info, AlertCircle, Lock, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
@@ -56,16 +56,25 @@ export const MemberRoleDialog = ({
   const [directPasswordUpdateSent, setDirectPasswordUpdateSent] = React.useState(false);
   const [passwordActionError, setPasswordActionError] = React.useState<string | null>(null);
   const [isAdminUser, setIsAdminUser] = React.useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = React.useState<string | null>(null);
   
   // Check if current user is the special admin account
   useEffect(() => {
     const checkAdminStatus = async () => {
       const { data } = await supabase.auth.getUser();
-      const isAdmin = data?.user?.email === 'admin@rotaryszczecin.pl';
+      const email = data?.user?.email || null;
+      setCurrentUserEmail(email);
+      const isAdmin = email === 'admin@rotaryszczecin.pl';
       setIsAdminUser(isAdmin);
+      console.log(`Current user: ${email}, isSpecialAdmin: ${isAdmin}`);
     };
     
-    checkAdminStatus();
+    if (isOpen) {
+      checkAdminStatus();
+      setResetEmailSent(false);
+      setDirectPasswordUpdateSent(false);
+      setPasswordActionError(null);
+    }
   }, [isOpen]);
   
   // Debug the current email value
@@ -75,15 +84,6 @@ export const MemberRoleDialog = ({
     }
   }, [isOpen, memberEmail, selectedMember]);
   
-  // Reset states when the dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setResetEmailSent(false);
-      setDirectPasswordUpdateSent(false);
-      setPasswordActionError(null);
-    }
-  }, [isOpen, memberEmail]);
-  
   const handleSendPasswordReset = async () => {
     if (!memberEmail) return;
     
@@ -92,6 +92,10 @@ export const MemberRoleDialog = ({
       const result = await sendPasswordResetEmail(memberEmail);
       if (result) {
         setResetEmailSent(true);
+        toast({
+          title: "Email wysłany",
+          description: `Link do resetowania hasła został wysłany na adres ${memberEmail}`
+        });
       } else {
         setPasswordActionError("Nie udało się wysłać emaila z linkiem do resetowania hasła");
       }
@@ -119,7 +123,7 @@ export const MemberRoleDialog = ({
         setDirectPasswordUpdateSent(true);
         setPasswordActionError(null);
       } else {
-        // Error handling is now done in the updateUserPassword function with toasts
+        // Error handling is done in the updateUserPassword function with toasts
       }
     } catch (error) {
       console.error("Failed to update password:", error);
@@ -156,22 +160,30 @@ export const MemberRoleDialog = ({
         </AlertDialogHeader>
 
         <div className="space-y-4 py-4">
-          {!isAdminUser && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Ograniczony dostęp</AlertTitle>
+          {isAdminUser ? (
+            <Alert>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <AlertTitle>Pełne uprawnienia administratora</AlertTitle>
               <AlertDescription className="text-sm">
-                <strong>Uwaga:</strong> Tylko konto <strong>admin@rotaryszczecin.pl</strong> (hasło: <strong>admin123</strong>) 
-                posiada uprawnienia do bezpośredniej zmiany haseł. Zaloguj się ponownie używając tego konta aby aktywować wszystkie funkcje.
+                Jesteś zalogowany jako <strong>admin@rotaryszczecin.pl</strong> i masz pełne uprawnienia 
+                do zarządzania użytkownikami i ich hasłami.
               </AlertDescription>
             </Alert>
-          )}
-          
-          {isAdminUser && (
-            <Alert className="mb-4">
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Konto administratora:</strong> Masz pełne uprawnienia do zarządzania użytkownikami i hasłami.
+          ) : (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Wymagane specjalne konto administratora</AlertTitle>
+              <AlertDescription className="text-sm">
+                <strong>Uwaga:</strong> Do zmiany haseł wymagane jest konto <strong>admin@rotaryszczecin.pl</strong> (hasło: <strong>admin123</strong>).
+                Aktualnie jesteś zalogowany jako: <strong>{currentUserEmail || "Nieznany użytkownik"}</strong>.
+                <div className="mt-2">
+                  <a 
+                    href="/?admin=true" 
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm inline-flex items-center"
+                  >
+                    <Lock className="mr-1 h-3 w-3" /> Zaloguj jako admin@rotaryszczecin.pl
+                  </a>
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -196,17 +208,24 @@ export const MemberRoleDialog = ({
           
           {existingUser && (
             <div className="space-y-2 mt-2">
-              <Alert variant={!isAdminUser ? "destructive" : "default"} className="mb-4">
-                <Lock className="h-4 w-4" />
-                <AlertTitle>{!isAdminUser ? "Tylko administrator może zmieniać hasła" : "Bezpośrednia zmiana hasła"}</AlertTitle>
-                <AlertDescription className="text-sm">
-                  {!isAdminUser ? (
-                    <>Błąd <strong>"user not allowed"</strong> oznacza, że musisz być zalogowany jako <strong>admin@rotaryszczecin.pl</strong> aby zmienić hasło.</>
-                  ) : (
-                    <>Jako administrator możesz bezpośrednio zmienić hasło użytkownika.</>
-                  )}
-                </AlertDescription>
-              </Alert>
+              {isAdminUser ? (
+                <Alert variant="default" className="mb-4">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <AlertTitle>Bezpośrednia zmiana hasła dostępna</AlertTitle>
+                  <AlertDescription className="text-sm">
+                    Jako <strong>admin@rotaryszczecin.pl</strong> możesz bezpośrednio zmienić hasło użytkownika.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert variant="destructive" className="mb-4">
+                  <Lock className="h-4 w-4" />
+                  <AlertTitle>Tylko admin@rotaryszczecin.pl może zmieniać hasła</AlertTitle>
+                  <AlertDescription className="text-sm">
+                    Aby zmienić hasło, musisz być zalogowany jako <strong>admin@rotaryszczecin.pl</strong>.
+                    Kliknij link powyżej, aby zalogować się jako administrator.
+                  </AlertDescription>
+                </Alert>
+              )}
               
               <Button 
                 type="button" 
