@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import type { AppRole } from '@/types/userRoles';
 import { MemberAuthFields } from './dialog/MemberAuthFields';
@@ -19,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface MemberRoleDialogProps {
   isOpen: boolean;
@@ -57,6 +57,7 @@ export const MemberRoleDialog = ({
   const [passwordActionError, setPasswordActionError] = React.useState<string | null>(null);
   const [isAdminUser, setIsAdminUser] = React.useState(false);
   const [currentUserEmail, setCurrentUserEmail] = React.useState<string | null>(null);
+  const { toast } = useToast();
   
   // Check if current user is the special admin account
   useEffect(() => {
@@ -117,17 +118,29 @@ export const MemberRoleDialog = ({
     }
     
     try {
+      console.log(`Attempting to update password for user ${existingUser.id} with email ${memberEmail}`);
       setPasswordActionError(null);
       const result = await updateUserPassword(existingUser.id, memberPassword);
+      
       if (result) {
         setDirectPasswordUpdateSent(true);
         setPasswordActionError(null);
+        toast({
+          title: "Hasło zaktualizowane",
+          description: `Hasło dla użytkownika ${memberEmail} zostało pomyślnie zmienione.`
+        });
       } else {
         // Error handling is done in the updateUserPassword function with toasts
+        console.log("Password update failed, but error was handled in updateUserPassword");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update password:", error);
-      setPasswordActionError("Wystąpił błąd podczas aktualizacji hasła");
+      setPasswordActionError(`Błąd aktualizacji hasła: ${error.message || "Nieznany błąd"}`);
+      toast({
+        title: "Błąd aktualizacji hasła",
+        description: error.message || "Wystąpił nieznany błąd podczas aktualizacji hasła",
+        variant: "destructive"
+      });
     }
   };
 

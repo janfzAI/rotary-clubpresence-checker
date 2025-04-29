@@ -28,9 +28,9 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
-        // Special handling for admin account
+        // Special handling for admin account - more explicit message for better debugging
         if (location.search.includes('admin=true')) {
-          console.log('Admin login parameter detected, attempting admin login');
+          console.log('[ADMIN LOGIN] Admin login parameter detected, attempting admin login');
           try {
             const { data, error } = await supabase.auth.signInWithPassword({
               email: 'admin@rotaryszczecin.pl',
@@ -38,14 +38,14 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
             });
             
             if (error) {
-              console.error('Admin auto-login failed:', error);
+              console.error('[ADMIN LOGIN] Admin auto-login failed:', error);
               toast({
                 title: "Błąd logowania jako admin",
-                description: "Nie udało się automatycznie zalogować jako administrator. Spróbuj zalogować się ręcznie jako admin@rotaryszczecin.pl z hasłem admin123.",
+                description: `Nie udało się zalogować jako admin: ${error.message}. Spróbuj zalogować się ręcznie jako admin@rotaryszczecin.pl z hasłem admin123.`,
                 variant: "destructive"
               });
             } else {
-              console.log('Admin auto-login successful', data.user?.email);
+              console.log('[ADMIN LOGIN] Admin auto-login successful', data.user?.email);
               localStorage.setItem('adminLoginHint', 'admin@rotaryszczecin.pl');
               toast({
                 title: "Zalogowano jako administrator",
@@ -57,14 +57,14 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
               return;
             }
           } catch (err) {
-            console.error('Admin auto-login error:', err);
+            console.error('[ADMIN LOGIN] Admin auto-login error:', err);
           }
         }
         
         // Check for admin account in local storage to help with debugging
         const storedEmail = localStorage.getItem('adminLoginHint');
         if (storedEmail === 'admin@rotaryszczecin.pl') {
-          console.log('Special admin account detected in local storage');
+          console.log('[ADMIN LOGIN] Special admin account detected in local storage');
         }
         
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -85,9 +85,9 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
         // Session exists, user is authenticated
         setIsAuthenticated(true);
 
-        // Special handling for admin account
+        // Special handling for admin account with more detailed messages
         if (session.user.email === 'admin@rotaryszczecin.pl') {
-          console.log('Admin account detected, ensuring admin role is assigned');
+          console.log('[ADMIN LOGIN] Admin account detected, ensuring admin role is assigned');
           toast({
             title: "Pełne uprawnienia administratora",
             description: "Zalogowano jako główny administrator systemu (admin@rotaryszczecin.pl). Masz dostęp do wszystkich funkcji, w tym zmiany haseł.",
