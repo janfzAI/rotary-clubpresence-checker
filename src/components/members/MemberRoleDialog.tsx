@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import type { AppRole } from '@/types/userRoles';
 import { MemberAuthFields } from './dialog/MemberAuthFields';
@@ -18,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MemberRoleDialogProps {
   isOpen: boolean;
