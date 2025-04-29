@@ -68,9 +68,8 @@ const Index = () => {
       <RoleNotice isAdmin={isAdmin} isManager={isManager} />
       {!canEditAttendance && <ReadOnlyNotice />}
       
-      {activeTab === 'events' && (
-        <EventsCalendar />
-      )}
+      {/* Render content based on active tab */}
+      {activeTab === 'events' && <EventsCalendar />}
       
       {activeTab === 'attendance' && (
         <div className="space-y-6">
@@ -167,10 +166,6 @@ const Index = () => {
             </div>
           </div>
         )
-      )}
-
-      {activeTab === 'events' && (
-        <EventsCalendar />
       )}
 
       {activeTab === 'database' && isAdmin && (

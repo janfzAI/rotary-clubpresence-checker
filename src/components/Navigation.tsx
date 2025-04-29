@@ -22,7 +22,7 @@ export const Navigation = ({ activeTab, onTabChange, isAdmin, isManager }: {
         }}>
           <TabsTrigger 
             value="events" 
-            className="flex items-center gap-2 bg-purple-100 text-purple-700 hover:bg-purple-200 data-[state=active]:bg-purple-500 data-[state=active]:text-white"
+            className="flex items-center gap-2 bg-purple-200 text-purple-800 hover:bg-purple-300 data-[state=active]:bg-purple-600 data-[state=active]:text-white font-medium"
           >
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Wydarzenia</span>
