@@ -42,15 +42,15 @@ export const useRoleManagement = () => {
     }
   };
 
-  // Poprawiona funkcja z dodatkową diagnostyką i lepszą obsługą błędów
+  // Improved function with better error handling and diagnostics
   const updateUserPassword = async (userId: string, newPassword: string): Promise<boolean> => {
     try {
-      console.log(`[PASSWORD_UPDATE] Rozpoczynam aktualizację hasła dla użytkownika ${userId}`);
-      console.log(`[PASSWORD_UPDATE] Długość hasła: ${newPassword.length}`);
+      console.log(`[PASSWORD_UPDATE] Starting password update for user ${userId}`);
+      console.log(`[PASSWORD_UPDATE] Password length: ${newPassword.length}`);
       
-      // Sprawdzenie minimalnej długości hasła
+      // Check minimum password length
       if (newPassword.length < 6) {
-        console.error("[PASSWORD_UPDATE] Hasło jest za krótkie (minimum 6 znaków)");
+        console.error("[PASSWORD_UPDATE] Password is too short (minimum 6 characters)");
         toast({
           title: "Błąd",
           description: "Hasło musi mieć co najmniej 6 znaków",
@@ -59,11 +59,11 @@ export const useRoleManagement = () => {
         return false;
       }
       
-      // Sprawdzenie, czy bieżący użytkownik to admin@rotaryszczecin.pl (specjalne konto administratora)
+      // Check if current user is admin@rotaryszczecin.pl (special admin account)
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (!currentUser) {
-        console.error("[PASSWORD_UPDATE] Brak zalogowanego użytkownika");
+        console.error("[PASSWORD_UPDATE] No logged-in user");
         toast({
           title: "Błąd",
           description: "Nie jesteś zalogowany. Zaloguj się ponownie.",
@@ -73,10 +73,10 @@ export const useRoleManagement = () => {
       }
       
       const isSpecialAdmin = currentUser.email === 'admin@rotaryszczecin.pl';
-      console.log(`[PASSWORD_UPDATE] Bieżący użytkownik: ${currentUser.email}, isSpecialAdmin: ${isSpecialAdmin}`);
+      console.log(`[PASSWORD_UPDATE] Current user: ${currentUser.email}, isSpecialAdmin: ${isSpecialAdmin}`);
       
       if (!isSpecialAdmin) {
-        console.error("[PASSWORD_UPDATE] Bieżący użytkownik nie jest specjalnym kontem administratora");
+        console.error("[PASSWORD_UPDATE] Current user is not the special admin account");
         toast({
           title: "Wymagane specjalne konto administratora",
           description: "Tylko użytkownik admin@rotaryszczecin.pl może bezpośrednio zmieniać hasła. Użyj tego konta z hasłem: admin123",
@@ -85,26 +85,32 @@ export const useRoleManagement = () => {
         return false;
       }
       
-      // Próba bezpośredniej aktualizacji hasła z API administracyjnym (najpierw metoda admin.updateUserById)
-      console.log("[PASSWORD_UPDATE] Próba aktualizacji hasła z użyciem admin.updateUserById");
+      // Attempt to directly update password using admin API (first try admin.updateUserById)
+      console.log("[PASSWORD_UPDATE] Attempting to update password using admin.updateUserById");
       const { error: adminUpdateError } = await supabase.auth.admin.updateUserById(
         userId, 
         { password: newPassword }
       );
       
       if (adminUpdateError) {
-        console.error("[PASSWORD_UPDATE] Błąd aktualizacji hasła z admin API:", adminUpdateError);
-        console.log("[PASSWORD_UPDATE] Próba użycia alternatywnej metody aktualizacji");
+        console.error("[PASSWORD_UPDATE] Error updating password with admin API:", adminUpdateError);
+        console.log("[PASSWORD_UPDATE] Attempting to use alternative update method");
         
-        // Druga próba - użycie alternatywnej metody (rzadziej używana, ale czasami działa)
+        // Second attempt - using alternative method (less commonly used, but sometimes works)
         try {
           const SUPABASE_URL = "https://oxoxfhhwbavniybllumy.supabase.co";
           
-          // FIX: Pobieramy sesję najpierw, a potem dopiero token z sesji
+          // FIX: Get session first, then access token from session
           const { data: { session } } = await supabase.auth.getSession();
           const SUPABASE_KEY = session?.access_token || '';
           
-          console.log("[PASSWORD_UPDATE] Próba aktualizacji hasła z użyciem bezpośredniego API");
+          console.log("[PASSWORD_UPDATE] Attempting to update password using direct API");
+          console.log("[PASSWORD_UPDATE] Session available:", !!session);
+          console.log("[PASSWORD_UPDATE] Token length:", SUPABASE_KEY.length);
+          
+          if (!SUPABASE_KEY) {
+            throw new Error("Missing access token - user may not be properly authenticated");
+          }
           
           const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
             method: 'PUT',
@@ -115,27 +121,29 @@ export const useRoleManagement = () => {
             body: JSON.stringify({ password: newPassword })
           });
           
+          console.log("[PASSWORD_UPDATE] Direct API response status:", response.status);
+          
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Błąd aktualizacji hasła: ${errorData.message || response.statusText}`);
+            throw new Error(`Password update error: ${errorData.message || response.statusText}`);
           }
           
-          console.log("[PASSWORD_UPDATE] Hasło zaktualizowane pomyślnie przez bezpośrednie API!");
+          console.log("[PASSWORD_UPDATE] Password successfully updated via direct API!");
           toast({
             title: "Hasło zaktualizowane",
             description: "Hasło zostało pomyślnie zmienione.",
           });
           return true;
         } catch (directApiError: any) {
-          console.error("[PASSWORD_UPDATE] Błąd bezpośredniej aktualizacji API:", directApiError);
+          console.error("[PASSWORD_UPDATE] Direct API update error:", directApiError);
           
-          // Sprawdź, czy to błąd uprawnień
+          // Check if this is a permissions error
           if (adminUpdateError.message?.includes("user not allowed") || 
               adminUpdateError.message?.includes("not_admin") ||
               adminUpdateError.message?.includes("permission") ||
               adminUpdateError.message?.includes("role")) {
             
-            console.error("[PASSWORD_UPDATE] Błąd uprawnień administratora Supabase");
+            console.error("[PASSWORD_UPDATE] Supabase admin permissions error");
             toast({
               title: "Brak uprawnień administratora Supabase",
               description: "Nawet konto admin@rotaryszczecin.pl nie ma wystarczających uprawnień w Supabase. Zalecamy użycie opcji resetowania hasła przez email.",
@@ -153,7 +161,7 @@ export const useRoleManagement = () => {
         }
       }
       
-      console.log("[PASSWORD_UPDATE] Hasło zaktualizowane pomyślnie!");
+      console.log("[PASSWORD_UPDATE] Password updated successfully!");
       
       toast({
         title: "Hasło zaktualizowane",
@@ -162,7 +170,7 @@ export const useRoleManagement = () => {
       
       return true;
     } catch (e: any) {
-      console.error("[PASSWORD_UPDATE] Błąd podczas aktualizacji hasła:", e);
+      console.error("[PASSWORD_UPDATE] Error during password update:", e);
       
       toast({
         title: "Błąd aktualizacji hasła",
@@ -267,4 +275,3 @@ export const useRoleManagement = () => {
     isSubmitting
   };
 };
-
