@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Info, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -54,6 +54,18 @@ export const MemberRoleDialog = ({
   const [resetEmailSent, setResetEmailSent] = React.useState(false);
   const [directPasswordUpdateSent, setDirectPasswordUpdateSent] = React.useState(false);
   const [passwordActionError, setPasswordActionError] = React.useState<string | null>(null);
+  const [isAdminUser, setIsAdminUser] = React.useState(false);
+  
+  // Check if current user is the special admin account
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const { data } = await supabase.auth.getUser();
+      const isAdmin = data?.user?.email === 'admin@rotaryszczecin.pl';
+      setIsAdminUser(isAdmin);
+    };
+    
+    checkAdminStatus();
+  }, [isOpen]);
   
   // Debug the current email value
   useEffect(() => {
@@ -106,7 +118,7 @@ export const MemberRoleDialog = ({
         setDirectPasswordUpdateSent(true);
         setPasswordActionError(null);
       } else {
-        setPasswordActionError("Nie udało się zaktualizować hasła. Sprawdź czy masz uprawnienia administratora");
+        // Error handling is now done in the updateUserPassword function with toasts
       }
     } catch (error) {
       console.error("Failed to update password:", error);
@@ -143,13 +155,32 @@ export const MemberRoleDialog = ({
         </AlertDialogHeader>
 
         <div className="space-y-4 py-4">
-          {isNewUser && (
+          {!isAdminUser && (
             <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Ograniczony dostęp</AlertTitle>
+              <AlertDescription>
+                <strong>Uwaga:</strong> Tylko konto <strong>admin@rotaryszczecin.pl</strong> (hasło: <strong>admin123</strong>) 
+                posiada uprawnienia do bezpośredniej zmiany haseł. Zaloguj się ponownie używając tego konta aby aktywować wszystkie funkcje.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {isAdminUser && (
+            <Alert className="mb-4">
               <Info className="h-4 w-4" />
               <AlertDescription>
-                <strong>Ważna informacja:</strong> Aby utworzyć nowe konta użytkowników, zaloguj się 
-                z kontem, które posiada pełne uprawnienia administracyjne Supabase. 
-                Korzystaj z konta <strong>admin@rotaryszczecin.pl</strong> z hasłem <strong>admin123</strong>.
+                <strong>Konto administratora:</strong> Masz pełne uprawnienia do zarządzania użytkownikami i hasłami.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {isNewUser && (
+            <Alert className="mb-4">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Tworzenie nowego konta:</strong> Podaj adres email i hasło dla nowego użytkownika.
+                {!isAdminUser && " Aby ustawić hasło, zaloguj się jako admin@rotaryszczecin.pl."}
               </AlertDescription>
             </Alert>
           )}

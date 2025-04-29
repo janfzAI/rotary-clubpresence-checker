@@ -2,9 +2,11 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole, RoleChangeResult } from '@/types/userRoles';
+import { useToast } from '@/hooks/use-toast';
 
 export const useRoleManagement = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const sendPasswordResetEmail = async (email: string): Promise<boolean> => {
     try {
@@ -26,12 +28,20 @@ export const useRoleManagement = () => {
     }
   };
 
-  // Funkcja do bezpośredniej aktualizacji hasła użytkownika
+  // Improved function to update user password with better error handling
   const updateUserPassword = async (userId: string, newPassword: string): Promise<boolean> => {
     try {
       console.log(`Attempting to directly update password for user ${userId}`);
       
-      // Próba aktualizacji hasła użytkownika przez admin API
+      // Check if current user is admin@rotaryszczecin.pl (special admin account)
+      const { data: { user } } = await supabase.auth.getUser();
+      const isSpecialAdmin = user?.email === 'admin@rotaryszczecin.pl';
+      
+      if (!isSpecialAdmin) {
+        console.log("Not using special admin account - password update may not work");
+      }
+      
+      // Try to update the password using admin API
       const { error } = await supabase.auth.admin.updateUserById(
         userId,
         { password: newPassword }
@@ -39,18 +49,53 @@ export const useRoleManagement = () => {
       
       if (error) {
         console.error("Password update error:", error);
+        
+        // Check if the error is related to permissions
+        if (error.message?.includes("not_admin") || 
+            error.message?.includes("following roles") || 
+            error.message?.includes("permission")) {
+          
+          toast({
+            title: "Brak wystarczających uprawnień",
+            description: "Tylko konto admin@rotaryszczecin.pl może bezpośrednio aktualizować hasła użytkowników.",
+            variant: "destructive"
+          });
+          
+          return false;
+        }
+        
+        toast({
+          title: "Błąd aktualizacji hasła",
+          description: error.message || "Wystąpił błąd podczas aktualizacji hasła.",
+          variant: "destructive"
+        });
+        
         return false;
       }
       
       console.log("Password updated successfully");
+      
+      toast({
+        title: "Hasło zaktualizowane",
+        description: "Hasło zostało pomyślnie zmienione.",
+      });
+      
       return true;
     } catch (e) {
       console.error("Error updating password:", e);
+      
+      toast({
+        title: "Błąd aktualizacji hasła",
+        description: "Wystąpił nieoczekiwany błąd podczas aktualizacji hasła.",
+        variant: "destructive"
+      });
+      
       return false;
     }
   };
 
   const handleRoleChange = async (userId: string, newRole: AppRole, newPassword?: string): Promise<RoleChangeResult> => {
+    setIsSubmitting(true);
     try {
       console.log(`Attempting to change role for user ${userId} to ${newRole}`);
       
@@ -120,6 +165,8 @@ export const useRoleManagement = () => {
     } catch (error) {
       console.error('Error in handleRoleChange:', error);
       throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
