@@ -12,6 +12,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
+  const [adminLoginAttempted, setAdminLoginAttempted] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -22,15 +23,28 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
         const accessToken = hashParams.get('access_token');
         
         if (type === 'recovery' && accessToken) {
-          console.log('Password reset detected in URL');
+          console.log('[PASSWORD_RESET] Wykryto token resetowania hasła w URL');
           setIsPasswordResetMode(true);
           setIsLoading(false);
           return;
         }
         
         // Special handling for admin account - more explicit message for better debugging
-        if (location.search.includes('admin=true')) {
-          console.log('[ADMIN LOGIN] Admin login parameter detected, attempting admin login');
+        if (location.search.includes('admin=true') && !adminLoginAttempted) {
+          setAdminLoginAttempted(true); // Ustawienie flagi, aby zapobiec wielokrotnym próbom logowania
+          console.log('[ADMIN LOGIN] Wykryto parametr admin=true, próba automatycznego logowania jako admin');
+          
+          // Najpierw wyloguj aktualnego użytkownika, aby uniknąć błędów
+          try {
+            await supabase.auth.signOut();
+            console.log('[ADMIN LOGIN] Wylogowano poprzedniego użytkownika');
+          } catch (signOutErr) {
+            console.error('[ADMIN LOGIN] Błąd podczas wylogowywania:', signOutErr);
+          }
+          
+          // Krótkie opóźnienie przed próbą logowania
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           try {
             const { data, error } = await supabase.auth.signInWithPassword({
               email: 'admin@rotaryszczecin.pl',
@@ -38,46 +52,52 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
             });
             
             if (error) {
-              console.error('[ADMIN LOGIN] Admin auto-login failed:', error);
+              console.error('[ADMIN LOGIN] Błąd automatycznego logowania jako admin:', error);
               toast({
                 title: "Błąd logowania jako admin",
                 description: `Nie udało się zalogować jako admin: ${error.message}. Spróbuj zalogować się ręcznie jako admin@rotaryszczecin.pl z hasłem admin123.`,
-                variant: "destructive"
+                variant: "destructive",
+                duration: 8000
               });
             } else {
-              console.log('[ADMIN LOGIN] Admin auto-login successful', data.user?.email);
+              console.log('[ADMIN LOGIN] Automatyczne logowanie jako admin zakończone sukcesem', data.user?.email);
               localStorage.setItem('adminLoginHint', 'admin@rotaryszczecin.pl');
+              
+              // Odczekaj chwilę, aby sesja została poprawnie ustanowiona
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
               toast({
                 title: "Zalogowano jako administrator",
                 description: "Zalogowano automatycznie jako administrator systemu (admin@rotaryszczecin.pl). Teraz możesz bezpośrednio zmieniać hasła użytkowników.",
                 duration: 6000
               });
-              // Remove the query parameter to avoid repeated logins
-              navigate('/', { replace: true });
+              
+              // Odśwież stronę bez parametru admin=true, aby uniknąć pętli logowania
+              window.location.href = window.location.pathname;
               return;
             }
           } catch (err) {
-            console.error('[ADMIN LOGIN] Admin auto-login error:', err);
+            console.error('[ADMIN LOGIN] Nieoczekiwany błąd podczas logowania jako admin:', err);
           }
         }
         
         // Check for admin account in local storage to help with debugging
         const storedEmail = localStorage.getItem('adminLoginHint');
         if (storedEmail === 'admin@rotaryszczecin.pl') {
-          console.log('[ADMIN LOGIN] Special admin account detected in local storage');
+          console.log('[ADMIN LOGIN] Wykryto konto administratora w localStorage');
         }
         
         const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('Checking auth session:', session?.user?.email);
+        console.log('Sprawdzanie sesji uwierzytelniania:', session?.user?.email);
         
         if (error) {
-          console.error('Session error:', error);
+          console.error('Błąd sesji:', error);
           navigate('/auth');
           return;
         }
 
         if (!session) {
-          console.log('No active session found');
+          console.log('Nie znaleziono aktywnej sesji');
           navigate('/auth');
           return;
         }
@@ -87,7 +107,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
 
         // Special handling for admin account with more detailed messages
         if (session.user.email === 'admin@rotaryszczecin.pl') {
-          console.log('[ADMIN LOGIN] Admin account detected, ensuring admin role is assigned');
+          console.log('[ADMIN LOGIN] Wykryto konto administratora, upewnianie się, że rola administratora jest przypisana');
           toast({
             title: "Pełne uprawnienia administratora",
             description: "Zalogowano jako główny administrator systemu (admin@rotaryszczecin.pl). Masz dostęp do wszystkich funkcji, w tym zmiany haseł.",
@@ -103,9 +123,9 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
               .eq('role', 'admin');
             
             if (error) {
-              console.error('Error checking admin role:', error);
+              console.error('Błąd sprawdzania roli administratora:', error);
             } else if (!data || data.length === 0) {
-              console.log('Adding admin role to database for admin account');
+              console.log('Dodawanie roli administratora do bazy danych dla konta admin');
               const { error: insertError } = await supabase
                 .from('user_roles')
                 .insert({
@@ -114,11 +134,11 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
                 });
                 
               if (insertError) {
-                console.error('Error adding admin role:', insertError);
+                console.error('Błąd dodawania roli administratora:', insertError);
               }
             }
           } catch (e) {
-            console.error('Error ensuring admin role:', e);
+            console.error('Błąd zapewniania roli administratora:', e);
           }
         } else {
           // Not the special admin account, show a clear notification
@@ -132,13 +152,13 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
         // Refresh session if it exists
         const { error: refreshError } = await supabase.auth.refreshSession();
         if (refreshError) {
-          console.error('Session refresh error:', refreshError);
+          console.error('Błąd odświeżania sesji:', refreshError);
           navigate('/auth');
           return;
         }
 
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error('Błąd sprawdzania uwierzytelnienia:', error);
         navigate('/auth');
       } finally {
         setIsLoading(false);
@@ -146,7 +166,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
+      console.log('Zmiana stanu uwierzytelnienia:', event, session?.user?.email);
       
       // Store admin email hint if this is the admin account
       if (event === 'SIGNED_IN' && session?.user?.email === 'admin@rotaryszczecin.pl') {
@@ -172,7 +192,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
 
     checkAuth();
     return () => subscription.unsubscribe();
-  }, [navigate, location, isAuthenticated, toast]);
+  }, [navigate, location, isAuthenticated, toast, adminLoginAttempted]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;

@@ -57,6 +57,7 @@ export const MemberRoleDialog = ({
   const [passwordActionError, setPasswordActionError] = React.useState<string | null>(null);
   const [isAdminUser, setIsAdminUser] = React.useState(false);
   const [currentUserEmail, setCurrentUserEmail] = React.useState<string | null>(null);
+  const [passwordActionInProgress, setPasswordActionInProgress] = React.useState(false);
   const { toast } = useToast();
   
   // Check if current user is the special admin account
@@ -67,7 +68,7 @@ export const MemberRoleDialog = ({
       setCurrentUserEmail(email);
       const isAdmin = email === 'admin@rotaryszczecin.pl';
       setIsAdminUser(isAdmin);
-      console.log(`Current user: ${email}, isSpecialAdmin: ${isAdmin}`);
+      console.log(`[ADMIN_CHECK] Current user: ${email}, isSpecialAdmin: ${isAdmin}`);
     };
     
     if (isOpen) {
@@ -75,13 +76,14 @@ export const MemberRoleDialog = ({
       setResetEmailSent(false);
       setDirectPasswordUpdateSent(false);
       setPasswordActionError(null);
+      setPasswordActionInProgress(false);
     }
   }, [isOpen]);
   
   // Debug the current email value
   useEffect(() => {
     if (isOpen && selectedMember) {
-      console.log(`MemberRoleDialog: Current email for ${selectedMember.name}:`, memberEmail);
+      console.log(`[MEMBER_DIALOG] Current email for ${selectedMember.name}:`, memberEmail);
     }
   }, [isOpen, memberEmail, selectedMember]);
   
@@ -89,6 +91,7 @@ export const MemberRoleDialog = ({
     if (!memberEmail) return;
     
     try {
+      setPasswordActionInProgress(true);
       setPasswordActionError(null);
       const result = await sendPasswordResetEmail(memberEmail);
       if (result) {
@@ -100,9 +103,11 @@ export const MemberRoleDialog = ({
       } else {
         setPasswordActionError("Nie udało się wysłać emaila z linkiem do resetowania hasła");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to send password reset email:", error);
       setPasswordActionError("Wystąpił błąd podczas wysyłania emaila resetującego hasło");
+    } finally {
+      setPasswordActionInProgress(false);
     }
   };
 
@@ -118,29 +123,44 @@ export const MemberRoleDialog = ({
     }
     
     try {
-      console.log(`Attempting to update password for user ${existingUser.id} with email ${memberEmail}`);
+      console.log(`[PASSWORD_UPDATE_REQUEST] Rozpoczynam aktualizację hasła dla użytkownika ${existingUser.id} (${memberEmail})`);
+      console.log(`[PASSWORD_UPDATE_REQUEST] Hasło ma ${memberPassword.length} znaków`);
+      setPasswordActionInProgress(true);
       setPasswordActionError(null);
+      
+      // Wyświetl informację o trwającym procesie
+      toast({
+        title: "Aktualizacja hasła w toku",
+        description: "Trwa aktualizacja hasła, proszę czekać..."
+      });
+      
       const result = await updateUserPassword(existingUser.id, memberPassword);
+      
+      console.log(`[PASSWORD_UPDATE_RESULT] Wynik operacji: ${result ? "Sukces" : "Niepowodzenie"}`);
       
       if (result) {
         setDirectPasswordUpdateSent(true);
         setPasswordActionError(null);
         toast({
           title: "Hasło zaktualizowane",
-          description: `Hasło dla użytkownika ${memberEmail} zostało pomyślnie zmienione.`
+          description: `Hasło dla użytkownika ${memberEmail} zostało pomyślnie zmienione.`,
+          duration: 6000
         });
       } else {
         // Error handling is done in the updateUserPassword function with toasts
-        console.log("Password update failed, but error was handled in updateUserPassword");
+        console.log("[PASSWORD_UPDATE_RESULT] Aktualizacja hasła nie powiodła się, ale błąd był obsłużony w funkcji updateUserPassword");
+        setPasswordActionError("Nie udało się zaktualizować hasła. Sprawdź uprawnienia administratora.");
       }
     } catch (error: any) {
-      console.error("Failed to update password:", error);
+      console.error("[PASSWORD_UPDATE_ERROR] Błąd aktualizacji hasła:", error);
       setPasswordActionError(`Błąd aktualizacji hasła: ${error.message || "Nieznany błąd"}`);
       toast({
         title: "Błąd aktualizacji hasła",
         description: error.message || "Wystąpił nieznany błąd podczas aktualizacji hasła",
         variant: "destructive"
       });
+    } finally {
+      setPasswordActionInProgress(false);
     }
   };
 
@@ -244,12 +264,11 @@ export const MemberRoleDialog = ({
                 type="button" 
                 variant={directPasswordUpdateSent ? "outline" : "secondary"}
                 onClick={handleDirectPasswordUpdate}
-                disabled={directPasswordUpdateSent || !memberPassword || memberPassword.length < 6 || !isAdminUser}
+                disabled={passwordActionInProgress || directPasswordUpdateSent || !memberPassword || memberPassword.length < 6 || !isAdminUser}
                 className="w-full"
               >
-                {directPasswordUpdateSent 
-                  ? "Hasło zostało zaktualizowane" 
-                  : "Zaktualizuj hasło bezpośrednio"}
+                {passwordActionInProgress ? "Aktualizacja hasła..." : 
+                  (directPasswordUpdateSent ? "Hasło zostało zaktualizowane" : "Zaktualizuj hasło bezpośrednio")}
                 {!isAdminUser && <Lock className="ml-2 h-4 w-4" />}
               </Button>
               
@@ -257,12 +276,11 @@ export const MemberRoleDialog = ({
                 type="button" 
                 variant="outline" 
                 onClick={handleSendPasswordReset}
-                disabled={resetEmailSent}
+                disabled={passwordActionInProgress || resetEmailSent}
                 className="w-full"
               >
-                {resetEmailSent 
-                  ? "Link do resetowania hasła wysłany" 
-                  : "Wyślij link do resetowania hasła"}
+                {passwordActionInProgress ? "Wysyłanie emaila..." :
+                  (resetEmailSent ? "Link do resetowania hasła wysłany" : "Wyślij link do resetowania hasła")}
               </Button>
               
               {(resetEmailSent || directPasswordUpdateSent) && !passwordActionError && (
