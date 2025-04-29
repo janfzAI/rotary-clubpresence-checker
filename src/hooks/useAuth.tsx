@@ -50,7 +50,7 @@ export const useAuth = () => {
         return;
       }
       
-      // Check if user has admin role
+      // Check if user has admin role using supabase RPC to avoid security issues
       const { data: isAdminData, error: adminError } = await supabase.rpc('has_role', {
         _user_id: userId,
         _role: 'admin'
@@ -63,7 +63,7 @@ export const useAuth = () => {
         console.log('User is admin:', !!isAdminData);
       }
 
-      // Check if user has manager role
+      // Check if user has manager role using supabase RPC to avoid security issues
       const { data: isManagerData, error: managerError } = await supabase.rpc('has_role', {
         _user_id: userId,
         _role: 'manager'
