@@ -10,59 +10,111 @@ export const findEmailMatch = (memberName: string, userEmails: string[]): string
   // Special case for specific individuals
   // Explicit special cases for known people with potential conflicts
   if (memberName.toLowerCase().includes("krzysztof") && memberName.toLowerCase().includes("dokowski")) {
+    // Specyficzny przypadek dla "Krzysztof Dokowski" - szukamy konkretnie email z "dokowski"
     const email = userEmails.find(email => 
-      email.toLowerCase().includes("krzysztof") && 
       email.toLowerCase().includes("dokowski")
     );
     if (email) {
       console.log(`Found exact match for Krzysztof Dokowski: ${email}`);
       return email;
     }
+    
+    // Próba znalezienia email zawierającego zarówno imię jak i nazwisko
+    const backupEmail = userEmails.find(email => 
+      email.toLowerCase().includes("krzysztof") && 
+      email.toLowerCase().includes("dokowski")
+    );
+    
+    if (backupEmail) {
+      console.log(`Found backup match for Krzysztof Dokowski: ${backupEmail}`);
+      return backupEmail;
+    }
   }
   
   if (memberName.toLowerCase().includes("krzysztof") && memberName.toLowerCase().includes("meisinger")) {
+    // Specyficzny przypadek dla "Krzysztof Meisinger" - szukamy konkretnie email z "meisinger"
     const email = userEmails.find(email => 
-      email.toLowerCase().includes("krzysztof") && 
       email.toLowerCase().includes("meisinger")
     );
     if (email) {
       console.log(`Found exact match for Krzysztof Meisinger: ${email}`);
       return email;
     }
+    
+    // Próba znalezienia email zawierającego zarówno imię jak i nazwisko
+    const backupEmail = userEmails.find(email => 
+      email.toLowerCase().includes("krzysztof") && 
+      email.toLowerCase().includes("meisinger")
+    );
+    
+    if (backupEmail) {
+      console.log(`Found backup match for Krzysztof Meisinger: ${backupEmail}`);
+      return backupEmail;
+    }
   }
   
   // Special case for Maciej Krzeptowski
   if (memberName.toLowerCase().includes("maciej") && memberName.toLowerCase().includes("krzeptowski")) {
     const maciejEmail = userEmails.find(email => 
-      email.toLowerCase().includes("maciej") && 
-      (email.toLowerCase().includes("krzeptowski") || email.toLowerCase().includes("krzept"))
+      email.toLowerCase().includes("krzept")
     );
     
     if (maciejEmail) {
       console.log(`Found special match for Maciej Krzeptowski: ${maciejEmail}`);
       return maciejEmail;
     }
+    
+    // Próba znalezienia email zawierającego zarówno imię jak i nazwisko
+    const backupEmail = userEmails.find(email => 
+      email.toLowerCase().includes("maciej") && 
+      (email.toLowerCase().includes("krzeptowski") || email.toLowerCase().includes("krzept"))
+    );
+    
+    if (backupEmail) {
+      console.log(`Found backup match for Maciej Krzeptowski: ${backupEmail}`);
+      return backupEmail;
+    }
   }
   
   // Special case for Jan Jurga
   if (memberName.toLowerCase().includes("jan jurga")) {
     const janEmail = userEmails.find(email => 
-      email.toLowerCase().includes("jan") && email.toLowerCase().includes("jurga")
+      email.toLowerCase().includes("jurga")
     );
     if (janEmail) {
       console.log(`Found special match for Jan Jurga: ${janEmail}`);
       return janEmail;
+    }
+    
+    // Próba znalezienia email zawierającego zarówno imię jak i nazwisko
+    const backupEmail = userEmails.find(email => 
+      email.toLowerCase().includes("jan") && email.toLowerCase().includes("jurga")
+    );
+    
+    if (backupEmail) {
+      console.log(`Found backup match for Jan Jurga: ${backupEmail}`);
+      return backupEmail;
     }
   }
   
   // Special case for Leszek Zdawski
   if (memberName.toLowerCase().includes("leszek") && memberName.toLowerCase().includes("zdawski")) {
     const leszekEmail = userEmails.find(email => 
-      email.toLowerCase().includes("leszek") && email.toLowerCase().includes("zdawski")
+      email.toLowerCase().includes("zdawski")
     );
     if (leszekEmail) {
       console.log(`Found special match for Leszek Zdawski: ${leszekEmail}`);
       return leszekEmail;
+    }
+    
+    // Próba znalezienia email zawierającego zarówno imię jak i nazwisko
+    const backupEmail = userEmails.find(email => 
+      email.toLowerCase().includes("leszek") && email.toLowerCase().includes("zdawski")
+    );
+    
+    if (backupEmail) {
+      console.log(`Found backup match for Leszek Zdawski: ${backupEmail}`);
+      return backupEmail;
     }
   }
   

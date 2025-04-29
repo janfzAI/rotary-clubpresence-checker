@@ -50,8 +50,10 @@ export const MemberRoleDialog = ({
 }: MemberRoleDialogProps) => {
   const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
   const isNewUser = memberEmail && !existingUser;
-  const { sendPasswordResetEmail } = useRoleManagement();
+  const { sendPasswordResetEmail, updateUserPassword } = useRoleManagement();
   const [resetEmailSent, setResetEmailSent] = React.useState(false);
+  const [directPasswordUpdateSent, setDirectPasswordUpdateSent] = React.useState(false);
+  const [passwordActionError, setPasswordActionError] = React.useState<string | null>(null);
   
   // Debug the current email value
   useEffect(() => {
@@ -60,10 +62,12 @@ export const MemberRoleDialog = ({
     }
   }, [isOpen, memberEmail, selectedMember]);
   
-  // Reset the resetEmailSent state when the dialog opens
+  // Reset states when the dialog opens
   useEffect(() => {
     if (isOpen) {
       setResetEmailSent(false);
+      setDirectPasswordUpdateSent(false);
+      setPasswordActionError(null);
     }
   }, [isOpen, memberEmail]);
   
@@ -71,12 +75,42 @@ export const MemberRoleDialog = ({
     if (!memberEmail) return;
     
     try {
+      setPasswordActionError(null);
       const result = await sendPasswordResetEmail(memberEmail);
       if (result) {
         setResetEmailSent(true);
+      } else {
+        setPasswordActionError("Nie udało się wysłać emaila z linkiem do resetowania hasła");
       }
     } catch (error) {
       console.error("Failed to send password reset email:", error);
+      setPasswordActionError("Wystąpił błąd podczas wysyłania emaila resetującego hasło");
+    }
+  };
+
+  const handleDirectPasswordUpdate = async () => {
+    if (!memberEmail || !memberPassword || memberPassword.length < 6) {
+      setPasswordActionError("Podaj poprawne hasło (min. 6 znaków)");
+      return;
+    }
+    
+    if (!existingUser) {
+      setPasswordActionError("Nie można zaktualizować hasła dla nieistniejącego użytkownika");
+      return;
+    }
+    
+    try {
+      setPasswordActionError(null);
+      const result = await updateUserPassword(existingUser.id, memberPassword);
+      if (result) {
+        setDirectPasswordUpdateSent(true);
+        setPasswordActionError(null);
+      } else {
+        setPasswordActionError("Nie udało się zaktualizować hasła. Sprawdź czy masz uprawnienia administratora");
+      }
+    } catch (error) {
+      console.error("Failed to update password:", error);
+      setPasswordActionError("Wystąpił błąd podczas aktualizacji hasła");
     }
   };
 
@@ -102,7 +136,7 @@ export const MemberRoleDialog = ({
             ) : (
               <>
                 Przypisz rolę do użytkownika w systemie poprzez podanie adresu email i wybranie roli.
-                <strong> Podaj hasło aby utworzyć nowe konto dla tego członka.</strong>
+                <strong> Podaj hasło aby utworzyć nowe konto dla tego członka lub zmienić hasło istniejącego.</strong>
               </>
             )}
           </AlertDialogDescription>
@@ -129,7 +163,19 @@ export const MemberRoleDialog = ({
           />
           
           {existingUser && (
-            <div className="mt-2">
+            <div className="space-y-2 mt-2">
+              <Button 
+                type="button" 
+                variant={directPasswordUpdateSent ? "outline" : "secondary"}
+                onClick={handleDirectPasswordUpdate}
+                disabled={directPasswordUpdateSent || !memberPassword || memberPassword.length < 6}
+                className="w-full"
+              >
+                {directPasswordUpdateSent 
+                  ? "Hasło zostało zaktualizowane" 
+                  : "Zaktualizuj hasło bezpośrednio"}
+              </Button>
+              
               <Button 
                 type="button" 
                 variant="outline" 
@@ -141,9 +187,18 @@ export const MemberRoleDialog = ({
                   ? "Link do resetowania hasła wysłany" 
                   : "Wyślij link do resetowania hasła"}
               </Button>
-              {resetEmailSent && (
+              
+              {(resetEmailSent || directPasswordUpdateSent) && !passwordActionError && (
                 <p className="text-sm text-green-600 mt-1">
-                  Email z linkiem do resetowania hasła został wysłany na adres {memberEmail}
+                  {resetEmailSent 
+                    ? `Email z linkiem do resetowania hasła został wysłany na adres ${memberEmail}` 
+                    : "Hasło zostało zaktualizowane pomyślnie"}
+                </p>
+              )}
+              
+              {passwordActionError && (
+                <p className="text-sm text-red-600 mt-1">
+                  {passwordActionError}
                 </p>
               )}
             </div>
