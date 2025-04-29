@@ -38,7 +38,15 @@ export const useRoleManagement = () => {
       const isSpecialAdmin = user?.email === 'admin@rotaryszczecin.pl';
       
       if (!isSpecialAdmin) {
-        console.log("Not using special admin account - password update may not work");
+        console.log("Not using special admin account - password update will not work");
+        
+        toast({
+          title: "Bezpośrednia zmiana hasła niemożliwa",
+          description: "Tylko konto admin@rotaryszczecin.pl może bezpośrednio aktualizować hasła użytkowników. Zaloguj się ponownie lub wyślij link resetujący hasło.",
+          variant: "destructive"
+        });
+        
+        return false;
       }
       
       // Try to update the password using admin API
@@ -49,6 +57,16 @@ export const useRoleManagement = () => {
       
       if (error) {
         console.error("Password update error:", error);
+        
+        // Check if the error is specifically "user not allowed"
+        if (error.message?.includes("user not allowed")) {
+          toast({
+            title: "Błąd: user not allowed",
+            description: "Twoje konto nie posiada uprawnień Supabase do bezpośredniej zmiany haseł. Zaloguj się jako admin@rotaryszczecin.pl, hasło: admin123.",
+            variant: "destructive"
+          });
+          return false;
+        }
         
         // Check if the error is related to permissions
         if (error.message?.includes("not_admin") || 

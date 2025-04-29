@@ -39,6 +39,11 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
             
             if (error) {
               console.error('Admin auto-login failed:', error);
+              toast({
+                title: "Błąd logowania jako admin",
+                description: "Nie udało się automatycznie zalogować jako administrator. Spróbuj zalogować się ręcznie.",
+                variant: "destructive"
+              });
             } else {
               console.log('Admin auto-login successful');
               localStorage.setItem('adminLoginHint', 'admin@rotaryszczecin.pl');
@@ -84,7 +89,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
           console.log('Admin account detected, ensuring admin role is assigned');
           toast({
             title: "Konto administratora",
-            description: "Zalogowano jako główny administrator systemu. Masz dostęp do wszystkich funkcji."
+            description: "Zalogowano jako główny administrator systemu. Masz dostęp do wszystkich funkcji, w tym zmiany haseł."
           });
           
           // Ensure the admin role is assigned in the database
@@ -113,6 +118,13 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
           } catch (e) {
             console.error('Error ensuring admin role:', e);
           }
+        } else {
+          // Not the special admin account, show a hint
+          toast({
+            title: "Ograniczone uprawnienia",
+            description: `Aby uzyskać pełne uprawnienia administratora, w tym zmianę haseł, zaloguj się jako admin@rotaryszczecin.pl (hasło: admin123).`,
+            duration: 8000
+          });
         }
 
         // Refresh session if it exists
@@ -139,7 +151,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem('adminLoginHint', 'admin@rotaryszczecin.pl');
         toast({
           title: "Konto administratora",
-          description: "Zalogowano jako główny administrator systemu. Masz dostęp do wszystkich funkcji."
+          description: "Zalogowano jako główny administrator systemu. Masz dostęp do wszystkich funkcji, w tym zmiany haseł."
         });
       }
       

@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import type { AppRole } from '@/types/userRoles';
 import { MemberAuthFields } from './dialog/MemberAuthFields';
@@ -12,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Info, AlertCircle } from "lucide-react";
+import { Info, AlertCircle, Lock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
@@ -159,7 +160,7 @@ export const MemberRoleDialog = ({
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Ograniczony dostęp</AlertTitle>
-              <AlertDescription>
+              <AlertDescription className="text-sm">
                 <strong>Uwaga:</strong> Tylko konto <strong>admin@rotaryszczecin.pl</strong> (hasło: <strong>admin123</strong>) 
                 posiada uprawnienia do bezpośredniej zmiany haseł. Zaloguj się ponownie używając tego konta aby aktywować wszystkie funkcje.
               </AlertDescription>
@@ -195,16 +196,29 @@ export const MemberRoleDialog = ({
           
           {existingUser && (
             <div className="space-y-2 mt-2">
+              <Alert variant={!isAdminUser ? "destructive" : "default"} className="mb-4">
+                <Lock className="h-4 w-4" />
+                <AlertTitle>{!isAdminUser ? "Tylko administrator może zmieniać hasła" : "Bezpośrednia zmiana hasła"}</AlertTitle>
+                <AlertDescription className="text-sm">
+                  {!isAdminUser ? (
+                    <>Błąd <strong>"user not allowed"</strong> oznacza, że musisz być zalogowany jako <strong>admin@rotaryszczecin.pl</strong> aby zmienić hasło.</>
+                  ) : (
+                    <>Jako administrator możesz bezpośrednio zmienić hasło użytkownika.</>
+                  )}
+                </AlertDescription>
+              </Alert>
+              
               <Button 
                 type="button" 
                 variant={directPasswordUpdateSent ? "outline" : "secondary"}
                 onClick={handleDirectPasswordUpdate}
-                disabled={directPasswordUpdateSent || !memberPassword || memberPassword.length < 6}
+                disabled={directPasswordUpdateSent || !memberPassword || memberPassword.length < 6 || !isAdminUser}
                 className="w-full"
               >
                 {directPasswordUpdateSent 
                   ? "Hasło zostało zaktualizowane" 
                   : "Zaktualizuj hasło bezpośrednio"}
+                {!isAdminUser && <Lock className="ml-2 h-4 w-4" />}
               </Button>
               
               <Button 
