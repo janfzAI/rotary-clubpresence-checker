@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
@@ -10,6 +9,7 @@ import { AttendanceStats } from '@/components/AttendanceStats';
 import { AttendanceExport } from '@/components/AttendanceExport';
 import { AttendanceFileHandler } from '@/components/AttendanceFileHandler';
 import { DatabaseStructure } from '@/components/DatabaseStructure';
+import { EventsCalendar } from '@/components/EventsCalendar';
 import { useAttendanceState } from '@/hooks/useAttendanceState';
 import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
 import { RoleNotice } from '@/components/RoleNotice';
@@ -155,6 +155,10 @@ const Index = () => {
             </div>
           </div>
         )
+      )}
+
+      {activeTab === 'events' && (
+        <EventsCalendar />
       )}
 
       {activeTab === 'database' && isAdmin && (
