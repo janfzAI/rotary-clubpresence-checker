@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Mail } from "lucide-react";
+import { Loader2, Mail, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -12,17 +12,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Manager {
   id: string;
   email: string;
   name?: string;
+  fullName?: string;
 }
 
 export const ManagersList = () => {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [emailConflicts, setEmailConflicts] = useState<string[]>([]);
 
   const fetchManagers = async () => {
     try {
@@ -67,14 +76,42 @@ export const ManagersList = () => {
       console.log(`Retrieved ${profiles?.length || 0} manager profiles`);
       
       if (profiles) {
-        setManagers(profiles.map(profile => ({
-          id: profile.id,
-          email: profile.email,
-          // Extract name from email if possible
-          name: profile.email.split('@')[0].replace('.', ' ').split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ')
-        })));
+        const managersList = profiles.map(profile => {
+          const email = profile.email;
+          const nameParts = email.split('@')[0].split('.');
+          
+          // Better name extraction from email
+          let fullName = '';
+          
+          if (nameParts.length >= 2) {
+            // If email follows format like firstname.lastname@domain.com
+            fullName = nameParts
+              .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' ');
+          } else {
+            // If email doesn't have a separator, use what we have
+            fullName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+          }
+          
+          return {
+            id: profile.id,
+            email: email,
+            // First name only (potentially problematic)
+            name: email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + 
+                  email.split('@')[0].split('.')[0].slice(1),
+            // Full name from email
+            fullName: fullName
+          };
+        });
+        
+        // Check for first name conflicts
+        const firstNames = managersList.map(manager => manager.name?.toLowerCase());
+        const conflicts = firstNames.filter(
+          (name, index) => firstNames.indexOf(name) !== index
+        );
+        
+        setEmailConflicts([...new Set(conflicts)]);
+        setManagers(managersList);
       }
     } catch (error) {
       console.error("Error in fetchManagers:", error);
@@ -108,6 +145,23 @@ export const ManagersList = () => {
         </Button>
       </div>
       
+      {emailConflicts.length > 0 && (
+        <Alert variant="warning" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium">Wykryto potencjalne konflikty imion:</p>
+            <ul className="list-disc pl-5 mt-2">
+              {emailConflicts.map((name, i) => (
+                <li key={i}>Imię "{name}" występuje więcej niż raz</li>
+              ))}
+            </ul>
+            <p className="mt-2">
+              Upewnij się, że użytkownicy są identyfikowani po pełnym imieniu i nazwisku.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {loading ? (
         <div className="flex justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -125,7 +179,7 @@ export const ManagersList = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Lp.</TableHead>
-              <TableHead>Nazwa użytkownika</TableHead>
+              <TableHead>Pełna nazwa</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Uprawnienia</TableHead>
               <TableHead>Akcje</TableHead>
@@ -135,20 +189,28 @@ export const ManagersList = () => {
             {managers.map((manager, index) => (
               <TableRow key={manager.id}>
                 <TableCell className="font-medium">{index + 1}</TableCell>
-                <TableCell>{manager.name || "Nieznany"}</TableCell>
+                <TableCell>{manager.fullName || "Nieznany"}</TableCell>
                 <TableCell>{manager.email}</TableCell>
                 <TableCell>
                   <Badge variant="info">Manager</Badge>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleCopyEmail(manager.email)}
-                    title="Kopiuj adres email"
-                  >
-                    <Mail className="h-4 w-4" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleCopyEmail(manager.email)}
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Kopiuj adres email</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
               </TableRow>
             ))}
