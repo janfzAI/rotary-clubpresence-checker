@@ -31,6 +31,7 @@ export const MembersManagement = ({
   const [newMemberName, setNewMemberName] = useState('');
   const [emailEditMember, setEmailEditMember] = useState<{ id: number; name: string } | null>(null);
   const [currentEmailForEdit, setCurrentEmailForEdit] = useState<string>('');
+  const [forceUpdate, setForceUpdate] = useState<number>(0);
   const { toast } = useToast();
   
   const {
@@ -48,56 +49,89 @@ export const MembersManagement = ({
     setSelectedRole,
     refreshUserData,
     notifyEmailChanged,
-    lastRefreshTimestamp
+    lastRefreshTimestamp,
+    memberEmailMappings,
+    getEmailByMemberId
   } = useMemberRoleManagement();
 
+  // Always refresh data when component mounts
   useEffect(() => {
     console.log("MembersManagement: Initial user data refresh");
     refreshUserData();
   }, [refreshUserData]);
 
+  // Refresh data when lastRefreshTimestamp changes
   useEffect(() => {
     if (lastRefreshTimestamp > 0) {
       console.log("MembersManagement: User data refreshed at", new Date(lastRefreshTimestamp).toISOString());
+      // Force component update to re-render badges
+      setForceUpdate(prev => prev + 1);
     }
   }, [lastRefreshTimestamp]);
 
-  const findUserRole = (memberName: string) => {
-    console.log(`Finding role for member: ${memberName}, available users: ${users.length}`);
+  // Find user role by first checking stored mappings, then by name matching
+  const findUserRole = (member: Member) => {
+    if (!member || !member.id) return undefined;
     
-    const normalizedMemberName = memberName.toLowerCase().trim();
+    const memberIdStr = String(member.id);
+    const memberName = member.name;
     
-    const exactUserMatch = users.find(user => {
-      const normalizedEmail = user.email.toLowerCase().trim();
-      const userName = normalizedMemberName.replace(/\s+/g, '.');
-      const userNameNoSpace = normalizedMemberName.replace(/\s+/g, '');
+    console.log(`Finding role for member: ${memberName} (ID: ${memberIdStr}), with ${users.length} users available`);
+    
+    // First try to find by saved email mapping
+    const mappedEmail = getEmailByMemberId(memberIdStr);
+    if (mappedEmail) {
+      console.log(`Found mapped email for ${memberName}: ${mappedEmail}`);
+      const mappedUser = users.find(user => 
+        user.email && user.email.toLowerCase().trim() === mappedEmail.toLowerCase().trim()
+      );
       
-      return normalizedEmail.includes(userName) || normalizedEmail.includes(userNameNoSpace);
-    });
-    
-    if (exactUserMatch) {
-      console.log(`Found exact match for ${memberName}: ${exactUserMatch.email} with role ${exactUserMatch.role}`);
-      return exactUserMatch.role;
+      if (mappedUser) {
+        console.log(`Found user by mapped email with role: ${mappedUser.role}`);
+        return mappedUser.role;
+      }
     }
     
-    const user = users.find(user => {
-      const normalizedEmail = user.email.toLowerCase().trim();
+    // If no mapping found, try to find by name
+    const normalizedMemberName = memberName.toLowerCase().trim();
+    
+    // Try exact name match in email (first.last@domain.com)
+    const nameParts = normalizedMemberName.split(/\s+/);
+    if (nameParts.length >= 2) {
+      const firstName = nameParts[0];
+      const lastName = nameParts[nameParts.length - 1];
       
-      const emailParts = normalizedEmail.split('@')[0].split('.');
-      const nameParts = normalizedMemberName.split(' ');
-
-      return emailParts.some(part => 
-        nameParts.some(namePart => part.includes(namePart) || namePart.includes(part))
+      const nameMatchUser = users.find(user => {
+        if (!user.email) return false;
+        const normalizedEmail = user.email.toLowerCase();
+        
+        return normalizedEmail.includes(`${firstName}.${lastName}`) || 
+               normalizedEmail.includes(`${lastName}.${firstName}`);
+      });
+      
+      if (nameMatchUser) {
+        console.log(`Found exact name match for ${memberName}: ${nameMatchUser.email} with role ${nameMatchUser.role}`);
+        return nameMatchUser.role;
+      }
+    }
+    
+    // Try partial name match
+    const partialMatch = users.find(user => {
+      if (!user.email) return false;
+      const normalizedEmail = user.email.toLowerCase();
+      
+      return nameParts.some(part => 
+        part.length > 2 && normalizedEmail.includes(part)
       );
     });
     
-    if (user) {
-      console.log(`Found partial match for ${memberName}: ${user.email} with role ${user.role}`);
-    } else {
-      console.log(`No role match found for ${memberName}`);
+    if (partialMatch) {
+      console.log(`Found partial match for ${memberName}: ${partialMatch.email} with role ${partialMatch.role}`);
+      return partialMatch.role;
     }
     
-    return user?.role;
+    console.log(`No role match found for ${memberName}`);
+    return undefined;
   };
 
   const findCurrentEmailForMember = (memberName: string): string => {
@@ -300,6 +334,16 @@ export const MembersManagement = ({
     }
   };
 
+  // Handle role update after closing the dialog
+  const handleDialogClose = () => {
+    console.log("Dialog closed, refreshing data");
+    refreshUserData().then(() => {
+      // Force component update to re-render badges
+      setForceUpdate(prev => prev + 1);
+    });
+    handleCloseDialog();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
@@ -320,11 +364,11 @@ export const MembersManagement = ({
       <div className="space-y-3">
         {members.map((member, index) => (
           <MemberListItem
-            key={member.id}
+            key={`${member.id}-${forceUpdate}`}
             member={member}
             index={index}
             isAdmin={true}
-            userRole={findUserRole(member.name)}
+            userRole={findUserRole(member)}
             onToggleActive={handleToggleActive}
             onOpenRoleDialog={() => {
               console.log("Requesting to open role dialog for:", member.name);
@@ -344,7 +388,7 @@ export const MembersManagement = ({
         memberPassword={memberPassword}
         isSubmitting={isSubmitting}
         users={users}
-        onClose={handleCloseDialog}
+        onClose={handleDialogClose}
         onSubmit={handleRoleChangeSubmit}
         onEmailChange={setMemberEmail}
         onPasswordChange={setMemberPassword}

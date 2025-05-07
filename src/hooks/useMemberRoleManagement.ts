@@ -141,7 +141,7 @@ export const useMemberRoleManagement = () => {
           description: message
         });
         
-        // Force full refresh of user data after role change with increased delay
+        // Force full refresh of user data after role change with multiple attempts
         setTimeout(async () => {
           console.log(`Forcing refresh after role change for ${memberName}`);
           await refreshUserData();
