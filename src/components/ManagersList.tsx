@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Mail, AlertTriangle } from "lucide-react";
@@ -115,6 +116,13 @@ export const ManagersList = () => {
             fullName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
           }
           
+          // Handle special case for Meissinger vs Dokowski
+          if (email.toLowerCase().includes('dokowski')) {
+            fullName = 'Krzysztof Dokowski';
+          } else if (email.toLowerCase().includes('meissinger') || email.toLowerCase().includes('meisinger')) {
+            fullName = 'Krzysztof Meissinger';
+          }
+          
           return {
             id: profile.id,
             email: email,
@@ -158,12 +166,14 @@ export const ManagersList = () => {
     console.log("Opening dialog for manager:", manager);
     
     // Convert to the format expected by handleOpenRoleDialog
-    // Important: Pass the exact string ID without parseInt to ensure proper matching
     const memberData = {
-      id: parseInt(manager.id), // Keep as string for exact matching
+      id: parseInt(manager.id),
       name: manager.fullName || manager.name || manager.email.split('@')[0],
       active: true
     };
+    
+    // Log the actual member data being passed
+    console.log("Member data being passed to handleOpenRoleDialog:", memberData);
     
     // Open the role dialog with the selected manager
     handleOpenRoleDialog(memberData);
@@ -198,7 +208,7 @@ export const ManagersList = () => {
       </div>
       
       {emailConflicts.length > 0 && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert className="mb-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             <p className="font-medium">Wykryto potencjalne konflikty imion:</p>

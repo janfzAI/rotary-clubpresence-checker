@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -116,22 +117,15 @@ export const useMemberRoleManagement = () => {
     setMemberEmail('');
     setSelectedRole('user');
     
-    // Find the matching user by exact ID first to ensure we get the right person
-    const exactMatch = findExactUserById(member.id.toString());
-    if (exactMatch) {
-      console.log("Found exact match by ID:", exactMatch.email);
-      setMemberEmail(exactMatch.email);
-      setSelectedRole(exactMatch.role);
+    // Find the matching user with improved precision
+    const matchingUser = findBestMatchingUser(member);
+    
+    if (matchingUser) {
+      console.log(`Found matching user for ${member.name}:`, matchingUser.email);
+      setMemberEmail(matchingUser.email);
+      setSelectedRole(matchingUser.role);
     } else {
-      // If no exact ID match, try to find by name
-      const userMatch = findUserByName(member.name);
-      if (userMatch) {
-        console.log("Found match by name:", userMatch.email);
-        setMemberEmail(userMatch.email);
-        setSelectedRole(userMatch.role);
-      } else {
-        console.log("No matching user found for member:", member.name);
-      }
+      console.log("No matching user found for member:", member.name);
     }
     
     // Clear password field
@@ -145,102 +139,99 @@ export const useMemberRoleManagement = () => {
     setSelectedMember(null);
   };
 
-  // New function to find user by exact ID match
-  const findExactUserById = (memberId: string) => {
-    console.log("Looking for exact ID match:", memberId);
-    return users.find(user => user.id === memberId);
-  };
-
-  // New function to find user by name with improved matching logic
-  const findUserByName = (memberName: string) => {
-    console.log("Finding user by name for:", memberName);
+  // New improved function to find the best matching user
+  const findBestMatchingUser = (member: Member) => {
+    console.log(`Finding best matching user for: ${member.name} with ID: ${member.id}`);
     
-    if (!memberName || !users || users.length === 0) {
+    if (!member || !users || users.length === 0) {
       return null;
     }
     
-    // Normalize function to standardize text for comparison
-    const normalize = (text: string) => {
-      if (!text) return '';
-      return text.toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')  // Remove diacritics
-        .replace(/[^\w\s]/g, '')          // Remove special characters
-        .replace(/\s+/g, '');             // Remove whitespace
-    };
-    
-    const normalizedMemberName = normalize(memberName);
-    console.log("Normalized member name:", normalizedMemberName);
-    
-    // Extract first name and last name if possible
-    const nameParts = memberName.split(/\s+/);
-    const firstName = nameParts.length > 0 ? normalize(nameParts[0]) : '';
-    const lastName = nameParts.length > 1 ? normalize(nameParts.slice(1).join('')) : '';
-    
-    console.log("Looking for first name:", firstName, "last name:", lastName);
-    
-    // 1. Try to find exact full name match in email
-    for (const user of users) {
-      if (!user.email) continue;
-      
-      const normalizedEmail = normalize(user.email);
-      // Look for full name patterns in email
-      if (normalizedEmail.includes(normalizedMemberName) || 
-          (firstName && lastName && normalizedEmail.includes(firstName) && normalizedEmail.includes(lastName))) {
-        console.log("Found match with full name in email:", user.email);
-        return user;
-      }
+    // 1. First try exact ID match (most reliable)
+    const exactIdMatch = users.find(user => user.id === member.id.toString());
+    if (exactIdMatch) {
+      console.log(`Found exact ID match for ${member.name}:`, exactIdMatch.email);
+      return exactIdMatch;
     }
     
-    // 2. For certain specific names (like in the screenshot example)
-    if (memberName.includes("Meissinger")) {
-      const meissingerUser = users.find(u => 
-        u.email && normalize(u.email).includes("meissinger")
-      );
+    // Special case handling for specific known conflicts
+    if (member.name.includes("Meissinger")) {
+      console.log("Special handling for Meissinger");
+      // For Meissinger, find any user with "meissinger" in email, NOT "dokowski"
+      const meissingerUser = users.find(user => {
+        const email = user.email.toLowerCase();
+        return email.includes("meissinger") || 
+              (email.includes("meisinger") && !email.includes("dokowski"));
+      });
+      
       if (meissingerUser) {
-        console.log("Found special match for Meissinger:", meissingerUser.email);
+        console.log("Found specific match for Meissinger:", meissingerUser.email);
         return meissingerUser;
       }
-    }
+    } 
     
-    if (memberName.includes("Dokowski")) {
-      const dokowskiUser = users.find(u => 
-        u.email && normalize(u.email).includes("dokowski")
+    if (member.name.includes("Dokowski")) {
+      console.log("Special handling for Dokowski");
+      // For Dokowski, find user with "dokowski" in email
+      const dokowskiUser = users.find(user => 
+        user.email.toLowerCase().includes("dokowski")
       );
+      
       if (dokowskiUser) {
-        console.log("Found special match for Dokowski:", dokowskiUser.email);
+        console.log("Found specific match for Dokowski:", dokowskiUser.email);
         return dokowskiUser;
       }
     }
     
-    // 3. Try matching with last name which is more unique
-    if (lastName) {
-      const lastNameUser = users.find(u => 
-        u.email && normalize(u.email).includes(lastName)
-      );
-      if (lastNameUser) {
-        console.log("Found match by last name:", lastNameUser.email);
-        return lastNameUser;
+    // 2. Try to match by full name with high precision
+    const fullName = member.name.toLowerCase();
+    const nameParts = fullName.split(/\s+/);
+    
+    if (nameParts.length >= 2) {
+      const firstName = nameParts[0];
+      const lastName = nameParts[nameParts.length - 1];
+      
+      console.log(`Looking for match with firstName: ${firstName}, lastName: ${lastName}`);
+      
+      // Try to find a user with both first name and last name in email
+      const fullNameMatch = users.find(user => {
+        const email = user.email.toLowerCase();
+        return email.includes(firstName) && email.includes(lastName);
+      });
+      
+      if (fullNameMatch) {
+        console.log(`Found match with both first and last name for ${fullName}:`, fullNameMatch.email);
+        return fullNameMatch;
+      }
+      
+      // Try to find user with last name (more unique than first name)
+      if (lastName.length >= 3) { // Only if last name is reasonably long
+        const lastNameMatch = users.find(user => 
+          user.email.toLowerCase().includes(lastName)
+        );
+        
+        if (lastNameMatch) {
+          console.log(`Found match with last name for ${fullName}:`, lastNameMatch.email);
+          return lastNameMatch;
+        }
       }
     }
     
-    // 4. Try matching with first name (least reliable)
-    if (firstName && firstName.length > 2) {
-      const firstNameMatches = users.filter(u => 
-        u.email && normalize(u.email).includes(firstName)
+    // 3. Fallback to first name match if reasonably unique
+    if (nameParts.length > 0 && nameParts[0].length >= 3) {
+      const firstName = nameParts[0];
+      
+      const firstNameMatches = users.filter(user => 
+        user.email.toLowerCase().includes(firstName)
       );
       
       if (firstNameMatches.length === 1) {
-        console.log("Found unique match by first name:", firstNameMatches[0].email);
+        console.log(`Found unique first name match for ${fullName}:`, firstNameMatches[0].email);
         return firstNameMatches[0];
-      } else if (firstNameMatches.length > 1) {
-        console.log("Multiple matches found by first name, cannot determine unique match");
-        // Return null as we can't determine a unique match
-        return null;
       }
     }
     
-    console.log("No matching user found after all attempts");
+    console.log(`No reliable match found for ${member.name}`);
     return null;
   };
 
