@@ -36,42 +36,19 @@ export const useRoleManagement = () => {
       if (newPassword) {
         console.log("Password update requested - attempting to update password");
         
-        try {
-          // Try admin password update first
-          const { error: updateError } = await supabase.auth.admin.updateUserById(
-            userId,
-            { password: newPassword }
-          );
+        // Instead of trying to use the admin API first, let's send a password reset email
+        // Get user email
+        const { data: userData } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
           
-          if (updateError) {
-            console.log("Admin password update failed, falling back to reset email:", updateError);
-            
-            // Get user email
-            const { data: userData } = await supabase
-              .from('profiles')
-              .select('email')
-              .eq('id', userId)
-              .single();
-              
-            if (userData?.email) {
-              passwordResetSent = await sendPasswordResetEmail(userData.email);
-            }
-          } else {
-            passwordResetSent = true;
-            console.log("Password updated successfully via admin API");
-          }
-        } catch (error) {
-          console.error("Password update error:", error);
-          // Get user email for reset email
-          const { data: userData } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', userId)
-            .single();
-            
-          if (userData?.email) {
-            passwordResetSent = await sendPasswordResetEmail(userData.email);
-          }
+        if (userData?.email) {
+          console.log(`Sending password reset email to ${userData.email}`);
+          passwordResetSent = await sendPasswordResetEmail(userData.email);
+        } else {
+          console.error("Could not find email for user ID:", userId);
         }
       }
 

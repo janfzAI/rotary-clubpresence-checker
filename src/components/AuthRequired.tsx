@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordReset } from './auth/PasswordReset';
+import { useToast } from '@/hooks/use-toast';
 
 export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
@@ -21,6 +23,27 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
         
         if (type === 'recovery' && accessToken) {
           console.log('Password reset detected in URL');
+          // Try to set the access token in the session
+          try {
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: ''
+            });
+            
+            if (error) {
+              console.error('Error setting session from recovery token:', error);
+              toast({
+                title: "Błąd resetowania hasła",
+                description: "Link do resetowania hasła wygasł lub jest nieprawidłowy. Spróbuj ponownie.",
+                variant: "destructive"
+              });
+              navigate('/auth');
+              return;
+            }
+          } catch (e) {
+            console.error('Exception setting session from recovery token:', e);
+          }
+          
           setIsPasswordResetMode(true);
           setIsLoading(false);
           return;
@@ -64,8 +87,6 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session);
       
-      // Only redirect to auth page if user explicitly signs out
-      // Don't redirect for other auth events like SIGNED_IN
       if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         navigate('/auth');
@@ -84,7 +105,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
     
     // Cleanup function to unsubscribe
     return () => subscription.unsubscribe();
-  }, [navigate, location, isAuthenticated]);
+  }, [navigate, location, isAuthenticated, toast]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;

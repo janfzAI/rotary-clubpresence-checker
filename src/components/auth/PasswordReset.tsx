@@ -34,6 +34,7 @@ export const PasswordReset = () => {
     setIsSubmitting(true);
     
     try {
+      console.log('Attempting to update user password');
       const { error } = await supabase.auth.updateUser({ 
         password: password 
       });
@@ -47,6 +48,7 @@ export const PasswordReset = () => {
           variant: "destructive"
         });
       } else {
+        console.log('Password reset successful');
         toast({
           title: "Hasło zmienione",
           description: "Twoje hasło zostało pomyślnie zmienione. Zaloguj się ponownie."
@@ -111,4 +113,3 @@ export const PasswordReset = () => {
     </div>
   );
 };
-
