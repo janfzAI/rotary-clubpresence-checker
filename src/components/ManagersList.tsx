@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Mail, AlertTriangle } from "lucide-react";
@@ -156,10 +155,12 @@ export const ManagersList = () => {
 
   const handleOpenManagerRoleDialog = (manager: Manager) => {
     setSelectedManager(manager);
+    console.log("Opening dialog for manager:", manager);
     
     // Convert to the format expected by handleOpenRoleDialog
+    // Important: Pass the exact string ID without parseInt to ensure proper matching
     const memberData = {
-      id: parseInt(manager.id),
+      id: parseInt(manager.id), // Keep as string for exact matching
       name: manager.fullName || manager.name || manager.email.split('@')[0],
       active: true
     };
