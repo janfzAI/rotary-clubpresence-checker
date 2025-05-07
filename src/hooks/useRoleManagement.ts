@@ -2,9 +2,11 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole, RoleChangeResult } from '@/types/userRoles';
+import { useToast } from '@/hooks/use-toast';
 
 export const useRoleManagement = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const sendPasswordResetEmail = async (email: string): Promise<boolean> => {
     try {
@@ -15,10 +17,19 @@ export const useRoleManagement = () => {
 
       if (error) {
         console.error("Password reset email error:", error);
+        toast({
+          title: "Błąd",
+          description: `Nie udało się wysłać emaila resetującego hasło: ${error.message}`,
+          variant: "destructive"
+        });
         return false;
       }
       
       console.log("Password reset email sent successfully");
+      toast({
+        title: "Email resetujący hasło został wysłany",
+        description: `Link do resetowania hasła został wysłany na adres ${email}. Poinformuj użytkownika, aby sprawdził swoją skrzynkę.`
+      });
       return true;
     } catch (e) {
       console.error("Error sending password reset email:", e);
@@ -34,9 +45,8 @@ export const useRoleManagement = () => {
       let passwordResetSent = false;
       
       if (newPassword) {
-        console.log("Password update requested - attempting to update password");
+        console.log("Password update requested - sending reset email instead of direct update");
         
-        // Instead of trying to use the admin API first, let's send a password reset email
         // Get user email
         const { data: userData } = await supabase
           .from('profiles')
@@ -49,6 +59,11 @@ export const useRoleManagement = () => {
           passwordResetSent = await sendPasswordResetEmail(userData.email);
         } else {
           console.error("Could not find email for user ID:", userId);
+          toast({
+            title: "Błąd",
+            description: "Nie znaleziono adresu email dla podanego użytkownika",
+            variant: "destructive"
+          });
         }
       }
 

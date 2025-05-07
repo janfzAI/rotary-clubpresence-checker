@@ -39,14 +39,22 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
               });
               navigate('/auth');
               return;
+            } else {
+              // Set to password reset mode immediately after successful token setting
+              setIsPasswordResetMode(true);
+              setIsLoading(false);
+              return;
             }
           } catch (e) {
             console.error('Exception setting session from recovery token:', e);
+            toast({
+              title: "Błąd przetwarzania tokenu",
+              description: "Wystąpił błąd podczas przetwarzania linku resetującego hasło.",
+              variant: "destructive"
+            });
+            navigate('/auth');
+            return;
           }
-          
-          setIsPasswordResetMode(true);
-          setIsLoading(false);
-          return;
         }
         
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -66,15 +74,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
 
         // Session exists, user is authenticated
         setIsAuthenticated(true);
-
-        // Refresh session if it exists
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          console.error('Session refresh error:', refreshError);
-          navigate('/auth');
-          return;
-        }
-
+        
       } catch (error) {
         console.error('Auth check error:', error);
         navigate('/auth');
@@ -89,9 +89,11 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
       
       if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
+        setIsPasswordResetMode(false);
         navigate('/auth');
       } else if (event === 'SIGNED_IN' && !isAuthenticated) {
         setIsAuthenticated(true);
+        setIsPasswordResetMode(false);
       } else if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordResetMode(true);
       } else if (event === 'USER_UPDATED') {

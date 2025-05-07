@@ -8,14 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [detailedError, setDetailedError] = useState<any>(null);
+  const [forgotPassword, setForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   // Check session on load
   useEffect(() => {
@@ -48,7 +52,7 @@ const Auth = () => {
         setDetailedError(error);
         
         if (error.message === 'Invalid login credentials') {
-          setErrorMessage('Nieprawidłowy email lub hasło.');
+          setErrorMessage('Nieprawidłowy email lub hasło. Jeśli niedawno zmieniono Twoje hasło, użyj linku resetującego wysłanego na Twój email.');
         } else {
           setErrorMessage('Błąd logowania. Spróbuj ponownie.');
         }
@@ -59,6 +63,43 @@ const Auth = () => {
     } catch (error) {
       console.error('Login error:', error);
       setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
+      setDetailedError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setDetailedError(null);
+    setLoading(true);
+    
+    if (!email) {
+      setErrorMessage('Proszę podać adres email.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+        redirectTo: `${window.location.origin}/`,
+      });
+
+      if (error) {
+        console.error('Password reset error:', error);
+        setErrorMessage('Wystąpił błąd podczas wysyłania linku resetującego. Spróbuj ponownie.');
+        setDetailedError(error);
+      } else {
+        setResetSent(true);
+        toast({
+          title: "Email resetujący hasło został wysłany",
+          description: "Sprawdź swoją skrzynkę pocztową i kliknij w link, aby zresetować hasło."
+        });
+      }
+    } catch (error) {
+      console.error('Password reset error:', error);
+      setErrorMessage('Wystąpił błąd podczas wysyłania linku resetującego. Spróbuj ponownie.');
       setDetailedError(error);
     } finally {
       setLoading(false);
@@ -115,6 +156,7 @@ const Auth = () => {
       
       {errorMessage && (
         <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
@@ -128,73 +170,143 @@ const Auth = () => {
         </div>
       )}
 
-      <Tabs defaultValue="login" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="login">Logowanie</TabsTrigger>
-          <TabsTrigger value="quick">Szybkie logowanie</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="login">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Wprowadź email"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Hasło</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Wprowadź hasło"
-                required
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Logowanie...' : 'Zaloguj się'}
-            </Button>
-          </form>
-        </TabsContent>
-        
-        <TabsContent value="quick">
-          <div className="space-y-4">
-            <div className="p-4 border rounded-md">
-              <h3 className="font-medium mb-2">Administrator</h3>
-              <p className="text-sm text-gray-500 mb-4">Pełny dostęp do zarządzania obecnością</p>
+      {forgotPassword ? (
+        <div className="space-y-4">
+          <h2 className="text-xl font-medium">Resetowanie hasła</h2>
+          
+          {resetSent ? (
+            <div className="text-center space-y-4">
+              <p className="text-green-600">
+                Link do resetowania hasła został wysłany na podany adres email.
+                Sprawdź swoją skrzynkę pocztową i kliknij link w emailu.
+              </p>
               <Button 
-                onClick={() => handleQuickLogin('admin')} 
+                onClick={() => {
+                  setForgotPassword(false);
+                  setResetSent(false);
+                }}
                 className="w-full"
-                disabled={loading}
               >
-                {loading ? 'Logowanie...' : 'Zaloguj jako administrator'}
+                Wróć do logowania
               </Button>
             </div>
-            
-            <div className="p-4 border rounded-md">
-              <h3 className="font-medium mb-2">Użytkownik</h3>
-              <p className="text-sm text-gray-500 mb-4">Dostęp tylko do odczytu danych</p>
-              <Button 
-                onClick={() => handleQuickLogin('user')} 
-                variant="outline"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? 'Logowanie...' : 'Zaloguj jako użytkownik'}
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Wprowadź email"
+                  required
+                />
+                <p className="text-sm text-gray-500">
+                  Na podany adres email wyślemy link do resetowania hasła.
+                </p>
+              </div>
+
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setForgotPassword(false)}
+                  disabled={loading}
+                >
+                  Anuluj
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="flex-1" 
+                  disabled={loading || !email}
+                >
+                  {loading ? 'Wysyłanie...' : 'Wyślij link resetujący'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      ) : (
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="login">Logowanie</TabsTrigger>
+            <TabsTrigger value="quick">Szybkie logowanie</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="login">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Wprowadź email"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Hasło</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Wprowadź hasło"
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Logowanie...' : 'Zaloguj się'}
               </Button>
+              
+              <div className="text-center">
+                <button 
+                  type="button"
+                  onClick={() => setForgotPassword(true)}
+                  className="text-sm text-blue-600 hover:underline mt-2"
+                >
+                  Zapomniałeś hasła?
+                </button>
+              </div>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="quick">
+            <div className="space-y-4">
+              <div className="p-4 border rounded-md">
+                <h3 className="font-medium mb-2">Administrator</h3>
+                <p className="text-sm text-gray-500 mb-4">Pełny dostęp do zarządzania obecnością</p>
+                <Button 
+                  onClick={() => handleQuickLogin('admin')} 
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? 'Logowanie...' : 'Zaloguj jako administrator'}
+                </Button>
+              </div>
+              
+              <div className="p-4 border rounded-md">
+                <h3 className="font-medium mb-2">Użytkownik</h3>
+                <p className="text-sm text-gray-500 mb-4">Dostęp tylko do odczytu danych</p>
+                <Button 
+                  onClick={() => handleQuickLogin('user')} 
+                  variant="outline"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? 'Logowanie...' : 'Zaloguj jako użytkownik'}
+                </Button>
+              </div>
             </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };
