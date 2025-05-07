@@ -57,12 +57,9 @@ export const MemberEmailEdit = ({
   
   // Update form values when currentEmail changes
   React.useEffect(() => {
-    if (isOpen) {
-      console.log("MemberEmailEdit: Current email for form reset:", currentEmail);
-      form.reset({ email: currentEmail });
-      // Reset error message when dialog opens or email changes
-      setErrorMessage(null);
-    }
+    form.reset({ email: currentEmail });
+    // Reset error message when dialog opens or email changes
+    setErrorMessage(null);
   }, [currentEmail, form, isOpen]);
 
   const handleSubmit = async (values: z.infer<typeof emailSchema>) => {
@@ -72,26 +69,13 @@ export const MemberEmailEdit = ({
         return;
       }
       
-      // Skip update if email hasn't changed
-      if (values.email === currentEmail) {
-        console.log("Email hasn't changed, skipping update");
-        onClose();
-        return;
-      }
-      
       setIsSubmitting(true);
       setErrorMessage(null);
       await onSubmit(values.email);
       onClose();
     } catch (error: any) {
       console.error('Error updating email:', error);
-      
-      // Handle duplicate key constraint error
-      if (error.message?.includes('duplicate key') || error.message?.includes('profiles_email_key')) {
-        setErrorMessage('Ten adres email jest już używany przez innego użytkownika. Proszę wybrać inny adres email.');
-      } else {
-        setErrorMessage(error.message || 'Wystąpił błąd podczas aktualizacji adresu email');
-      }
+      setErrorMessage(error.message || 'Wystąpił błąd podczas aktualizacji adresu email');
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +84,6 @@ export const MemberEmailEdit = ({
   // Check if email is valid
   const emailValue = form.watch('email');
   const isEmailValid = form.formState.isValid;
-  const hasEmailChanged = emailValue !== currentEmail;
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -159,9 +142,9 @@ export const MemberEmailEdit = ({
               <AlertDialogCancel type="button">Anuluj</AlertDialogCancel>
               <Button 
                 type="submit"
-                disabled={isSubmitting || !isEmailValid || !currentEmail || !hasEmailChanged}
+                disabled={isSubmitting || !isEmailValid || !currentEmail}
                 className={`
-                  ${isEmailValid && currentEmail && hasEmailChanged
+                  ${isEmailValid && currentEmail
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                     : 'bg-muted text-muted-foreground'
                   }
@@ -176,4 +159,3 @@ export const MemberEmailEdit = ({
     </AlertDialog>
   );
 };
-

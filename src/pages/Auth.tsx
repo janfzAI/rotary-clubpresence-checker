@@ -78,13 +78,7 @@ const Auth = () => {
         setErrorMessage(`Nie można zalogować z użytkownikiem ${preset}. Szczegóły błędu: ${error.message}`);
       } else {
         console.log('Quick login successful:', data);
-        
-        if (preset === 'admin') {
-          // Navigate with admin flag to ensure proper role assignment
-          navigate('/?admin=true');
-        } else {
-          navigate('/');
-        }
+        navigate('/');
       }
     } catch (error: any) {
       console.error('Quick login error:', error);

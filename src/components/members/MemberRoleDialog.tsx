@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import type { AppRole } from '@/types/userRoles';
 import { MemberAuthFields } from './dialog/MemberAuthFields';
@@ -12,13 +13,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Info, AlertCircle, Lock, CheckCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 interface MemberRoleDialogProps {
   isOpen: boolean;
@@ -51,116 +50,27 @@ export const MemberRoleDialog = ({
 }: MemberRoleDialogProps) => {
   const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
   const isNewUser = memberEmail && !existingUser;
-  const { sendPasswordResetEmail, updateUserPassword } = useRoleManagement();
+  const { sendPasswordResetEmail } = useRoleManagement();
   const [resetEmailSent, setResetEmailSent] = React.useState(false);
-  const [directPasswordUpdateSent, setDirectPasswordUpdateSent] = React.useState(false);
-  const [passwordActionError, setPasswordActionError] = React.useState<string | null>(null);
-  const [isAdminUser, setIsAdminUser] = React.useState(false);
-  const [currentUserEmail, setCurrentUserEmail] = React.useState<string | null>(null);
-  const [passwordActionInProgress, setPasswordActionInProgress] = React.useState(false);
-  const { toast } = useToast();
+  const [refreshingEmailList, setRefreshingEmailList] = React.useState(false);
   
-  // Check if current user is the special admin account
+  // Reset the resetEmailSent state when the dialog opens
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      const { data } = await supabase.auth.getUser();
-      const email = data?.user?.email || null;
-      setCurrentUserEmail(email);
-      const isAdmin = email === 'admin@rotaryszczecin.pl';
-      setIsAdminUser(isAdmin);
-      console.log(`[ADMIN_CHECK] Current user: ${email}, isSpecialAdmin: ${isAdmin}`);
-    };
-    
     if (isOpen) {
-      checkAdminStatus();
       setResetEmailSent(false);
-      setDirectPasswordUpdateSent(false);
-      setPasswordActionError(null);
-      setPasswordActionInProgress(false);
     }
-  }, [isOpen]);
-  
-  // Debug the current email value
-  useEffect(() => {
-    if (isOpen && selectedMember) {
-      console.log(`[MEMBER_DIALOG] Current email for ${selectedMember.name}:`, memberEmail);
-    }
-  }, [isOpen, memberEmail, selectedMember]);
+  }, [isOpen, memberEmail]);
   
   const handleSendPasswordReset = async () => {
     if (!memberEmail) return;
     
     try {
-      setPasswordActionInProgress(true);
-      setPasswordActionError(null);
       const result = await sendPasswordResetEmail(memberEmail);
       if (result) {
         setResetEmailSent(true);
-        toast({
-          title: "Email wysłany",
-          description: `Link do resetowania hasła został wysłany na adres ${memberEmail}`
-        });
-      } else {
-        setPasswordActionError("Nie udało się wysłać emaila z linkiem do resetowania hasła");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to send password reset email:", error);
-      setPasswordActionError("Wystąpił błąd podczas wysyłania emaila resetującego hasło");
-    } finally {
-      setPasswordActionInProgress(false);
-    }
-  };
-
-  const handleDirectPasswordUpdate = async () => {
-    if (!memberEmail || !memberPassword || memberPassword.length < 6) {
-      setPasswordActionError("Podaj poprawne hasło (min. 6 znaków)");
-      return;
-    }
-    
-    if (!existingUser) {
-      setPasswordActionError("Nie można zaktualizować hasła dla nieistniejącego użytkownika");
-      return;
-    }
-    
-    try {
-      console.log(`[PASSWORD_UPDATE_REQUEST] Rozpoczynam aktualizację hasła dla użytkownika ${existingUser.id} (${memberEmail})`);
-      console.log(`[PASSWORD_UPDATE_REQUEST] Hasło ma ${memberPassword.length} znaków`);
-      setPasswordActionInProgress(true);
-      setPasswordActionError(null);
-      
-      // Wyświetl informację o trwającym procesie
-      toast({
-        title: "Aktualizacja hasła w toku",
-        description: "Trwa aktualizacja hasła, proszę czekać..."
-      });
-      
-      const result = await updateUserPassword(existingUser.id, memberPassword);
-      
-      console.log(`[PASSWORD_UPDATE_RESULT] Wynik operacji: ${result ? "Sukces" : "Niepowodzenie"}`);
-      
-      if (result) {
-        setDirectPasswordUpdateSent(true);
-        setPasswordActionError(null);
-        toast({
-          title: "Hasło zaktualizowane",
-          description: `Hasło dla użytkownika ${memberEmail} zostało pomyślnie zmienione.`,
-          duration: 6000
-        });
-      } else {
-        // Error handling is done in the updateUserPassword function with toasts
-        console.log("[PASSWORD_UPDATE_RESULT] Aktualizacja hasła nie powiodła się, ale błąd był obsłużony w funkcji updateUserPassword");
-        setPasswordActionError("Nie udało się zaktualizować hasła. Sprawdź uprawnienia administratora.");
-      }
-    } catch (error: any) {
-      console.error("[PASSWORD_UPDATE_ERROR] Błąd aktualizacji hasła:", error);
-      setPasswordActionError(`Błąd aktualizacji hasła: ${error.message || "Nieznany błąd"}`);
-      toast({
-        title: "Błąd aktualizacji hasła",
-        description: error.message || "Wystąpił nieznany błąd podczas aktualizacji hasła",
-        variant: "destructive"
-      });
-    } finally {
-      setPasswordActionInProgress(false);
     }
   };
 
@@ -186,47 +96,20 @@ export const MemberRoleDialog = ({
             ) : (
               <>
                 Przypisz rolę do użytkownika w systemie poprzez podanie adresu email i wybranie roli.
-                <strong> Podaj hasło aby utworzyć nowe konto dla tego członka lub zmienić hasło istniejącego.</strong>
+                <strong> Podaj hasło aby utworzyć nowe konto dla tego członka.</strong>
               </>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-4 py-4">
-          {isAdminUser ? (
-            <Alert>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <AlertTitle>Pełne uprawnienia administratora</AlertTitle>
-              <AlertDescription className="text-sm">
-                Jesteś zalogowany jako <strong>admin@rotaryszczecin.pl</strong> i masz pełne uprawnienia 
-                do zarządzania użytkownikami i ich hasłami.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Wymagane specjalne konto administratora</AlertTitle>
-              <AlertDescription className="text-sm">
-                <strong>Uwaga:</strong> Do zmiany haseł wymagane jest konto <strong>admin@rotaryszczecin.pl</strong> (hasło: <strong>admin123</strong>).
-                Aktualnie jesteś zalogowany jako: <strong>{currentUserEmail || "Nieznany użytkownik"}</strong>.
-                <div className="mt-2">
-                  <a 
-                    href="/?admin=true" 
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm inline-flex items-center"
-                  >
-                    <Lock className="mr-1 h-3 w-3" /> Zaloguj jako admin@rotaryszczecin.pl
-                  </a>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-          
           {isNewUser && (
-            <Alert className="mb-4">
-              <Info className="h-4 w-4" />
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Tworzenie nowego konta:</strong> Podaj adres email i hasło dla nowego użytkownika.
-                {!isAdminUser && " Aby ustawić hasło, zaloguj się jako admin@rotaryszczecin.pl."}
+                <strong>Uwaga:</strong> Aby utworzyć nowego użytkownika, konto używane do logowania musi 
+                mieć uprawnienia administratora w Supabase. Jeśli operacja się nie powiedzie, 
+                użyj istniejącego adresu e-mail lub skontaktuj się z administratorem systemu.
               </AlertDescription>
             </Alert>
           )}
@@ -240,60 +123,21 @@ export const MemberRoleDialog = ({
           />
           
           {existingUser && (
-            <div className="space-y-2 mt-2">
-              {isAdminUser ? (
-                <Alert variant="default" className="mb-4">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <AlertTitle>Bezpośrednia zmiana hasła dostępna</AlertTitle>
-                  <AlertDescription className="text-sm">
-                    Jako <strong>admin@rotaryszczecin.pl</strong> możesz bezpośrednio zmienić hasło użytkownika.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Alert variant="destructive" className="mb-4">
-                  <Lock className="h-4 w-4" />
-                  <AlertTitle>Tylko admin@rotaryszczecin.pl może zmieniać hasła</AlertTitle>
-                  <AlertDescription className="text-sm">
-                    Aby zmienić hasło, musisz być zalogowany jako <strong>admin@rotaryszczecin.pl</strong>.
-                    Kliknij link powyżej, aby zalogować się jako administrator.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              <Button 
-                type="button" 
-                variant={directPasswordUpdateSent ? "outline" : "secondary"}
-                onClick={handleDirectPasswordUpdate}
-                disabled={passwordActionInProgress || directPasswordUpdateSent || !memberPassword || memberPassword.length < 6 || !isAdminUser}
-                className="w-full"
-              >
-                {passwordActionInProgress ? "Aktualizacja hasła..." : 
-                  (directPasswordUpdateSent ? "Hasło zostało zaktualizowane" : "Zaktualizuj hasło bezpośrednio")}
-                {!isAdminUser && <Lock className="ml-2 h-4 w-4" />}
-              </Button>
-              
+            <div className="mt-2">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handleSendPasswordReset}
-                disabled={passwordActionInProgress || resetEmailSent}
+                disabled={resetEmailSent}
                 className="w-full"
               >
-                {passwordActionInProgress ? "Wysyłanie emaila..." :
-                  (resetEmailSent ? "Link do resetowania hasła wysłany" : "Wyślij link do resetowania hasła")}
+                {resetEmailSent 
+                  ? "Link do resetowania hasła wysłany" 
+                  : "Wyślij link do resetowania hasła"}
               </Button>
-              
-              {(resetEmailSent || directPasswordUpdateSent) && !passwordActionError && (
+              {resetEmailSent && (
                 <p className="text-sm text-green-600 mt-1">
-                  {resetEmailSent 
-                    ? `Email z linkiem do resetowania hasła został wysłany na adres ${memberEmail}` 
-                    : "Hasło zostało zaktualizowane pomyślnie"}
-                </p>
-              )}
-              
-              {passwordActionError && (
-                <p className="text-sm text-red-600 mt-1">
-                  {passwordActionError}
+                  Email z linkiem do resetowania hasła został wysłany na adres {memberEmail}
                 </p>
               )}
             </div>
@@ -307,31 +151,12 @@ export const MemberRoleDialog = ({
 
         <AlertDialogFooter>
           <AlertDialogCancel>Anuluj</AlertDialogCancel>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <AlertDialogAction 
-                    onClick={onSubmit}
-                    disabled={isSubmitting || !memberEmail || (isNewUser && !memberPassword)}
-                    className="inline-flex items-center"
-                  >
-                    {isSubmitting ? 'Przetwarzanie...' : 'Zapisz'}
-                  </AlertDialogAction>
-                </span>
-              </TooltipTrigger>
-              {isNewUser && !memberPassword && (
-                <TooltipContent>
-                  <p>Podaj hasło dla nowego konta</p>
-                </TooltipContent>
-              )}
-              {!memberEmail && (
-                <TooltipContent>
-                  <p>Podaj adres email</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+          <AlertDialogAction 
+            onClick={onSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Przetwarzanie...' : 'Zapisz'}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

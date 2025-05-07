@@ -1,11 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from "@/hooks/use-toast";
 import type { AppRole, RoleChangeResult } from '@/types/userRoles';
 
 export const useUserCreation = () => {
-  const { toast } = useToast();
-
   const createUserAndSetRole = async (
     email: string, 
     password: string, 
@@ -32,12 +29,6 @@ export const useUserCreation = () => {
           userId = existingUser.id;
           isNewUser = false;
         } else {
-          // Check password requirement
-          if (!password || password.length < 6) {
-            throw new Error("Hasło jest wymagane (minimum 6 znaków) dla nowego użytkownika");
-          }
-          
-          console.log("Attempting to create new user with signUp");
           // Try to create new user with signUp first
           const { data: signupData, error: signupError } = await supabase.auth.signUp({
             email,
@@ -66,18 +57,9 @@ export const useUserCreation = () => {
           userId = signupData.user.id;
           console.log("User created successfully:", userId);
           
-          // Short delay to ensure database consistency
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       } catch (authError: any) {
-        // Log the detailed error
-        console.error("Error in first attempt to create user:", authError);
-        
-        // If the error mentions password being too short
-        if (authError.message?.includes('password') && authError.message?.includes('short')) {
-          throw new Error("Hasło jest za krótkie. Musi mieć minimum 6 znaków.");
-        }
-        
         // If the error mentions permission issues or is a 403, show specific message
         if (authError.message?.includes('not allowed') || authError.status === 403 || 
             authError.message?.includes('not_admin') || authError.message?.includes('permission denied')) {
@@ -85,7 +67,7 @@ export const useUserCreation = () => {
           throw new Error("Brak wymaganych uprawnień administratora Supabase do zarządzania użytkownikami. Skontaktuj się z administratorem systemu.");
         }
         
-        console.log("Failed first attempt, trying admin API...");
+        console.error("Failed first attempt, trying admin API...", authError);
         
         try {
           console.log("Attempting to create user with admin API...");
@@ -98,11 +80,6 @@ export const useUserCreation = () => {
           
           if (createError) {
             console.error("Admin user creation error:", createError);
-            
-            // If the error is about password length
-            if (createError.message?.includes('password') && createError.message?.includes('short')) {
-              throw new Error("Hasło jest za krótkie. Musi mieć minimum 6 znaków.");
-            }
             
             // If the error is about permission
             if (createError.message?.includes('not allowed') || createError.status === 403 ||
@@ -120,7 +97,6 @@ export const useUserCreation = () => {
           userId = userData.user.id;
           console.log("User created successfully with admin API:", userId);
           
-          // Short delay to ensure database consistency
           await new Promise(resolve => setTimeout(resolve, 500));
           
         } catch (adminError: any) {

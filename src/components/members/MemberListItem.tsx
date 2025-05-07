@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +27,28 @@ interface MemberListItemProps {
   onOpenEmailEdit?: (member: { id: number; name: string }) => void;
 }
 
+const getRoleBadgeStyle = (role?: AppRole) => {
+  switch (role) {
+    case 'admin':
+      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    case 'manager':
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300';
+    default:
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+  }
+};
+
+const getRoleLabel = (role?: AppRole) => {
+  switch (role) {
+    case 'admin':
+      return 'Administrator';
+    case 'manager':
+      return 'Manager';
+    default:
+      return 'Użytkownik';
+  }
+};
+
 export const MemberListItem = ({
   member,
   index,
@@ -38,17 +59,6 @@ export const MemberListItem = ({
   onRemoveMember,
   onOpenEmailEdit
 }: MemberListItemProps) => {
-  const getRoleLabel = (role?: AppRole) => {
-    switch (role) {
-      case 'admin':
-        return 'Administrator';
-      case 'manager':
-        return 'Manager';
-      default:
-        return 'Użytkownik';
-    }
-  };
-
   return (
     <div key={member.id} className="p-4 flex justify-between items-center border rounded-md">
       <span className="flex items-center gap-2 flex-1">
@@ -56,7 +66,7 @@ export const MemberListItem = ({
         <span className="flex items-center gap-2">
           {member.name}
           {userRole && (
-            <Badge variant={userRole}>
+            <Badge variant="outline" className={getRoleBadgeStyle(userRole)}>
               {getRoleLabel(userRole)}
             </Badge>
           )}
@@ -119,4 +129,3 @@ export const MemberListItem = ({
     </div>
   );
 };
-

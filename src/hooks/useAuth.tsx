@@ -8,49 +8,12 @@ export const useAuth = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isManager, setIsManager] = useState(false);
 
-  // Separate function to check user roles
+  // Oddzielna funkcja do sprawdzania roli użytkownika
   const checkUserRoles = useCallback(async (userId: string) => {
     try {
       console.log("Checking roles for user:", userId);
       
-      // Special case for admin@rotaryszczecin.pl - always grant admin access
-      const isAdminEmail = userEmail === 'admin@rotaryszczecin.pl';
-      if (isAdminEmail) {
-        console.log('Special admin account detected, granting admin privileges');
-        setIsAdmin(true);
-        setIsManager(true);
-        
-        // Ensure admin role exists in database
-        try {
-          const { data, error } = await supabase
-            .from('user_roles')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('role', 'admin');
-          
-          if (error) {
-            console.error('Error checking admin role:', error);
-          } else if (!data || data.length === 0) {
-            console.log('Adding admin role to database for admin account');
-            const { error: insertError } = await supabase
-              .from('user_roles')
-              .insert({
-                user_id: userId,
-                role: 'admin'
-              });
-              
-            if (insertError) {
-              console.error('Error adding admin role:', insertError);
-            }
-          }
-        } catch (e) {
-          console.error('Error ensuring admin role:', e);
-        }
-        
-        return;
-      }
-      
-      // Check if user has admin role using supabase RPC to avoid security issues
+      // Check if user has admin role
       const { data: isAdminData, error: adminError } = await supabase.rpc('has_role', {
         _user_id: userId,
         _role: 'admin'
@@ -63,7 +26,7 @@ export const useAuth = () => {
         console.log('User is admin:', !!isAdminData);
       }
 
-      // Check if user has manager role using supabase RPC to avoid security issues
+      // Check if user has manager role
       const { data: isManagerData, error: managerError } = await supabase.rpc('has_role', {
         _user_id: userId,
         _role: 'manager'
@@ -78,9 +41,9 @@ export const useAuth = () => {
     } catch (error) {
       console.error("Error checking user roles:", error);
     }
-  }, [userEmail]);
+  }, []);
 
-  // Function to ensure profile exists
+  // Funkcja do sprawdzania istnienia profilu i tworzenia go, jeśli nie istnieje
   const ensureProfileExists = useCallback(async (userId: string, userEmail: string | null) => {
     try {
       if (!userEmail) return;
@@ -110,13 +73,12 @@ export const useAuth = () => {
     }
   }, []);
 
-  // Function to refresh user roles - can be called from outside
+  // Funkcja do odświeżania uprawnień użytkownika - może być wywoływana z zewnątrz
   const refreshUserRoles = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        console.log("Refreshing roles for user:", session.user.email);
         await checkUserRoles(session.user.id);
       }
     } catch (error) {
@@ -128,10 +90,7 @@ export const useAuth = () => {
     const getCurrentUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const email = session?.user?.email ?? null;
-        setUserEmail(email);
-        
-        console.log("Current user session:", email);
+        setUserEmail(session?.user?.email ?? null);
         
         if (session?.user) {
           await checkUserRoles(session.user.id);
@@ -148,11 +107,10 @@ export const useAuth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed:", event, session?.user?.email);
-      const email = session?.user?.email ?? null;
-      setUserEmail(email);
+      setUserEmail(session?.user?.email ?? null);
       
       if (session?.user) {
-        // Use setTimeout to avoid potential deadlock issues
+        // Używaj setTimeout aby uniknąć potencjalnych problemów z deadlockiem
         setTimeout(() => {
           checkUserRoles(session.user.id);
           ensureProfileExists(session.user.id, session.user.email);

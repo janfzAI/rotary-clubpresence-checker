@@ -10,7 +10,6 @@ import { AttendanceStats } from '@/components/AttendanceStats';
 import { AttendanceExport } from '@/components/AttendanceExport';
 import { AttendanceFileHandler } from '@/components/AttendanceFileHandler';
 import { DatabaseStructure } from '@/components/DatabaseStructure';
-import { EventsCalendar } from '@/components/EventsCalendar';
 import { useAttendanceState } from '@/hooks/useAttendanceState';
 import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
 import { RoleNotice } from '@/components/RoleNotice';
@@ -41,13 +40,6 @@ const Index = () => {
     toast
   } = useAttendanceState();
 
-  // If no activeTab is set (first visit), default to events tab
-  React.useEffect(() => {
-    if (!activeTab) {
-      setActiveTab('events');
-    }
-  }, [activeTab, setActiveTab]);
-
   // Define if user has permission to edit attendance and manage guests/members
   const canEditAttendance = isAdmin || isManager;
   const canManageGuests = isAdmin || isManager;
@@ -67,9 +59,6 @@ const Index = () => {
       
       <RoleNotice isAdmin={isAdmin} isManager={isManager} />
       {!canEditAttendance && <ReadOnlyNotice />}
-      
-      {/* Render content based on active tab */}
-      {activeTab === 'events' && <EventsCalendar />}
       
       {activeTab === 'attendance' && (
         <div className="space-y-6">
