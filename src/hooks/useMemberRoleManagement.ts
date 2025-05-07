@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -19,7 +18,7 @@ export const useMemberRoleManagement = () => {
   const [emailChangeTimestamp, setEmailChangeTimestamp] = useState(0);
   const [lastRefreshTimestamp, setLastRefreshTimestamp] = useState(0);
   
-  // New state to store explicit member to email mappings
+  // State to store explicit member to email mappings
   const [memberEmailMappings, setMemberEmailMappings] = useState<Record<string, string>>({
     // Default mappings for known problematic users
     "Krzysztof Meissinger": "krzysztof.meissinger@example.com",
@@ -112,7 +111,8 @@ export const useMemberRoleManagement = () => {
         const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
         const isNewUser = !existingUser;
         
-        let message = `Pomyślnie ${isNewUser ? 'utworzono użytkownika' : 'zmieniono rolę użytkownika'} ${memberEmail} na ${selectedRole}`;
+        // Modified toast message to use member name instead of email
+        let message = `Pomyślnie ${isNewUser ? 'utworzono użytkownika' : 'zmieniono rolę użytkownika'} ${memberName} na ${selectedRole}`;
         if (memberPassword && result.passwordUpdated) {
           message += isNewUser ? ' z podanym hasłem' : ' i zaktualizowano hasło';
         } else if (memberPassword && result.passwordUpdated === false) {
