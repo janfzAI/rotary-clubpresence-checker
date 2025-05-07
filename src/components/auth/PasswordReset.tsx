@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ProgressBar } from "@/components/ui/progress";
+import { Progress } from "@/components/ui/progress";
 
 export const PasswordReset = () => {
   const [password, setPassword] = useState('');

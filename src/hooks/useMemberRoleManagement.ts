@@ -19,12 +19,8 @@ export const useMemberRoleManagement = () => {
   const [emailChangeTimestamp, setEmailChangeTimestamp] = useState(0);
   const [lastRefreshTimestamp, setLastRefreshTimestamp] = useState(0);
   
-  // State to store explicit member to email mappings
-  const [memberEmailMappings, setMemberEmailMappings] = useState<Record<string, string>>({
-    // Default mappings for known problematic users
-    "Krzysztof Meissinger": "krzysztof.meissinger@example.com",
-    "Krzysztof Dokowski": "krzysztof.dokowski@example.com"
-  });
+  // State to store explicit member to email mappings using member ID as key
+  const [memberEmailMappings, setMemberEmailMappings] = useState<Record<string, string>>({});
   
   const { toast } = useToast();
   const { users, handleMemberRoleChange, fetchUsers, getRoleByEmail } = useUserRoles();
@@ -65,22 +61,35 @@ export const useMemberRoleManagement = () => {
     }
   }, [emailChangeTimestamp, refreshUserData]);
 
-  // Add function to save member-email mappings
-  const saveMemberEmailMapping = (memberName: string, email: string) => {
-    console.log(`Saving mapping for ${memberName}: ${email}`);
+  // Add function to save member-email mappings using member ID as key
+  const saveMemberEmailMapping = (member: Member, email: string) => {
+    if (!member || !member.id) {
+      console.error("Cannot save mapping: Invalid member or missing ID");
+      return;
+    }
+    
+    const memberId = String(member.id); // Convert to string for consistent storage
+    console.log(`Saving mapping for member ID ${memberId} (${member.name}): ${email}`);
+    
     setMemberEmailMappings(prev => ({
       ...prev,
-      [memberName]: email
+      [memberId]: email
     }));
     
     // Store in localStorage for persistence
     try {
       const existingMappings = JSON.parse(localStorage.getItem('memberEmailMappings') || '{}');
-      const updatedMappings = { ...existingMappings, [memberName]: email };
+      const updatedMappings = { ...existingMappings, [memberId]: email };
       localStorage.setItem('memberEmailMappings', JSON.stringify(updatedMappings));
     } catch (error) {
       console.error("Error saving member email mapping to localStorage:", error);
     }
+  };
+
+  // Helper function to get email by member ID
+  const getEmailByMemberId = (memberId: string | number): string | undefined => {
+    const id = String(memberId);
+    return memberEmailMappings[id];
   };
 
   const handleRoleChangeSubmit = async () => {
@@ -96,16 +105,17 @@ export const useMemberRoleManagement = () => {
     setIsSubmitting(true);
 
     try {
+      const memberId = String(selectedMember.id);
       const memberName = selectedMember.name;
       
-      // Save mapping when submitting a role change
-      saveMemberEmailMapping(memberName, memberEmail);
+      // Save mapping using member ID when submitting a role change
+      saveMemberEmailMapping(selectedMember, memberEmail);
       
       // Check current role from the database before making changes
       const currentRole = getRoleByEmail(memberEmail);
       console.log(`Current role for ${memberEmail} before change: ${currentRole}`);
       
-      console.log(`Attempting role change for ${memberName} (${memberEmail}) to ${selectedRole}`);
+      console.log(`Attempting role change for ID ${memberId} (${memberName}) with email ${memberEmail} to ${selectedRole}`);
       
       const result = await handleMemberRoleChange(
         memberName,
@@ -179,12 +189,12 @@ export const useMemberRoleManagement = () => {
     setMemberEmail('');
     setSelectedRole('user');
     
-    // Check if we have a saved mapping for this member
-    const memberName = member.name;
-    const savedEmail = memberEmailMappings[memberName];
+    // Check if we have a saved mapping for this member using ID
+    const memberId = String(member.id);
+    const savedEmail = getEmailByMemberId(memberId);
     
     if (savedEmail) {
-      console.log(`Found saved email mapping for ${memberName}:`, savedEmail);
+      console.log(`Found saved email mapping for member ID ${memberId} (${member.name}):`, savedEmail);
       setMemberEmail(savedEmail);
       
       // Find matching user to get their role
@@ -200,17 +210,17 @@ export const useMemberRoleManagement = () => {
         setSelectedRole('user');
       }
     } else {
-      // If no mapping exists, fallback to the old method to find a potential match
-      console.log("No saved mapping found. Looking for potential matches...");
+      // If no mapping exists by ID, try to find a matching user
+      console.log(`No saved mapping found for ID ${memberId}. Looking for potential matches...`);
       const matchingUser = findBestMatchingUser(member);
       
       if (matchingUser) {
-        console.log(`Found potential matching user for ${member.name}:`, matchingUser.email);
+        console.log(`Found potential matching user for ${member.id} (${member.name}):`, matchingUser.email);
         setMemberEmail(matchingUser.email);
         setSelectedRole(matchingUser.role);
         
-        // Save this mapping for future use
-        saveMemberEmailMapping(memberName, matchingUser.email);
+        // Save this mapping for future use with member ID
+        saveMemberEmailMapping(member, matchingUser.email);
       } else {
         console.log("No matching user found for member:", member.name);
       }
@@ -227,48 +237,15 @@ export const useMemberRoleManagement = () => {
     setSelectedMember(null);
   };
 
-  // New improved function to find the best matching user
+  // Improved function to find the best matching user
   const findBestMatchingUser = (member: Member) => {
-    console.log(`Finding best matching user for: ${member.name} with ID: ${member.id}`);
+    console.log(`Finding best matching user for member ID: ${member.id}, name: ${member.name}`);
     
     if (!member || !users || users.length === 0) {
       return null;
     }
     
-    // 1. First try exact ID match (most reliable)
-    const exactIdMatch = users.find(user => user.id === member.id.toString());
-    if (exactIdMatch) {
-      console.log(`Found exact ID match for ${member.name}:`, exactIdMatch.email);
-      return exactIdMatch;
-    }
-    
-    // Special handling for specific cases
-    if (member.name === "Krzysztof Meissinger") {
-      console.log("Special handling for Meissinger");
-      const meissingerUser = users.find(user => 
-        user.email.toLowerCase().includes("meissinger") || 
-        (user.email.toLowerCase().includes("meisinger") && !user.email.toLowerCase().includes("dokowski"))
-      );
-      
-      if (meissingerUser) {
-        console.log("Found specific match for Meissinger:", meissingerUser.email);
-        return meissingerUser;
-      }
-    }
-    
-    if (member.name === "Krzysztof Dokowski") {
-      console.log("Special handling for Dokowski");
-      const dokowskiUser = users.find(user => 
-        user.email.toLowerCase().includes("dokowski")
-      );
-      
-      if (dokowskiUser) {
-        console.log("Found specific match for Dokowski:", dokowskiUser.email);
-        return dokowskiUser;
-      }
-    }
-    
-    // 2. Try name-based matching as before
+    // Try to find a user with both first name and last name in email
     const fullName = member.name.toLowerCase();
     const nameParts = fullName.split(/\s+/);
     
@@ -276,28 +253,19 @@ export const useMemberRoleManagement = () => {
       const firstName = nameParts[0];
       const lastName = nameParts[nameParts.length - 1];
       
-      // Try to find a user with both first name and last name in email
+      // First try to find a user with both first name and last name in email
       const fullNameMatch = users.find(user => {
         const email = user.email.toLowerCase();
         return email.includes(firstName) && email.includes(lastName);
       });
       
       if (fullNameMatch) {
+        console.log(`Found full name match for ${member.name}:`, fullNameMatch.email);
         return fullNameMatch;
-      }
-      
-      // Try to find user with last name
-      if (lastName.length >= 3) {
-        const lastNameMatch = users.find(user => 
-          user.email.toLowerCase().includes(lastName)
-        );
-        
-        if (lastNameMatch) {
-          return lastNameMatch;
-        }
       }
     }
     
+    // No matches found
     return null;
   };
 
@@ -323,8 +291,9 @@ export const useMemberRoleManagement = () => {
     refreshUserData,
     notifyEmailChanged,
     lastRefreshTimestamp,
-    // New functions for working with email mappings
+    // Functions for working with email mappings
     saveMemberEmailMapping,
-    memberEmailMappings
+    memberEmailMappings,
+    getEmailByMemberId
   };
 };

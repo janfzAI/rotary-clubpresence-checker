@@ -52,7 +52,6 @@ export const MemberRoleDialog = ({
   const isNewUser = memberEmail && !existingUser;
   const { sendPasswordResetEmail } = useRoleManagement();
   const [resetEmailSent, setResetEmailSent] = React.useState(false);
-  const [refreshingEmailList, setRefreshingEmailList] = React.useState(false);
   
   // Reset the resetEmailSent state when the dialog opens
   useEffect(() => {
@@ -85,7 +84,15 @@ export const MemberRoleDialog = ({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center justify-between">
             <span>Zarządzaj uprawnieniami - {selectedMember?.name}</span>
-            <div id="current-member-email" data-email={memberEmail} className="hidden"></div>
+            {selectedMember && (
+              <span className="text-xs text-gray-500">ID: {selectedMember.id}</span>
+            )}
+            <div 
+              id="current-member-info" 
+              data-email={memberEmail} 
+              data-id={selectedMember?.id}
+              className="hidden"
+            ></div>
           </AlertDialogTitle>
           <AlertDialogDescription>
             {memberEmail ? (

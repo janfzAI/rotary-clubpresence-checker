@@ -105,17 +105,27 @@ export const ManagersList = () => {
       
       if (profiles) {
         const managersList = profiles.map(profile => {
-          const email = profile.email;
+          const email = profile.email || '';
+          const userId = profile.id;
           
-          // Find member name from known mappings
+          // Extract name from email if no mapping exists
+          let firstName = email.split('@')[0].split('.')[0];
+          firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+          
+          // Extract full name from email or known mappings
           let fullName = '';
-          Object.entries(memberEmailMappings).forEach(([name, mappedEmail]) => {
-            if (mappedEmail.toLowerCase() === email.toLowerCase()) {
-              fullName = name;
-            }
-          });
           
-          // If no mapping found, extract name from email
+          // Look for full name in mappings
+          for (const [mappingKey, mappingEmail] of Object.entries(memberEmailMappings)) {
+            if (mappingEmail.toLowerCase() === email.toLowerCase()) {
+              // If the key is a number, it's a member ID, otherwise it might be a name
+              if (isNaN(Number(mappingKey))) {
+                fullName = mappingKey;
+              }
+            }
+          }
+          
+          // If no mapping found, create a name from the email
           if (!fullName) {
             const nameParts = email.split('@')[0].split('.');
             
@@ -126,23 +136,15 @@ export const ManagersList = () => {
                 .join(' ');
             } else {
               // If email doesn't have a separator, use what we have
-              fullName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+              fullName = firstName;
             }
           }
           
-          // Override name for known special cases
-          if (email.toLowerCase().includes('dokowski')) {
-            fullName = 'Krzysztof Dokowski';
-          } else if (email.toLowerCase().includes('meissinger') || email.toLowerCase().includes('meisinger')) {
-            fullName = 'Krzysztof Meissinger';
-          }
-          
           return {
-            id: profile.id,
+            id: userId,
             email: email,
             // First name only
-            name: email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + 
-                  email.split('@')[0].split('.')[0].slice(1),
+            name: firstName,
             // Full name
             fullName: fullName
           };
@@ -179,13 +181,13 @@ export const ManagersList = () => {
     setSelectedManager(manager);
     console.log("Opening dialog for manager:", manager);
     
-    // Ensure we use the correct full name
-    const memberName = manager.fullName || manager.name || manager.email.split('@')[0];
+    // Convert String ID to Number for compatibility with MemberRoleDialog
+    const memberId = parseInt(manager.id) || Math.floor(Math.random() * 10000);
     
-    // Convert to the format expected by handleOpenRoleDialog
+    // Create member object in the format expected by handleOpenRoleDialog
     const memberData = {
-      id: parseInt(manager.id),
-      name: memberName,
+      id: memberId,
+      name: manager.fullName || manager.name || manager.email.split('@')[0],
       active: true
     };
     
@@ -204,13 +206,6 @@ export const ManagersList = () => {
   };
 
   const handleRoleSubmit = async () => {
-    if (selectedMember && selectedManager) {
-      // Update the email mapping to ensure it's correct for next time
-      if (memberEmail && selectedMember.name) {
-        console.log(`Updating mapping for ${selectedMember.name} to ${memberEmail} during submission`);
-      }
-    }
-    
     await handleRoleChangeSubmit();
     setDialogOpen(false);
     
@@ -278,6 +273,7 @@ export const ManagersList = () => {
               <TableHead>Lp.</TableHead>
               <TableHead>Pełna nazwa</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>ID użytkownika</TableHead>
               <TableHead>Uprawnienia</TableHead>
               <TableHead>Akcje</TableHead>
             </TableRow>
@@ -288,6 +284,9 @@ export const ManagersList = () => {
                 <TableCell className="font-medium">{index + 1}</TableCell>
                 <TableCell>{manager.fullName || "Nieznany"}</TableCell>
                 <TableCell>{manager.email}</TableCell>
+                <TableCell>
+                  <span className="text-xs font-mono">{manager.id.substring(0, 8)}...</span>
+                </TableCell>
                 <TableCell>
                   <Badge variant="info">Manager</Badge>
                 </TableCell>
