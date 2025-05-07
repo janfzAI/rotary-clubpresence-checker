@@ -107,6 +107,14 @@ export const useRoleManagement = () => {
         }
         console.log(`Role updated to ${newRole} successfully`);
       }
+      
+      // Force a refresh of the session to update roles
+      try {
+        console.log("Forcing session refresh to update roles");
+        await supabase.auth.refreshSession();
+      } catch (refreshError) {
+        console.error("Session refresh error:", refreshError);
+      }
 
       const { data: userData } = await supabase
         .from('profiles')

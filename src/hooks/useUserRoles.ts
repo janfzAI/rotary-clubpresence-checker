@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRoleManagement } from './useRoleManagement';
 import { useUserCreation } from './useUserCreation';
@@ -9,11 +9,12 @@ export const useUserRoles = () => {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState<number>(0);
 
   const { handleRoleChange } = useRoleManagement();
   const { createUserAndSetRole } = useUserCreation();
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -60,13 +61,14 @@ export const useUserRoles = () => {
 
       console.log("Combined users with roles:", usersWithRoles);
       setUsers(usersWithRoles);
+      setLastUpdateTimestamp(Date.now());
     } catch (error) {
       console.error("Error in fetchUsers:", error);
       setError(error instanceof Error ? error : new Error('Unknown error fetching users'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleMemberRoleChange = async (
     memberName: string, 
@@ -99,7 +101,7 @@ export const useUserRoles = () => {
         const result = await handleRoleChange(existingUser.id, role, password);
         
         // Force a delay to ensure database updates are propagated
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Refresh the local user data
         await fetchUsers();
@@ -115,7 +117,7 @@ export const useUserRoles = () => {
           const result = await createUserAndSetRole(email, password, role, memberName);
           
           // Force a delay to ensure database updates are propagated
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
           // Refresh the local user data
           await fetchUsers();
@@ -144,7 +146,18 @@ export const useUserRoles = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
+
+  // Add a function to get the current role for a specific email
+  const getRoleByEmail = useCallback((email: string): AppRole => {
+    if (!email) return 'user';
+    
+    const user = users.find(u => 
+      u.email.toLowerCase() === email.toLowerCase()
+    );
+    
+    return user ? user.role : 'user';
+  }, [users]);
 
   return {
     users,
@@ -153,6 +166,8 @@ export const useUserRoles = () => {
     fetchUsers,
     handleRoleChange,
     createUserAndSetRole,
-    handleMemberRoleChange
+    handleMemberRoleChange,
+    getRoleByEmail,
+    lastUpdateTimestamp
   };
 };

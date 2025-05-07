@@ -1,8 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertCircle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +14,24 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [detailedError, setDetailedError] = useState<any>(null);
+
+  // Check session on load
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log("User already logged in, redirecting to home page");
+        navigate('/');
+      }
+    };
+    checkSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setDetailedError(null);
     setLoading(true);
     
     console.log('Attempting login with:', { email });
@@ -30,6 +44,8 @@ const Auth = () => {
 
       if (error) {
         console.error('Login error:', error);
+        setDetailedError(error);
+        
         if (error.message === 'Invalid login credentials') {
           setErrorMessage('Nieprawidłowy email lub hasło.');
         } else {
@@ -42,6 +58,7 @@ const Auth = () => {
     } catch (error) {
       console.error('Login error:', error);
       setErrorMessage('Wystąpił błąd podczas logowania. Spróbuj ponownie.');
+      setDetailedError(error);
     } finally {
       setLoading(false);
     }
@@ -50,6 +67,7 @@ const Auth = () => {
   const handleQuickLogin = async (preset: 'admin' | 'user') => {
     setLoading(true);
     setErrorMessage('');
+    setDetailedError(null);
     
     try {
       let loginInfo;
@@ -75,6 +93,7 @@ const Auth = () => {
       
       if (error) {
         console.error('Quick login error:', error);
+        setDetailedError(error);
         setErrorMessage(`Nie można zalogować z użytkownikiem ${preset}. Szczegóły błędu: ${error.message}`);
       } else {
         console.log('Quick login successful:', data);
@@ -83,6 +102,7 @@ const Auth = () => {
     } catch (error: any) {
       console.error('Quick login error:', error);
       setErrorMessage(`Wystąpił błąd podczas logowania: ${error.message}`);
+      setDetailedError(error);
     } finally {
       setLoading(false);
     }
@@ -96,6 +116,15 @@ const Auth = () => {
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
+      )}
+      
+      {detailedError && (
+        <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
+          <p className="text-muted-foreground">Szczegóły błędu (dla deweloperów):</p>
+          <pre className="overflow-auto whitespace-pre-wrap">
+            {JSON.stringify(detailedError, null, 2)}
+          </pre>
+        </div>
       )}
 
       <Tabs defaultValue="login" className="w-full">

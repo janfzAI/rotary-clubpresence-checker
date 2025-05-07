@@ -27,7 +27,24 @@ export const useMemberRoleManagement = () => {
   });
   
   const { toast } = useToast();
-  const { users, handleMemberRoleChange, fetchUsers } = useUserRoles();
+  const { users, handleMemberRoleChange, fetchUsers, getRoleByEmail } = useUserRoles();
+
+  // Load mappings from localStorage on initialization
+  useEffect(() => {
+    try {
+      const savedMappings = localStorage.getItem('memberEmailMappings');
+      if (savedMappings) {
+        const parsedMappings = JSON.parse(savedMappings);
+        setMemberEmailMappings(prev => ({
+          ...prev,
+          ...parsedMappings
+        }));
+        console.log("Loaded member-email mappings from localStorage:", parsedMappings);
+      }
+    } catch (error) {
+      console.error("Error loading member email mappings from localStorage:", error);
+    }
+  }, []);
 
   const refreshUserData = useCallback(async () => {
     console.log("Refreshing user data in useMemberRoleManagement");
@@ -66,23 +83,6 @@ export const useMemberRoleManagement = () => {
     }
   };
 
-  // Load mappings from localStorage on initialization
-  useEffect(() => {
-    try {
-      const savedMappings = localStorage.getItem('memberEmailMappings');
-      if (savedMappings) {
-        const parsedMappings = JSON.parse(savedMappings);
-        setMemberEmailMappings(prev => ({
-          ...prev,
-          ...parsedMappings
-        }));
-        console.log("Loaded member-email mappings from localStorage:", parsedMappings);
-      }
-    } catch (error) {
-      console.error("Error loading member email mappings from localStorage:", error);
-    }
-  }, []);
-
   const handleRoleChangeSubmit = async () => {
     if (!memberEmail || !selectedRole || !selectedMember) {
       toast({
@@ -101,6 +101,10 @@ export const useMemberRoleManagement = () => {
       // Save mapping when submitting a role change
       saveMemberEmailMapping(memberName, memberEmail);
       
+      // Check current role from the database before making changes
+      const currentRole = getRoleByEmail(memberEmail);
+      console.log(`Current role for ${memberEmail} before change: ${currentRole}`);
+      
       console.log(`Attempting role change for ${memberName} (${memberEmail}) to ${selectedRole}`);
       
       const result = await handleMemberRoleChange(
@@ -114,7 +118,7 @@ export const useMemberRoleManagement = () => {
         const existingUser = users.find(u => u.email.toLowerCase() === memberEmail.toLowerCase());
         const isNewUser = !existingUser;
         
-        // Modified toast message to use member name instead of email
+        // Use member name in the success message instead of email
         let message = `Pomyślnie ${isNewUser ? 'utworzono użytkownika' : 'zmieniono rolę użytkownika'} ${memberName} na ${selectedRole}`;
         if (memberPassword && result.passwordUpdated) {
           message += isNewUser ? ' z podanym hasłem' : ' i zaktualizowano hasło';
@@ -127,11 +131,17 @@ export const useMemberRoleManagement = () => {
           description: message
         });
         
-        // Force full refresh of user data after role change
+        // Force full refresh of user data after role change with increased delay
         setTimeout(async () => {
           console.log(`Forcing refresh after role change for ${memberName}`);
           await refreshUserData();
-        }, 500);
+          
+          // Do a second refresh after a longer delay to ensure database is fully updated
+          setTimeout(async () => {
+            console.log(`Secondary refresh for ${memberName} to ensure data is current`);
+            await refreshUserData();
+          }, 2000);
+        }, 1000);
       }
       
       handleCloseDialog();
