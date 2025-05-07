@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ProgressBar } from "@/components/ui/progress";
 
 export const PasswordReset = () => {
   const [password, setPassword] = useState('');
@@ -15,15 +16,71 @@ export const PasswordReset = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check for password strength
+  // Check for password strength with more detailed requirements
   const validatePasswordStrength = (password: string) => {
+    let score = 0;
+    let feedback = [];
+
+    // Length check
     if (password.length < 6) {
-      return 'Hasło musi mieć co najmniej 6 znaków';
+      feedback.push('Hasło musi mieć co najmniej 6 znaków');
+    } else {
+      score += 20;
     }
-    return '';
+
+    // Contains uppercase letters
+    if (/[A-Z]/.test(password)) {
+      score += 20;
+    } else {
+      feedback.push('Hasło powinno zawierać dużą literę');
+    }
+
+    // Contains lowercase letters
+    if (/[a-z]/.test(password)) {
+      score += 20;
+    } else {
+      feedback.push('Hasło powinno zawierać małą literę');
+    }
+
+    // Contains numbers
+    if (/[0-9]/.test(password)) {
+      score += 20;
+    } else {
+      feedback.push('Hasło powinno zawierać cyfrę');
+    }
+
+    // Contains special characters
+    if (/[^A-Za-z0-9]/.test(password)) {
+      score += 20;
+    } else {
+      feedback.push('Hasło powinno zawierać znak specjalny');
+    }
+
+    setPasswordStrength(score);
+
+    // Return the first error message or empty string if all checks pass
+    return feedback.length > 0 ? feedback[0] : '';
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    // Update password strength indicator but don't show error yet
+    validatePasswordStrength(newPassword);
+    // Clear error if field is empty
+    if (!newPassword) {
+      setPasswordError('');
+    }
+  };
+
+  const getPasswordStrengthColor = () => {
+    if (passwordStrength < 40) return 'bg-red-500';
+    if (passwordStrength < 70) return 'bg-yellow-500';
+    return 'bg-green-500';
   };
 
   const handlePasswordReset = async (e: React.FormEvent) => {
@@ -37,6 +94,12 @@ export const PasswordReset = () => {
     const strengthError = validatePasswordStrength(password);
     if (strengthError) {
       setPasswordError(strengthError);
+      return;
+    }
+
+    // Only proceed if password strength is sufficient
+    if (passwordStrength < 60) {
+      setPasswordError('Hasło jest zbyt słabe. Dodaj więcej różnorodnych znaków.');
       return;
     }
     
@@ -106,10 +169,23 @@ export const PasswordReset = () => {
                 id="password" 
                 type="password" 
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 placeholder="Wprowadź nowe hasło"
                 required
               />
+              {password && (
+                <div className="mt-1">
+                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${getPasswordStrengthColor()}`} 
+                      style={{ width: `${passwordStrength}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Siła hasła: {passwordStrength < 40 ? 'Słabe' : passwordStrength < 70 ? 'Średnie' : 'Silne'}
+                  </p>
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
