@@ -29,25 +29,57 @@ export const useRoleManagement = () => {
   const handleRoleChange = async (userId: string, newRole: AppRole, newPassword?: string): Promise<RoleChangeResult> => {
     try {
       console.log(`Attempting to change role for user ${userId} to ${newRole}`);
+      setIsSubmitting(true);
       
       let passwordResetSent = false;
       
       if (newPassword) {
-        console.log("Password update requested - will send reset email instead");
+        console.log("Password update requested - attempting to update password");
         
-        // Get user email
-        const { data: userData } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', userId)
-          .single();
+        try {
+          // Try admin password update first
+          const { error: updateError } = await supabase.auth.admin.updateUserById(
+            userId,
+            { password: newPassword }
+          );
           
-        if (userData?.email) {
-          passwordResetSent = await sendPasswordResetEmail(userData.email);
+          if (updateError) {
+            console.log("Admin password update failed, falling back to reset email:", updateError);
+            
+            // Get user email
+            const { data: userData } = await supabase
+              .from('profiles')
+              .select('email')
+              .eq('id', userId)
+              .single();
+              
+            if (userData?.email) {
+              passwordResetSent = await sendPasswordResetEmail(userData.email);
+            }
+          } else {
+            passwordResetSent = true;
+            console.log("Password updated successfully via admin API");
+          }
+        } catch (error) {
+          console.error("Password update error:", error);
+          // Get user email for reset email
+          const { data: userData } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', userId)
+            .single();
+            
+          if (userData?.email) {
+            passwordResetSent = await sendPasswordResetEmail(userData.email);
+          }
         }
       }
 
+      // Handle role change based on the new role
+      console.log(`Processing role change to ${newRole} for user ${userId}`);
+      
       if (newRole === 'user') {
+        console.log(`Removing any special roles for user ${userId}`);
         const { error: deleteError } = await supabase
           .from('user_roles')
           .delete()
@@ -59,6 +91,7 @@ export const useRoleManagement = () => {
         }
         console.log("User role removed successfully");
       } else {
+        console.log(`Setting role ${newRole} for user ${userId}`);
         const { error: upsertError } = await supabase
           .from('user_roles')
           .upsert({
@@ -88,6 +121,8 @@ export const useRoleManagement = () => {
     } catch (error) {
       console.error('Error in handleRoleChange:', error);
       throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

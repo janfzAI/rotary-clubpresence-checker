@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Mail, AlertTriangle } from "lucide-react";
+import { Loader2, Mail, AlertTriangle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -19,7 +19,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MemberRoleDialog } from "./members/MemberRoleDialog";
 import { useMemberRoleManagement } from "@/hooks/useMemberRoleManagement";
 import type { AppRole } from '@/types/userRoles';
@@ -38,6 +37,7 @@ export const ManagersList = () => {
   const [emailConflicts, setEmailConflicts] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   // Get the role management hook
   const {
@@ -54,7 +54,8 @@ export const ManagersList = () => {
     setMemberPassword,
     setSelectedRole,
     refreshUserData,
-    memberEmailMappings
+    memberEmailMappings,
+    lastRefreshTimestamp
   } = useMemberRoleManagement();
 
   const fetchManagers = async () => {
@@ -63,6 +64,9 @@ export const ManagersList = () => {
       setError(null);
       
       console.log("Fetching managers from database...");
+      
+      // First refresh the user data to get the latest roles
+      await refreshUserData();
       
       // Get all users with manager role from user_roles table
       const { data: managerRoles, error: rolesError } = await supabase
@@ -161,9 +165,10 @@ export const ManagersList = () => {
     }
   };
 
+  // Fetch managers on initial load and when refresh counter changes
   useEffect(() => {
     fetchManagers();
-  }, []);
+  }, [refreshCounter, lastRefreshTimestamp]);
   
   const handleCopyEmail = (email: string) => {
     navigator.clipboard.writeText(email);
@@ -208,8 +213,12 @@ export const ManagersList = () => {
     
     await handleRoleChangeSubmit();
     setDialogOpen(false);
-    // Refresh the managers list after role change
-    fetchManagers();
+    
+    // Force refresh after a short delay to ensure database changes are applied
+    setTimeout(() => {
+      console.log("Forcing manager list refresh after role change");
+      setRefreshCounter(prev => prev + 1);
+    }, 1000);
   };
 
   return (
@@ -219,10 +228,17 @@ export const ManagersList = () => {
         <Button 
           variant="outline" 
           size="sm"
-          onClick={fetchManagers}
+          onClick={() => {
+            setRefreshCounter(prev => prev + 1);
+          }}
           disabled={loading}
         >
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Odśwież"}
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Odśwież
+            </>
+          )}
         </Button>
       </div>
       

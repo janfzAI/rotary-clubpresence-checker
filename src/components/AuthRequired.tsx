@@ -60,6 +60,7 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
+    // Set up the auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session);
       
@@ -72,10 +73,16 @@ export const AuthRequired = ({ children }: { children: React.ReactNode }) => {
         setIsAuthenticated(true);
       } else if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordResetMode(true);
+      } else if (event === 'USER_UPDATED') {
+        console.log('User updated, refreshing session');
+        setIsAuthenticated(!!session);
       }
     });
 
+    // Then check for existing session
     checkAuth();
+    
+    // Cleanup function to unsubscribe
     return () => subscription.unsubscribe();
   }, [navigate, location, isAuthenticated]);
 

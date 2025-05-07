@@ -46,6 +46,8 @@ export const useUserRoles = () => {
         throw rolesError;
       }
 
+      console.log("Fetched user roles:", userRoles);
+      
       const usersWithRoles = profiles.map((profile) => {
         const userRole = userRoles ? userRoles.find(role => role.user_id === profile.id) : null;
         
@@ -56,6 +58,7 @@ export const useUserRoles = () => {
         };
       });
 
+      console.log("Combined users with roles:", usersWithRoles);
       setUsers(usersWithRoles);
     } catch (error) {
       console.error("Error in fetchUsers:", error);
@@ -93,7 +96,15 @@ export const useUserRoles = () => {
       
       if (existingUser) {
         console.log(`User exists with email ${email}, updating role to ${role}`);
-        return await handleRoleChange(existingUser.id, role, password);
+        const result = await handleRoleChange(existingUser.id, role, password);
+        
+        // Force a delay to ensure database updates are propagated
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Refresh the local user data
+        await fetchUsers();
+        
+        return result;
       } else {
         if (!password || password.length < 6) {
           throw new Error("Hasło jest wymagane (minimum 6 znaków) dla nowego użytkownika");
@@ -101,7 +112,15 @@ export const useUserRoles = () => {
         
         console.log(`No user found with email ${email}, creating new user`);
         try {
-          return await createUserAndSetRole(email, password, role, memberName);
+          const result = await createUserAndSetRole(email, password, role, memberName);
+          
+          // Force a delay to ensure database updates are propagated
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Refresh the local user data
+          await fetchUsers();
+          
+          return result;
         } catch (error: any) {
           // Check if error is about user already existing
           if (error.message && (error.message.includes('User already registered') || 

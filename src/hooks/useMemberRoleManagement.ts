@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -100,6 +101,8 @@ export const useMemberRoleManagement = () => {
       // Save mapping when submitting a role change
       saveMemberEmailMapping(memberName, memberEmail);
       
+      console.log(`Attempting role change for ${memberName} (${memberEmail}) to ${selectedRole}`);
+      
       const result = await handleMemberRoleChange(
         memberName,
         memberEmail,
@@ -124,8 +127,11 @@ export const useMemberRoleManagement = () => {
           description: message
         });
         
-        // Refresh user data after role change
-        await refreshUserData();
+        // Force full refresh of user data after role change
+        setTimeout(async () => {
+          console.log(`Forcing refresh after role change for ${memberName}`);
+          await refreshUserData();
+        }, 500);
       }
       
       handleCloseDialog();
