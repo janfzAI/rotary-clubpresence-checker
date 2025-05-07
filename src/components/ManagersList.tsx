@@ -19,6 +19,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MemberRoleDialog } from "./members/MemberRoleDialog";
+import { useMemberRoleManagement } from "@/hooks/useMemberRoleManagement";
+import type { AppRole } from '@/types/userRoles';
 
 interface Manager {
   id: string;
@@ -32,6 +36,25 @@ export const ManagersList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [emailConflicts, setEmailConflicts] = useState<string[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
+
+  // Get the role management hook
+  const {
+    selectedMember,
+    selectedRole,
+    memberEmail,
+    memberPassword,
+    isSubmitting,
+    users,
+    handleRoleChangeSubmit,
+    handleOpenRoleDialog,
+    handleCloseDialog,
+    setMemberEmail,
+    setMemberPassword,
+    setSelectedRole,
+    refreshUserData
+  } = useMemberRoleManagement();
 
   const fetchManagers = async () => {
     try {
@@ -131,6 +154,34 @@ export const ManagersList = () => {
     console.log(`Copied to clipboard: ${email}`);
   };
 
+  const handleOpenManagerRoleDialog = (manager: Manager) => {
+    setSelectedManager(manager);
+    
+    // Convert to the format expected by handleOpenRoleDialog
+    const memberData = {
+      id: parseInt(manager.id),
+      name: manager.fullName || manager.name || manager.email.split('@')[0],
+      active: true
+    };
+    
+    // Open the role dialog with the selected manager
+    handleOpenRoleDialog(memberData);
+    setDialogOpen(true);
+  };
+
+  const handleCloseManagerDialog = () => {
+    handleCloseDialog();
+    setDialogOpen(false);
+    setSelectedManager(null);
+  };
+
+  const handleRoleSubmit = async () => {
+    await handleRoleChangeSubmit();
+    setDialogOpen(false);
+    // Refresh the managers list after role change
+    fetchManagers();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
@@ -146,7 +197,7 @@ export const ManagersList = () => {
       </div>
       
       {emailConflicts.length > 0 && (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="destructive" className="mb-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             <p className="font-medium">Wykryto potencjalne konflikty imion:</p>
@@ -194,7 +245,7 @@ export const ManagersList = () => {
                 <TableCell>
                   <Badge variant="info">Manager</Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="space-x-2">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -211,6 +262,14 @@ export const ManagersList = () => {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleOpenManagerRoleDialog(manager)}
+                  >
+                    Uprawnienia
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -221,6 +280,22 @@ export const ManagersList = () => {
       <div className="text-sm text-muted-foreground">
         Liczba managerów: {managers.length}
       </div>
+
+      {/* MemberRoleDialog integration */}
+      <MemberRoleDialog
+        isOpen={dialogOpen}
+        selectedMember={selectedMember}
+        memberEmail={memberEmail}
+        selectedRole={selectedRole}
+        memberPassword={memberPassword}
+        isSubmitting={isSubmitting}
+        users={users}
+        onClose={handleCloseManagerDialog}
+        onSubmit={handleRoleSubmit}
+        onEmailChange={setMemberEmail}
+        onPasswordChange={setMemberPassword}
+        onRoleChange={setSelectedRole}
+      />
     </div>
   );
 };
