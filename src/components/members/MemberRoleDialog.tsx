@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface MemberRoleDialogProps {
   isOpen: boolean;
@@ -33,6 +34,31 @@ interface MemberRoleDialogProps {
   onPasswordChange: (password: string) => void;
   onRoleChange: (role: AppRole) => void;
 }
+
+// Helper functions to get badge variants based on role
+const getRoleBadgeVariant = (role: AppRole) => {
+  switch (role) {
+    case 'admin':
+      return 'destructive';
+    case 'manager':
+      return 'warning';
+    case 'user':
+    default:
+      return 'info';
+  }
+};
+
+const getRoleLabel = (role: AppRole) => {
+  switch (role) {
+    case 'admin':
+      return 'Administrator';
+    case 'manager':
+      return 'Manager';
+    case 'user':
+    default:
+      return 'Użytkownik';
+  }
+};
 
 export const MemberRoleDialog = ({
   isOpen,
@@ -73,6 +99,9 @@ export const MemberRoleDialog = ({
     }
   };
 
+  // Get current role if user exists
+  const currentRole = existingUser?.role || 'user';
+
   return (
     <AlertDialog 
       open={isOpen} 
@@ -83,7 +112,14 @@ export const MemberRoleDialog = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center justify-between">
-            <span>Zarządzaj uprawnieniami - {selectedMember?.name}</span>
+            <div className="flex items-center gap-2">
+              <span>Zarządzaj uprawnieniami - {selectedMember?.name}</span>
+              {existingUser && (
+                <Badge variant={getRoleBadgeVariant(currentRole)} className="ml-2">
+                  {getRoleLabel(currentRole)}
+                </Badge>
+              )}
+            </div>
             {selectedMember && (
               <span className="text-xs text-gray-500">ID: {selectedMember.id}</span>
             )}
