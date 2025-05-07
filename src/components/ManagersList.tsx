@@ -53,7 +53,8 @@ export const ManagersList = () => {
     setMemberEmail,
     setMemberPassword,
     setSelectedRole,
-    refreshUserData
+    refreshUserData,
+    memberEmailMappings
   } = useMemberRoleManagement();
 
   const fetchManagers = async () => {
@@ -101,22 +102,31 @@ export const ManagersList = () => {
       if (profiles) {
         const managersList = profiles.map(profile => {
           const email = profile.email;
-          const nameParts = email.split('@')[0].split('.');
           
-          // Better name extraction from email
+          // Find member name from known mappings
           let fullName = '';
+          Object.entries(memberEmailMappings).forEach(([name, mappedEmail]) => {
+            if (mappedEmail.toLowerCase() === email.toLowerCase()) {
+              fullName = name;
+            }
+          });
           
-          if (nameParts.length >= 2) {
-            // If email follows format like firstname.lastname@domain.com
-            fullName = nameParts
-              .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-              .join(' ');
-          } else {
-            // If email doesn't have a separator, use what we have
-            fullName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+          // If no mapping found, extract name from email
+          if (!fullName) {
+            const nameParts = email.split('@')[0].split('.');
+            
+            if (nameParts.length >= 2) {
+              // If email follows format like firstname.lastname@domain.com
+              fullName = nameParts
+                .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(' ');
+            } else {
+              // If email doesn't have a separator, use what we have
+              fullName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+            }
           }
           
-          // Handle special case for Meissinger vs Dokowski
+          // Override name for known special cases
           if (email.toLowerCase().includes('dokowski')) {
             fullName = 'Krzysztof Dokowski';
           } else if (email.toLowerCase().includes('meissinger') || email.toLowerCase().includes('meisinger')) {
@@ -126,10 +136,10 @@ export const ManagersList = () => {
           return {
             id: profile.id,
             email: email,
-            // First name only (potentially problematic)
+            // First name only
             name: email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + 
                   email.split('@')[0].split('.')[0].slice(1),
-            // Full name from email
+            // Full name
             fullName: fullName
           };
         });
@@ -157,7 +167,6 @@ export const ManagersList = () => {
   
   const handleCopyEmail = (email: string) => {
     navigator.clipboard.writeText(email);
-    // You could add a toast notification here
     console.log(`Copied to clipboard: ${email}`);
   };
 
@@ -165,10 +174,13 @@ export const ManagersList = () => {
     setSelectedManager(manager);
     console.log("Opening dialog for manager:", manager);
     
+    // Ensure we use the correct full name
+    const memberName = manager.fullName || manager.name || manager.email.split('@')[0];
+    
     // Convert to the format expected by handleOpenRoleDialog
     const memberData = {
       id: parseInt(manager.id),
-      name: manager.fullName || manager.name || manager.email.split('@')[0],
+      name: memberName,
       active: true
     };
     
@@ -187,6 +199,13 @@ export const ManagersList = () => {
   };
 
   const handleRoleSubmit = async () => {
+    if (selectedMember && selectedManager) {
+      // Update the email mapping to ensure it's correct for next time
+      if (memberEmail && selectedMember.name) {
+        console.log(`Updating mapping for ${selectedMember.name} to ${memberEmail} during submission`);
+      }
+    }
+    
     await handleRoleChangeSubmit();
     setDialogOpen(false);
     // Refresh the managers list after role change

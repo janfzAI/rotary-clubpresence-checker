@@ -19,6 +19,13 @@ export const useMemberRoleManagement = () => {
   const [emailChangeTimestamp, setEmailChangeTimestamp] = useState(0);
   const [lastRefreshTimestamp, setLastRefreshTimestamp] = useState(0);
   
+  // New state to store explicit member to email mappings
+  const [memberEmailMappings, setMemberEmailMappings] = useState<Record<string, string>>({
+    // Default mappings for known problematic users
+    "Krzysztof Meissinger": "krzysztof.meissinger@example.com",
+    "Krzysztof Dokowski": "krzysztof.dokowski@example.com"
+  });
+  
   const { toast } = useToast();
   const { users, handleMemberRoleChange, fetchUsers } = useUserRoles();
 
@@ -41,6 +48,41 @@ export const useMemberRoleManagement = () => {
     }
   }, [emailChangeTimestamp, refreshUserData]);
 
+  // Add function to save member-email mappings
+  const saveMemberEmailMapping = (memberName: string, email: string) => {
+    console.log(`Saving mapping for ${memberName}: ${email}`);
+    setMemberEmailMappings(prev => ({
+      ...prev,
+      [memberName]: email
+    }));
+    
+    // Store in localStorage for persistence
+    try {
+      const existingMappings = JSON.parse(localStorage.getItem('memberEmailMappings') || '{}');
+      const updatedMappings = { ...existingMappings, [memberName]: email };
+      localStorage.setItem('memberEmailMappings', JSON.stringify(updatedMappings));
+    } catch (error) {
+      console.error("Error saving member email mapping to localStorage:", error);
+    }
+  };
+
+  // Load mappings from localStorage on initialization
+  useEffect(() => {
+    try {
+      const savedMappings = localStorage.getItem('memberEmailMappings');
+      if (savedMappings) {
+        const parsedMappings = JSON.parse(savedMappings);
+        setMemberEmailMappings(prev => ({
+          ...prev,
+          ...parsedMappings
+        }));
+        console.log("Loaded member-email mappings from localStorage:", parsedMappings);
+      }
+    } catch (error) {
+      console.error("Error loading member email mappings from localStorage:", error);
+    }
+  }, []);
+
   const handleRoleChangeSubmit = async () => {
     if (!memberEmail || !selectedRole || !selectedMember) {
       toast({
@@ -54,8 +96,13 @@ export const useMemberRoleManagement = () => {
     setIsSubmitting(true);
 
     try {
+      const memberName = selectedMember.name;
+      
+      // Save mapping when submitting a role change
+      saveMemberEmailMapping(memberName, memberEmail);
+      
       const result = await handleMemberRoleChange(
-        selectedMember.name,
+        memberName,
         memberEmail,
         selectedRole,
         memberPassword || undefined
@@ -85,7 +132,6 @@ export const useMemberRoleManagement = () => {
     } catch (error: any) {
       console.error("Error managing user:", error);
       
-      // Bardziej szczegółowa obsługa błędów
       if (error.message && error.message.includes('not_admin')) {
         toast({
           title: "Brak uprawnień",
@@ -113,19 +159,45 @@ export const useMemberRoleManagement = () => {
     // Refresh users list before finding a match
     await refreshUserData();
     
-    // Important: Set memberEmail to empty initially
+    // Reset fields
     setMemberEmail('');
     setSelectedRole('user');
     
-    // Find the matching user with improved precision
-    const matchingUser = findBestMatchingUser(member);
+    // Check if we have a saved mapping for this member
+    const memberName = member.name;
+    const savedEmail = memberEmailMappings[memberName];
     
-    if (matchingUser) {
-      console.log(`Found matching user for ${member.name}:`, matchingUser.email);
-      setMemberEmail(matchingUser.email);
-      setSelectedRole(matchingUser.role);
+    if (savedEmail) {
+      console.log(`Found saved email mapping for ${memberName}:`, savedEmail);
+      setMemberEmail(savedEmail);
+      
+      // Find matching user to get their role
+      const matchingUser = users.find(u => 
+        u.email.toLowerCase() === savedEmail.toLowerCase()
+      );
+      
+      if (matchingUser) {
+        console.log(`User found with matching email. Setting role to ${matchingUser.role}`);
+        setSelectedRole(matchingUser.role);
+      } else {
+        console.log("No user found with this email yet. Setting default role 'user'");
+        setSelectedRole('user');
+      }
     } else {
-      console.log("No matching user found for member:", member.name);
+      // If no mapping exists, fallback to the old method to find a potential match
+      console.log("No saved mapping found. Looking for potential matches...");
+      const matchingUser = findBestMatchingUser(member);
+      
+      if (matchingUser) {
+        console.log(`Found potential matching user for ${member.name}:`, matchingUser.email);
+        setMemberEmail(matchingUser.email);
+        setSelectedRole(matchingUser.role);
+        
+        // Save this mapping for future use
+        saveMemberEmailMapping(memberName, matchingUser.email);
+      } else {
+        console.log("No matching user found for member:", member.name);
+      }
     }
     
     // Clear password field
@@ -154,25 +226,22 @@ export const useMemberRoleManagement = () => {
       return exactIdMatch;
     }
     
-    // Special case handling for specific known conflicts
-    if (member.name.includes("Meissinger")) {
+    // Special handling for specific cases
+    if (member.name === "Krzysztof Meissinger") {
       console.log("Special handling for Meissinger");
-      // For Meissinger, find any user with "meissinger" in email, NOT "dokowski"
-      const meissingerUser = users.find(user => {
-        const email = user.email.toLowerCase();
-        return email.includes("meissinger") || 
-              (email.includes("meisinger") && !email.includes("dokowski"));
-      });
+      const meissingerUser = users.find(user => 
+        user.email.toLowerCase().includes("meissinger") || 
+        (user.email.toLowerCase().includes("meisinger") && !user.email.toLowerCase().includes("dokowski"))
+      );
       
       if (meissingerUser) {
         console.log("Found specific match for Meissinger:", meissingerUser.email);
         return meissingerUser;
       }
-    } 
+    }
     
-    if (member.name.includes("Dokowski")) {
+    if (member.name === "Krzysztof Dokowski") {
       console.log("Special handling for Dokowski");
-      // For Dokowski, find user with "dokowski" in email
       const dokowskiUser = users.find(user => 
         user.email.toLowerCase().includes("dokowski")
       );
@@ -183,15 +252,13 @@ export const useMemberRoleManagement = () => {
       }
     }
     
-    // 2. Try to match by full name with high precision
+    // 2. Try name-based matching as before
     const fullName = member.name.toLowerCase();
     const nameParts = fullName.split(/\s+/);
     
     if (nameParts.length >= 2) {
       const firstName = nameParts[0];
       const lastName = nameParts[nameParts.length - 1];
-      
-      console.log(`Looking for match with firstName: ${firstName}, lastName: ${lastName}`);
       
       // Try to find a user with both first name and last name in email
       const fullNameMatch = users.find(user => {
@@ -200,38 +267,21 @@ export const useMemberRoleManagement = () => {
       });
       
       if (fullNameMatch) {
-        console.log(`Found match with both first and last name for ${fullName}:`, fullNameMatch.email);
         return fullNameMatch;
       }
       
-      // Try to find user with last name (more unique than first name)
-      if (lastName.length >= 3) { // Only if last name is reasonably long
+      // Try to find user with last name
+      if (lastName.length >= 3) {
         const lastNameMatch = users.find(user => 
           user.email.toLowerCase().includes(lastName)
         );
         
         if (lastNameMatch) {
-          console.log(`Found match with last name for ${fullName}:`, lastNameMatch.email);
           return lastNameMatch;
         }
       }
     }
     
-    // 3. Fallback to first name match if reasonably unique
-    if (nameParts.length > 0 && nameParts[0].length >= 3) {
-      const firstName = nameParts[0];
-      
-      const firstNameMatches = users.filter(user => 
-        user.email.toLowerCase().includes(firstName)
-      );
-      
-      if (firstNameMatches.length === 1) {
-        console.log(`Found unique first name match for ${fullName}:`, firstNameMatches[0].email);
-        return firstNameMatches[0];
-      }
-    }
-    
-    console.log(`No reliable match found for ${member.name}`);
     return null;
   };
 
@@ -256,6 +306,9 @@ export const useMemberRoleManagement = () => {
     fetchUsers,
     refreshUserData,
     notifyEmailChanged,
-    lastRefreshTimestamp
+    lastRefreshTimestamp,
+    // New functions for working with email mappings
+    saveMemberEmailMapping,
+    memberEmailMappings
   };
 };
