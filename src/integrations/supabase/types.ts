@@ -63,6 +63,30 @@ export type Database = {
         }
         Relationships: []
       }
+      members: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: number
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: number
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: number
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

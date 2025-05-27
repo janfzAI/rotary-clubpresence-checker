@@ -1,38 +1,32 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Plus, Users, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useMemberRoleManagement } from "@/hooks/useMemberRoleManagement";
+import { useMembers } from "@/hooks/useMembers";
 import { MemberListItem } from './members/MemberListItem';
 import { MemberRoleDialog } from './members/MemberRoleDialog';
 import { MemberEmailEdit } from './members/dialog/MemberEmailEdit';
 import { supabase } from "@/integrations/supabase/client";
 
-interface Member {
-  id: number;
-  name: string;
-  active?: boolean;
-}
-
-interface MembersManagementProps {
-  members: Member[];
-  onAddMember: (name: string) => void;
-  onRemoveMember: (id: number) => void;
-  onToggleActive: (id: number) => void;
-}
-
-export const MembersManagement = ({ 
-  members,
-  onAddMember,
-  onRemoveMember,
-  onToggleActive
-}: MembersManagementProps) => {
+export const MembersManagement = () => {
   const [newMemberName, setNewMemberName] = useState('');
   const [emailEditMember, setEmailEditMember] = useState<{ id: number; name: string } | null>(null);
   const [currentEmailForEdit, setCurrentEmailForEdit] = useState<string>('');
   const [forceUpdate, setForceUpdate] = useState<number>(0);
   const { toast } = useToast();
+  
+  const {
+    members,
+    loading: membersLoading,
+    addMember,
+    removeMember,
+    toggleActive,
+    generateEmail,
+    createAccountsForAllMembers
+  } = useMembers();
   
   const {
     selectedMember,
@@ -70,7 +64,7 @@ export const MembersManagement = ({
   }, [lastRefreshTimestamp]);
 
   // Find user role by first checking stored mappings, then by name matching
-  const findUserRole = (member: Member) => {
+  const findUserRole = (member: { id: number; name: string }) => {
     if (!member || !member.id) return undefined;
     
     const memberIdStr = String(member.id);
@@ -92,7 +86,18 @@ export const MembersManagement = ({
       }
     }
     
-    // If no mapping found, try to find by name
+    // If no mapping found, try to find by generated email
+    const generatedEmail = generateEmail(memberName);
+    const generatedUser = users.find(user => 
+      user.email && user.email.toLowerCase().trim() === generatedEmail.toLowerCase().trim()
+    );
+    
+    if (generatedUser) {
+      console.log(`Found user by generated email ${generatedEmail} with role: ${generatedUser.role}`);
+      return generatedUser.role;
+    }
+    
+    // Try to find by name
     const normalizedMemberName = memberName.toLowerCase().trim();
     
     // Try exact name match in email (first.last@domain.com)
@@ -115,21 +120,6 @@ export const MembersManagement = ({
       }
     }
     
-    // Try partial name match
-    const partialMatch = users.find(user => {
-      if (!user.email) return false;
-      const normalizedEmail = user.email.toLowerCase();
-      
-      return nameParts.some(part => 
-        part.length > 2 && normalizedEmail.includes(part)
-      );
-    });
-    
-    if (partialMatch) {
-      console.log(`Found partial match for ${memberName}: ${partialMatch.email} with role ${partialMatch.role}`);
-      return partialMatch.role;
-    }
-    
     console.log(`No role match found for ${memberName}`);
     return undefined;
   };
@@ -139,19 +129,21 @@ export const MembersManagement = ({
     
     if (!memberName || !users || users.length === 0) {
       console.log("No member name provided or no users available");
-      return '';
+      return generateEmail(memberName);
     }
     
-    if (memberName.toLowerCase().includes("jan jurga")) {
-      const janUser = users.find(u => 
-        u.email && (u.email.toLowerCase().includes("jan") || u.email.toLowerCase().includes("jurga"))
-      );
-      if (janUser && janUser.email) {
-        console.log(`Found special match for Jan Jurga: ${janUser.email}`);
-        return janUser.email;
-      }
+    // First try generated email
+    const generatedEmail = generateEmail(memberName);
+    const generatedUser = users.find(user => 
+      user.email && user.email.toLowerCase().trim() === generatedEmail.toLowerCase().trim()
+    );
+    
+    if (generatedUser) {
+      console.log(`Found user with generated email: ${generatedEmail}`);
+      return generatedEmail;
     }
     
+    // Fall back to other matching logic
     const normalizedMemberName = memberName.toLowerCase().trim();
     
     const exactUserMatch = users.find(user => {
@@ -168,74 +160,25 @@ export const MembersManagement = ({
       return exactUserMatch.email;
     }
     
-    const nameParts = memberName.split(' ');
-    if (nameParts.length >= 2) {
-      const firstName = nameParts[0].toLowerCase();
-      const lastName = nameParts[nameParts.length - 1].toLowerCase();
-      
-      const matchedUser = users.find(user => {
-        if (!user.email) return false;
-        const normalizedEmail = user.email.toLowerCase();
-        
-        return normalizedEmail.startsWith(`${firstName}.${lastName}`) ||
-               normalizedEmail.startsWith(`${lastName}.${firstName}`) ||
-               normalizedEmail.startsWith(`${firstName}${lastName}`) ||
-               normalizedEmail.startsWith(`${lastName}${firstName}`) ||
-               normalizedEmail.startsWith(`${firstName[0]}${lastName}`) ||
-               normalizedEmail.startsWith(`${lastName[0]}${firstName}`);
-      });
-      
-      if (matchedUser && matchedUser.email) {
-        console.log(`Found name-based email match for ${memberName}: ${matchedUser.email}`);
-        return matchedUser.email;
-      }
-    }
-    
-    for (const user of users) {
-      if (!user.email) continue;
-      
-      const userEmail = user.email.toLowerCase();
-      const nameParts = memberName.toLowerCase().split(' ');
-      
-      for (const part of nameParts) {
-        if (part.length > 2 && userEmail.includes(part)) {
-          console.log(`Found part match for ${memberName}: ${user.email} (matched part: ${part})`);
-          return user.email;
-        }
-      }
-    }
-    
-    console.log(`No email found for member ${memberName}`);
-    return '';
+    // Return generated email as fallback
+    return generatedEmail;
   };
 
   const handleAddMember = () => {
     if (newMemberName.trim()) {
-      onAddMember(newMemberName.trim());
+      addMember(newMemberName.trim());
       setNewMemberName('');
-      toast({
-        title: "Dodano nowego członka",
-        description: `${newMemberName} został dodany do listy.`
-      });
     }
   };
 
   const handleRemoveMember = (id: number, name: string) => {
     if (window.confirm(`Czy na pewno chcesz całkowicie usunąć ${name} z systemu? Ta operacja jest nieodwracalna.`)) {
-      onRemoveMember(id);
-      toast({
-        title: "Usunięto członka",
-        description: `${name} został całkowicie usunięty z systemu.`
-      });
+      removeMember(id);
     }
   };
 
   const handleToggleActive = (id: number, name: string, isCurrentlyActive: boolean) => {
-    onToggleActive(id);
-    toast({
-      title: isCurrentlyActive ? "Dezaktywowano członka" : "Aktywowano członka",
-      description: `${name} został ${isCurrentlyActive ? 'dezaktywowany' : 'aktywowany'}.`
-    });
+    toggleActive(id);
   };
 
   const handleOpenEmailEdit = (member: { id: number; name: string }) => {
@@ -344,21 +287,46 @@ export const MembersManagement = ({
     handleCloseDialog();
   };
 
+  const handleCreateAllAccounts = () => {
+    if (window.confirm(`Czy na pewno chcesz utworzyć konta email dla wszystkich ${members.length} członków klubu? Każde konto będzie miał adres w domenie @rotary.szczecin.pl i hasło "naszklubrotary".`)) {
+      createAccountsForAllMembers();
+    }
+  };
+
+  if (membersLoading) {
+    return (
+      <div className="flex justify-center items-center p-10">
+        <div className="text-center">
+          <Users className="h-8 w-8 animate-pulse mx-auto mb-2" />
+          <span>Ładowanie członków...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex gap-2 flex-1">
           <Input
-            placeholder="First and last name"
+            placeholder="Imię i nazwisko"
             value={newMemberName}
             onChange={(e) => setNewMemberName(e.target.value)}
             className="flex-1"
           />
           <Button onClick={handleAddMember}>
             <Plus className="w-4 h-4 mr-2" />
-            Add
+            Dodaj
           </Button>
         </div>
+        <Button 
+          onClick={handleCreateAllAccounts}
+          variant="outline"
+          className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Utwórz konta dla wszystkich ({members.length})
+        </Button>
       </div>
 
       <div className="space-y-3">
