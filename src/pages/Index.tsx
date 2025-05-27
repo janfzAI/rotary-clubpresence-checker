@@ -115,7 +115,12 @@ const Index = () => {
 
       {activeTab === 'members' && (
         canManageMembers ? (
-          <MembersManagement />
+          <MembersManagement
+            members={members}
+            onAddMember={handleAddMember}
+            onRemoveMember={handleRemoveMember}
+            onToggleActive={handleToggleActive}
+          />
         ) : (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Lista członków</h2>
