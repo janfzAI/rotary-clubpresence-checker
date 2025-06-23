@@ -19,10 +19,14 @@ export const generateWednesdayDates = (startDate: Date, endDate: Date) => {
   
   // Lista dat do wykluczenia
   const excludeDates = [
+    '2024-10-23', // 23 października 2024
+    '2024-10-30', // 30 października 2024
     '2024-12-25', // Boże Narodzenie
     '2025-01-01', // Nowy Rok
     '2025-02-26', // Dodano datę 26 lutego do wykluczenia
-    '2025-03-19'  // Wykluczono spotkanie ze środy 19 marca
+    '2025-03-19', // Wykluczono spotkanie ze środy 19 marca
+    '2025-04-23', // 23 kwietnia 2025
+    '2025-05-21'  // 21 maja 2025
   ];
   
   // Lista specjalnych dat (niestandardowych spotkań)
