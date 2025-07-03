@@ -97,17 +97,17 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
                   "p-4 transition-all duration-200 hover:shadow-md",
                   member.present && "bg-primary/10",
                   readOnly ? "" : "cursor-pointer",
-                  isInactive && "opacity-60 bg-gray-50"
+                  isInactive && "opacity-50 bg-gray-50 border-gray-200"
                 )}
                 onClick={readOnly ? undefined : () => onToggleAttendance(member.id)}
               >
                 <div className="flex items-center justify-between">
                   <span className={cn(
                     "text-lg",
-                    isInactive && "text-gray-500"
+                    isInactive && "text-gray-500 line-through"
                   )}>
                     {index + 1}. {member.name}
-                    {isInactive && <span className="ml-2 text-sm text-red-500">(nieaktywny)</span>}
+                    {isInactive && <span className="ml-2 text-sm text-red-600 font-medium no-underline">(nieaktywny)</span>}
                   </span>
                   <div
                     className={cn(

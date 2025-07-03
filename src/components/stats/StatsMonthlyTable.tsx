@@ -83,13 +83,13 @@ export const StatsMonthlyTable = ({
                 {memberStats.map((member) => {
                   const isInactive = member.active === false;
                   return (
-                    <TableRow key={member.id} className={cn(isInactive && "opacity-60")}>
+                    <TableRow key={member.id} className={cn(isInactive && "opacity-50 bg-gray-50")}>
                       <TableCell className={cn(
                         "font-medium",
-                        isInactive && "text-gray-500"
+                        isInactive && "text-gray-500 line-through"
                       )}>
                         {member.name}
-                        {isInactive && <span className="ml-2 text-sm text-red-500">(nieaktywny)</span>}
+                        {isInactive && <span className="ml-2 text-sm text-red-600 font-medium no-underline">(nieaktywny)</span>}
                       </TableCell>
                       {groupedRecords[month].map((record, index) => (
                         <TableCell key={index} className={cn(
