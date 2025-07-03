@@ -10,6 +10,7 @@ import { AttendanceStats } from '@/components/AttendanceStats';
 import { AttendanceExport } from '@/components/AttendanceExport';
 import { AttendanceFileHandler } from '@/components/AttendanceFileHandler';
 import { DatabaseStructure } from '@/components/DatabaseStructure';
+import { ReadOnlyMembersList } from '@/components/members/ReadOnlyMembersList';
 import { useAttendanceState } from '@/hooks/useAttendanceState';
 import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
 import { RoleNotice } from '@/components/RoleNotice';
@@ -23,6 +24,7 @@ const Index = () => {
     activeTab,
     setActiveTab,
     members,
+    membersLoading,
     attendanceMembers,
     attendanceGuests,
     selectedDate,
@@ -44,6 +46,16 @@ const Index = () => {
   const canEditAttendance = isAdmin || isManager;
   const canManageGuests = isAdmin || isManager;
   const canManageMembers = isAdmin; // Only admins can manage members
+
+  if (membersLoading) {
+    return (
+      <div className="container mx-auto p-4 w-[80%] lg:max-w-6xl xl:max-w-7xl">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">Ładowanie danych...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4 w-[80%] lg:max-w-6xl xl:max-w-7xl">
@@ -122,22 +134,7 @@ const Index = () => {
             onToggleActive={handleToggleActive}
           />
         ) : (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Lista członków</h2>
-            <div className="space-y-3">
-              {members.map((member, index) => {
-                const isInactive = member.active === false;
-                return (
-                  <div key={member.id} className={`p-4 border rounded-md ${isInactive ? 'opacity-50 bg-gray-50 border-gray-200' : ''}`}>
-                    <span className={isInactive ? 'text-gray-500 line-through' : ''}>
-                      {index + 1}. {member.name}
-                    </span>
-                    {isInactive && <span className="ml-2 text-sm text-red-600 font-medium no-underline">(nieaktywny)</span>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <ReadOnlyMembersList members={members} />
         )
       )}
 
