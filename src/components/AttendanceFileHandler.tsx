@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { normalizeDate } from '@/utils/dateUtils';
-import { Member } from '@/hooks/useAttendanceState';
+import { Member } from '@/hooks/useMembersData';
 
 interface AttendanceFileHandlerProps {
   selectedDate: Date;
