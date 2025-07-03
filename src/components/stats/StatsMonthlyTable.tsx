@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface Member {
   id: number;
@@ -18,6 +19,7 @@ interface Member {
   presencePercentage: number;
   totalDays: number;
   totalParticipation: number;
+  active?: boolean;
 }
 
 interface AttendanceRecord {
@@ -78,20 +80,52 @@ export const StatsMonthlyTable = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {memberStats.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell className="font-medium">{member.name}</TableCell>
-                    {groupedRecords[month].map((record, index) => (
-                      <TableCell key={index} className="text-center">
-                        {record.presentMembers?.includes(member.id) ? '✓' : '—'}
+                {memberStats.map((member) => {
+                  const isInactive = member.active === false;
+                  return (
+                    <TableRow key={member.id} className={cn(isInactive && "opacity-60")}>
+                      <TableCell className={cn(
+                        "font-medium",
+                        isInactive && "text-gray-500"
+                      )}>
+                        {member.name}
+                        {isInactive && <span className="ml-2 text-sm text-red-500">(nieaktywny)</span>}
                       </TableCell>
-                    ))}
-                    <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
-                    <TableCell className="text-right font-medium">{member.presencePercentage.toFixed(1)}%</TableCell>
-                    <TableCell className="text-right font-medium">{member.presenceCount}</TableCell>
-                    <TableCell className="text-right font-medium">{member.totalParticipation.toFixed(1)}%</TableCell>
-                  </TableRow>
-                ))}
+                      {groupedRecords[month].map((record, index) => (
+                        <TableCell key={index} className={cn(
+                          "text-center",
+                          isInactive && "text-gray-400"
+                        )}>
+                          {record.presentMembers?.includes(member.id) ? '✓' : '—'}
+                        </TableCell>
+                      ))}
+                      <TableCell className={cn(
+                        "text-right font-medium",
+                        isInactive && "text-gray-500"
+                      )}>
+                        {member.presenceCount}
+                      </TableCell>
+                      <TableCell className={cn(
+                        "text-right font-medium",
+                        isInactive && "text-gray-500"
+                      )}>
+                        {member.presencePercentage.toFixed(1)}%
+                      </TableCell>
+                      <TableCell className={cn(
+                        "text-right font-medium",
+                        isInactive && "text-gray-500"
+                      )}>
+                        {member.presenceCount}
+                      </TableCell>
+                      <TableCell className={cn(
+                        "text-right font-medium",
+                        isInactive && "text-gray-500"
+                      )}>
+                        {member.totalParticipation.toFixed(1)}%
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TabsContent>

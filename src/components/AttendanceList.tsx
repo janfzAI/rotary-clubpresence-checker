@@ -46,9 +46,10 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
     });
   };
 
-  const activeMembers = members.filter(member => member.active !== false);
+  // Pokaż wszystkich członków (aktywnych i nieaktywnych)
+  const allMembers = members;
 
-  const sortedMembers = [...activeMembers].sort((a, b) => {
+  const sortedMembers = [...allMembers].sort((a, b) => {
     if (sortedAlphabetically) {
       return a.name.localeCompare(b.name);
     }
@@ -87,35 +88,45 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
       <div className="space-y-4">
         <div className="space-y-3">
           <h3 className="text-lg font-semibold">Członkowie</h3>
-          {sortedMembers.map((member, index) => (
-            <Card
-              key={member.id}
-              className={cn(
-                "p-4 transition-all duration-200 hover:shadow-md",
-                member.present && "bg-primary/10",
-                readOnly ? "" : "cursor-pointer"
-              )}
-              onClick={readOnly ? undefined : () => onToggleAttendance(member.id)}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-lg">
-                  {index + 1}. {member.name}
-                </span>
-                <div
-                  className={cn(
-                    "w-6 h-6 rounded-full border-2 flex items-center justify-center",
-                    member.present
-                      ? "border-primary bg-primary text-white"
-                      : "border-gray-300"
-                  )}
-                >
-                  {member.present && (
-                    <Check className="w-4 h-4 animate-check-mark" />
-                  )}
+          {sortedMembers.map((member, index) => {
+            const isInactive = member.active === false;
+            return (
+              <Card
+                key={member.id}
+                className={cn(
+                  "p-4 transition-all duration-200 hover:shadow-md",
+                  member.present && "bg-primary/10",
+                  readOnly ? "" : "cursor-pointer",
+                  isInactive && "opacity-60 bg-gray-50"
+                )}
+                onClick={readOnly ? undefined : () => onToggleAttendance(member.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={cn(
+                    "text-lg",
+                    isInactive && "text-gray-500"
+                  )}>
+                    {index + 1}. {member.name}
+                    {isInactive && <span className="ml-2 text-sm text-red-500">(nieaktywny)</span>}
+                  </span>
+                  <div
+                    className={cn(
+                      "w-6 h-6 rounded-full border-2 flex items-center justify-center",
+                      member.present
+                        ? "border-primary bg-primary text-white"
+                        : isInactive 
+                          ? "border-gray-300 bg-gray-100"
+                          : "border-gray-300"
+                    )}
+                  >
+                    {member.present && (
+                      <Check className="w-4 h-4 animate-check-mark" />
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
 
         {guests.length > 0 && (

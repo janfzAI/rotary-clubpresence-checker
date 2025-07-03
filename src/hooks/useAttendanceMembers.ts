@@ -6,7 +6,7 @@ interface Member {
   id: number;
   name: string;
   present: boolean;
-  active: boolean; // Zmienione z active?: boolean na active: boolean
+  active: boolean;
 }
 
 interface Guest {
@@ -43,12 +43,12 @@ export const useAttendanceMembers = (
     console.log('useAttendanceMembers - Found record:', record);
     
     // Resetuj stan obecności przed ustawieniem nowych wartości
-    setMembers(members.map(member => ({ ...member, present: false })));
+    setMembers(initialMembers.map(member => ({ ...member, present: false })));
     setGuests(guests.map(guest => ({ ...guest, present: false })));
 
     if (record) {
       console.log('useAttendanceMembers - Setting present members:', record.presentMembers);
-      setMembers(members.map(member => ({
+      setMembers(initialMembers.map(member => ({
         ...member,
         present: record.presentMembers?.includes(member.id) || false
       })));
@@ -58,7 +58,7 @@ export const useAttendanceMembers = (
         present: record.presentGuests?.includes(guest.id) || false
       })));
     }
-  }, [selectedDate, history]);
+  }, [selectedDate, history, initialMembers]);
 
   const toggleAttendance = (id: number) => {
     console.log('Toggling attendance for member:', id);
