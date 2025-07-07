@@ -45,6 +45,10 @@ const Index = () => {
   const canManageGuests = isAdmin || isManager;
   const canManageMembers = isAdmin; // Only admins can manage members
 
+  const hasLeftInName = (name: string) => {
+    return name.toLowerCase().includes('left');
+  };
+
   return (
     <div className="container mx-auto p-4 w-[80%] lg:max-w-6xl xl:max-w-7xl">
       <div className="flex justify-between items-center mb-4">
@@ -127,9 +131,10 @@ const Index = () => {
             <div className="space-y-3">
               {members.map((member, index) => {
                 const isInactive = member.active === false;
+                const isLeft = hasLeftInName(member.name);
                 return (
                   <div key={member.id} className={`p-4 border rounded-md ${isInactive ? 'opacity-50 bg-gray-50 border-gray-200' : ''}`}>
-                    <span className={isInactive ? 'text-gray-500 line-through' : ''}>
+                    <span className={`${isInactive ? 'text-gray-500 line-through' : ''} ${isLeft ? 'text-yellow-600 font-medium' : ''}`}>
                       {index + 1}. {member.name}
                     </span>
                     {isInactive && <span className="ml-2 text-sm text-red-600 font-medium no-underline">(nieaktywny)</span>}

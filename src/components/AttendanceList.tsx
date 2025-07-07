@@ -63,6 +63,10 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
     return 0;
   });
 
+  const hasLeftInName = (name: string) => {
+    return name.toLowerCase().includes('left');
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
@@ -90,6 +94,7 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
           <h3 className="text-lg font-semibold">Członkowie</h3>
           {sortedMembers.map((member, index) => {
             const isInactive = member.active === false;
+            const isLeft = hasLeftInName(member.name);
             return (
               <Card
                 key={member.id}
@@ -104,7 +109,8 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
                 <div className="flex items-center justify-between">
                   <span className={cn(
                     "text-lg",
-                    isInactive && "text-gray-500 line-through"
+                    isInactive && "text-gray-500 line-through",
+                    isLeft && "text-yellow-600 font-medium"
                   )}>
                     {index + 1}. {member.name}
                     {isInactive && <span className="ml-2 text-sm text-red-600 font-medium no-underline">(nieaktywny)</span>}

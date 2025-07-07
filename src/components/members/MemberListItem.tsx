@@ -64,11 +64,17 @@ export const MemberListItem = ({
   onRemoveMember,
   onOpenEmailEdit
 }: MemberListItemProps) => {
+  const hasLeftInName = (name: string) => {
+    return name.toLowerCase().includes('left');
+  };
+
+  const isLeft = hasLeftInName(member.name);
+
   return (
     <div key={member.id} className="p-4 flex justify-between items-center border rounded-md">
       <span className="flex items-center gap-2 flex-1">
         <span className="text-sm text-muted-foreground">{index + 1}.</span>
-        <span className="flex items-center gap-2">
+        <span className={`flex items-center gap-2 ${isLeft ? 'text-yellow-600 font-medium' : ''}`}>
           {member.name}
           {userRole && (
             <Badge variant="outline" className={getRoleBadgeStyle(userRole)}>
