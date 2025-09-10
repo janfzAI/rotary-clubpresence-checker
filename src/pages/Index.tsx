@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AttendanceList } from '@/components/AttendanceList';
 import { AttendanceHeader } from '@/components/AttendanceHeader';
 import { Navigation } from '@/components/Navigation';
+import { YearNavigation } from '@/components/YearNavigation';
 import { MembersManagement } from '@/components/MembersManagement';
 import { GuestsManagement } from '@/components/GuestsManagement';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
@@ -15,9 +16,11 @@ import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
 import { RoleNotice } from '@/components/RoleNotice';
 import { useAuth } from '@/hooks/useAuth';
 import { UserMenu } from '@/components/UserMenu';
+import { RotaryYear } from '@/utils/dateUtils';
 
 const Index = () => {
   const { isAdmin, isManager, userEmail } = useAuth();
+  const [selectedYear, setSelectedYear] = useState<RotaryYear>('2025/2026');
   
   const {
     activeTab,
@@ -38,7 +41,7 @@ const Index = () => {
     toggleAttendance,
     toggleGuestAttendance,
     toast
-  } = useAttendanceState();
+  } = useAttendanceState(selectedYear);
 
   // Define if user has permission to edit attendance and manage guests/members
   const canEditAttendance = isAdmin || isManager;
@@ -52,14 +55,19 @@ const Index = () => {
   return (
     <div className="container mx-auto p-4 w-[80%] lg:max-w-6xl xl:max-w-7xl">
       <div className="flex justify-between items-center mb-4">
-        <Navigation 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab} 
-          isAdmin={isAdmin} 
-          isManager={isManager} 
+        <YearNavigation 
+          activeYear={selectedYear}
+          onYearChange={setSelectedYear}
         />
         <UserMenu />
       </div>
+      
+      <Navigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        isAdmin={isAdmin} 
+        isManager={isManager} 
+      />
       
       <RoleNotice isAdmin={isAdmin} isManager={isManager} />
       {!canEditAttendance && <ReadOnlyNotice />}

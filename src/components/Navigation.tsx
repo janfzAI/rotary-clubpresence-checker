@@ -13,9 +13,6 @@ export const Navigation = ({ activeTab, onTabChange, isAdmin, isManager }: {
 
   return (
     <div className="w-full mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Rotary Club Szczecin</h1>
-      </div>
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList className="grid w-full" style={{ 
           gridTemplateColumns: isAdmin ? "repeat(6, 1fr)" : "repeat(5, 1fr)" 

@@ -1,7 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { normalizeDate, generateWednesdayDates } from '@/utils/dateUtils';
+import { normalizeDate, generateWednesdayDates, RotaryYear } from '@/utils/dateUtils';
 
 interface AttendanceRecord {
   date: Date;
@@ -11,13 +11,13 @@ interface AttendanceRecord {
   presentGuests?: number[];
 }
 
-export const useAttendanceData = () => {
+export const useAttendanceData = (rotaryYear: RotaryYear) => {
   const queryClient = useQueryClient();
 
   const { data: history = [], isLoading } = useQuery({
-    queryKey: ['attendance'],
+    queryKey: ['attendance', rotaryYear],
     queryFn: async () => {
-      console.log('Fetching attendance records from Supabase');
+      console.log('Fetching attendance records from Supabase for year:', rotaryYear);
       const { data: supabaseData, error } = await supabase
         .from('attendance_records')
         .select('*')
@@ -30,10 +30,8 @@ export const useAttendanceData = () => {
 
       console.log('Fetched data from Supabase:', supabaseData);
 
-      // Generate all Wednesday dates between Sep 4, 2024 and Jun 25, 2025
-      const startDate = new Date('2024-09-04');
-      const endDate = new Date('2025-06-25');
-      const allWednesdays = generateWednesdayDates(startDate, endDate);
+      // Generate all Wednesday dates for the selected rotary year
+      const allWednesdays = generateWednesdayDates(rotaryYear);
       
       console.log('Generated Wednesday dates:', allWednesdays);
 
@@ -113,7 +111,7 @@ export const useAttendanceData = () => {
       return updateData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance', rotaryYear] });
     },
     onError: (error) => {
       console.error('Error in updateAttendance mutation:', error);

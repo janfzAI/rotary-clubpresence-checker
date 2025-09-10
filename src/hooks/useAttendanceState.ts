@@ -4,7 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAttendanceData } from '@/hooks/useAttendanceData';
 import { useGuestsData } from '@/hooks/useGuestsData';
 import { useAttendanceMembers } from '@/hooks/useAttendanceMembers';
-import { normalizeDate } from '@/utils/dateUtils';
+import { normalizeDate, RotaryYear } from '@/utils/dateUtils';
 
 export interface Member {
   id: number;
@@ -52,11 +52,11 @@ const initialMembers = [
   { id: 36, name: "Leszek Zdawski", present: false, active: true },
 ];
 
-export const useAttendanceState = () => {
+export const useAttendanceState = (rotaryYear: RotaryYear = '2025/2026') => {
   const [activeTab, setActiveTab] = useState('attendance');
   const { toast } = useToast();
   const [members, setMembers] = useState(initialMembers);
-  const { history, updateAttendance } = useAttendanceData();
+  const { history, updateAttendance } = useAttendanceData(rotaryYear);
   const { guests, addGuest, removeGuest } = useGuestsData();
   
   const { 
