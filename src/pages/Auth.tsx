@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useUserSync } from "@/hooks/useUserSync";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { checkAndSyncUser } = useUserSync();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,6 +22,7 @@ const Auth = () => {
   const [detailedError, setDetailedError] = useState<any>(null);
   const [forgotPassword, setForgotPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [showSyncButton, setShowSyncButton] = useState(false);
 
   // Check session on load
   useEffect(() => {
@@ -53,6 +56,7 @@ const Auth = () => {
         
         if (error.message === 'Invalid login credentials') {
           setErrorMessage('Nieprawidłowy email lub hasło. Jeśli niedawno zmieniono Twoje hasło, użyj linku resetującego wysłanego na Twój email.');
+          setShowSyncButton(true); // Show sync button for invalid credentials
         } else {
           setErrorMessage('Błąd logowania. Spróbuj ponownie.');
         }
@@ -145,6 +149,49 @@ const Auth = () => {
       console.error('Quick login error:', error);
       setErrorMessage(`Wystąpił błąd podczas logowania: ${error.message}`);
       setDetailedError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSyncUser = async () => {
+    if (!email || !password) {
+      setErrorMessage('Wprowadź email i hasło przed synchronizacją konta.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage('');
+    setDetailedError(null);
+
+    try {
+      const result = await checkAndSyncUser(email.toLowerCase().trim(), password);
+      
+      if (result.success) {
+        // Try to login again after successful sync
+        setTimeout(async () => {
+          try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email: email.toLowerCase().trim(),
+              password: password,
+            });
+
+            if (!error && data) {
+              navigate('/');
+            } else {
+              setErrorMessage('Konto zostało zsynchronizowane, ale logowanie nie powiodło się. Spróbuj ponownie.');
+            }
+          } catch (loginError) {
+            console.error('Login after sync error:', loginError);
+            setErrorMessage('Konto zostało zsynchronizowane. Spróbuj zalogować się ponownie.');
+          }
+        }, 2000);
+      } else {
+        setShowSyncButton(false); // Hide sync button as reset email was sent
+      }
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      setErrorMessage('Wystąpił błąd podczas synchronizacji konta.');
     } finally {
       setLoading(false);
     }
@@ -264,6 +311,18 @@ const Auth = () => {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Logowanie...' : 'Zaloguj się'}
               </Button>
+
+              {showSyncButton && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleSyncUser}
+                  disabled={loading}
+                >
+                  {loading ? 'Naprawianie konta...' : 'Napraw konto (Administrator)'}
+                </Button>
+              )}
               
               <div className="text-center">
                 <button 
