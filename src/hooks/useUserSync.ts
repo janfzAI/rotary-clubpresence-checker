@@ -8,25 +8,7 @@ export const useUserSync = () => {
     try {
       console.log(`Checking and syncing user: ${email}`);
       
-      // First check if user exists in profiles
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Error checking profile:', profileError);
-        throw profileError;
-      }
-
-      if (!profile) {
-        throw new Error('Użytkownik nie istnieje w systemie');
-      }
-
-      console.log(`Profile found for ${email}:`, profile);
-
-      // Try to create the user in auth if they don't exist
+      // Try to create the user in auth directly - if they exist in profiles, this should work
       try {
         const { data: signupData, error: signupError } = await supabase.auth.admin.createUser({
           email,
@@ -62,18 +44,6 @@ export const useUserSync = () => {
         if (signupData?.user) {
           console.log('User created in auth successfully');
           
-          // Update profile with correct user ID if needed
-          if (signupData.user.id !== profile.id) {
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ id: signupData.user.id })
-              .eq('email', email);
-
-            if (updateError) {
-              console.error('Error updating profile ID:', updateError);
-            }
-          }
-
           toast({
             title: "Konto zostało zsynchronizowane",
             description: `Użytkownik ${email} może się teraz zalogować używając hasła: ${password}`,
