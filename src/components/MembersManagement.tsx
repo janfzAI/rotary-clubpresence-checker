@@ -289,6 +289,23 @@ export const MembersManagement = ({
 
     console.log('Znaleziono użytkownika do aktualizacji:', matchedUser);
 
+    // Check if the new email already exists in the system
+    if (newEmail.toLowerCase().trim() !== currentEmail.toLowerCase().trim()) {
+      const existingEmailUser = users.find(user => 
+        user.email && user.email.toLowerCase().trim() === newEmail.toLowerCase().trim()
+      );
+      
+      if (existingEmailUser) {
+        console.error('Email już istnieje w systemie:', newEmail);
+        toast({
+          title: "Błąd - Email już istnieje",
+          description: `Adres email "${newEmail}" jest już używany przez innego użytkownika w systemie. Wybierz inny adres email.`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -300,6 +317,11 @@ export const MembersManagement = ({
         
         if (error.message?.includes('permission') || error.code === '42501') {
           throw new Error("Brak uprawnień do zmiany adresu email. Skontaktuj się z administratorem systemu.");
+        }
+        
+        if (error.message?.includes('duplicate key value violates unique constraint') || 
+            error.message?.includes('profiles_email_key')) {
+          throw new Error(`Adres email "${newEmail}" jest już używany przez innego użytkownika. Wybierz inny adres email.`);
         }
         
         throw new Error(`Nie udało się zaktualizować adresu email: ${error.message}`);
