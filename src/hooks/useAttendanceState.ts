@@ -50,6 +50,8 @@ const initialMembers = [
   { id: 34, name: "Piotr Tobolski", present: false, active: true },
   { id: 35, name: "Marek Wróblewski", present: false, active: true },
   { id: 36, name: "Leszek Zdawski", present: false, active: true },
+  { id: 37, name: "Andrzej Wawrzyniak", present: false, active: true },
+  { id: 38, name: "Leszek Nagay", present: false, active: true },
 ];
 
 export const useAttendanceState = (rotaryYear: RotaryYear = '2025/2026') => {
