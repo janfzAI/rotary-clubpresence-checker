@@ -33,9 +33,9 @@ const initialMembers = [
   { id: 17, name: "Maciej Krzeptowski", present: false, active: true },
   { id: 18, name: "Mirosław Lewiński", present: false, active: true },
   { id: 19, name: "Ryszard Lipka-Bartosik", present: false, active: true },
-  { id: 20, name: "Agata Łakomiak left", present: false, active: true },
+  { id: 20, name: "Agata Łakomiak left", present: false, active: false },
   { id: 21, name: "Roman Łakomiak", present: false, active: true },
-  { id: 22, name: "Anna Lakomiak-Melka left", present: false, active: true },
+  { id: 22, name: "Anna Lakomiak-Melka left", present: false, active: false },
   { id: 23, name: "Michał Marks", present: false, active: true },
   { id: 24, name: "Zbigniew Nagay", present: false, active: true },
   { id: 25, name: "Zbigniew Najmowicz", present: false, active: true },
@@ -50,6 +50,8 @@ const initialMembers = [
   { id: 34, name: "Piotr Tobolski", present: false, active: true },
   { id: 35, name: "Marek Wróblewski", present: false, active: true },
   { id: 36, name: "Leszek Zdawski", present: false, active: true },
+  { id: 37, name: "Andrzej Wawrzyniak", present: false, active: true },
+  { id: 38, name: "Leszek Nagay", present: false, active: true },
 ];
 
 export const useAttendanceState = (rotaryYear: RotaryYear = '2025/2026') => {
