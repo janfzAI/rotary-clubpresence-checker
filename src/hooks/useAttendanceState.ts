@@ -35,7 +35,7 @@ const initialMembers = [
   { id: 19, name: "Ryszard Lipka-Bartosik", present: false, active: true },
   { id: 20, name: "Agata Łakomiak left", present: false, active: false },
   { id: 21, name: "Roman Łakomiak", present: false, active: true },
-  { id: 22, name: "Anna Lakomiak-Melka left", present: false, active: true },
+  { id: 22, name: "Anna Lakomiak-Melka left", present: false, active: false },
   { id: 23, name: "Michał Marks", present: false, active: true },
   { id: 24, name: "Zbigniew Nagay", present: false, active: true },
   { id: 25, name: "Zbigniew Najmowicz", present: false, active: true },
