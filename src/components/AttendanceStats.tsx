@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StatsSummaryCards } from './stats/StatsSummaryCards';
 import { StatsAttendanceChart } from './stats/StatsAttendanceChart';
 import { StatsMonthlyTable } from './stats/StatsMonthlyTable';
+import { sortByLastName } from '@/lib/utils';
 
 interface AttendanceRecord {
   date: Date;
@@ -51,7 +52,9 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
     ? pastRecords.reduce((acc, curr) => acc + curr.presentCount, 0) / pastRecords.length
     : 0;
 
-  const memberStats = members.map(member => {
+  const activeMembers = members.filter(member => !/\s+left$/i.test(member.name));
+
+  const memberStats = activeMembers.map(member => {
     const presenceCount = pastRecords.reduce((count, record) => {
       return count + (record.presentMembers?.includes(member.id) ? 1 : 0);
     }, 0);
@@ -75,7 +78,7 @@ export const AttendanceStats = ({ records, members }: { records: AttendanceRecor
       totalDays,
       totalParticipation
     };
-  });
+  }).sort(sortByLastName);
 
   return (
     <div className="space-y-6">

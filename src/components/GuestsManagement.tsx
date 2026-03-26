@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, SortAsc } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { sortByLastName } from '@/lib/utils';
 
 interface Guest {
   id: number;
@@ -52,7 +53,7 @@ export const GuestsManagement = ({
 
   const sortedGuests = [...guests].sort((a, b) => {
     if (sortedAlphabetically) {
-      return a.name.localeCompare(b.name);
+      return sortByLastName(a, b);
     }
     return 0;
   });

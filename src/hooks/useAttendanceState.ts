@@ -45,7 +45,7 @@ const initialMembers = [
   { id: 29, name: "Roman Rogoziński", present: false, active: true },
   { id: 30, name: "Wojciech Soiński", present: false, active: true },
   { id: 31, name: "Lubomir Synak", present: false, active: true },
-  { id: 32, name: "Piotr Szajkowski left", present: false, active: true },
+  { id: 32, name: "Piotr Szajkowski left", present: false, active: false },
   { id: 33, name: "Janusz Teresiak", present: false, active: true },
   { id: 34, name: "Piotr Tobolski", present: false, active: true },
   { id: 35, name: "Marek Wróblewski", present: false, active: true },
