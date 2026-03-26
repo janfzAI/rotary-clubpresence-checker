@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Check, SortAsc, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, sortByLastName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
@@ -51,14 +51,14 @@ export const AttendanceList: React.FC<AttendanceListProps> = ({
 
   const sortedMembers = [...allMembers].sort((a, b) => {
     if (sortedAlphabetically) {
-      return a.name.localeCompare(b.name);
+      return sortByLastName(a, b);
     }
     return 0;
   });
 
   const sortedGuests = [...guests].sort((a, b) => {
     if (sortedAlphabetically) {
-      return a.name.localeCompare(b.name);
+      return sortByLastName(a, b);
     }
     return 0;
   });
