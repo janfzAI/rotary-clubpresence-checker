@@ -40,7 +40,9 @@ export const getRotaryYearConfig = (year: RotaryYear) => {
         endDate: new Date('2026-06-24'),
         excludeDates: [
           // Dodaj daty do wykluczenia dla nowego roku rotarskiego
+          '2025-12-24', // Wigilia
           '2025-12-25', // Boże Narodzenie
+          '2025-12-31', // Sylwester
           '2026-01-01', // Nowy Rok
         ],
         specialDates: [
