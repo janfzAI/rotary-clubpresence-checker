@@ -72,8 +72,9 @@ export const MeetingSummary = ({ records, guests, canEdit, onSaveDetails }: Meet
 
   const resolveGuestNames = (ids?: number[]) =>
     (ids || [])
-      .map(id => guestNameById.get(id) || '(gość usunięty)')
-      .sort(sortByLastName);
+      .map(id => ({ name: guestNameById.get(id) || '(gość usunięty)' }))
+      .sort(sortByLastName)
+      .map(g => g.name);
 
   const heldMeetings = records.filter(r => (r.presentMembers?.length || 0) > 0);
   const avgAttendance = heldMeetings.length > 0
