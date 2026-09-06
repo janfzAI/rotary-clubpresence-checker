@@ -62,6 +62,15 @@ export const AttendanceFileHandler: React.FC<AttendanceFileHandlerProps> = ({
 
   const handleSave = async () => {
     console.log('Saving attendance for date:', selectedDate);
+
+    if (!isMeetingDate(rotaryYear, selectedDate)) {
+      toast({
+        title: "Nieprawidłowa data spotkania",
+        description: `${selectedDate.toLocaleDateString('pl-PL')} nie jest dniem spotkania w roku ${rotaryYear}. Wybierz datę spotkania w zakładce Historia.`,
+        variant: "destructive"
+      });
+      return;
+    }
     console.log('Current members state:', attendanceMembers);
     
     const presentMemberIds = attendanceMembers

@@ -90,6 +90,7 @@ const Index = () => {
           {canEditAttendance && (
             <AttendanceFileHandler
               selectedDate={selectedDate}
+              rotaryYear={selectedYear}
               attendanceMembers={attendanceMembers}
               attendanceGuests={attendanceGuests}
               updateAttendance={updateAttendance}
