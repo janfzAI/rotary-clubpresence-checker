@@ -10,6 +10,7 @@ import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { AttendanceStats } from '@/components/AttendanceStats';
 import { AttendanceExport } from '@/components/AttendanceExport';
 import { AttendanceFileHandler } from '@/components/AttendanceFileHandler';
+import { MeetingSummary } from '@/components/MeetingSummary';
 import { DatabaseStructure } from '@/components/DatabaseStructure';
 import { useAttendanceState } from '@/hooks/useAttendanceState';
 import { ReadOnlyNotice } from '@/components/ReadOnlyNotice';
@@ -31,6 +32,7 @@ const Index = () => {
     selectedDate,
     history,
     updateAttendance,
+    updateMeetingDetails,
     guests,
     addGuest,
     removeGuest,
@@ -124,6 +126,34 @@ const Index = () => {
 
       {activeTab === 'stats' && (
         <AttendanceStats records={history} members={members} />
+      )}
+
+      {activeTab === 'summary' && (
+        <MeetingSummary
+          records={history}
+          guests={guests}
+          canEdit={canEditAttendance}
+          onSaveDetails={(date, topic, speakerName) => {
+            updateMeetingDetails.mutate(
+              { date, topic, speakerName },
+              {
+                onSuccess: () => {
+                  toast({
+                    title: "Zapisano szczegóły spotkania",
+                    description: "Temat i prelegent zostały zaktualizowane.",
+                  });
+                },
+                onError: () => {
+                  toast({
+                    title: "Błąd zapisu",
+                    description: "Nie udało się zapisać szczegółów spotkania. Spróbuj ponownie.",
+                    variant: "destructive"
+                  });
+                }
+              }
+            );
+          }}
+        />
       )}
 
       {activeTab === 'members' && (

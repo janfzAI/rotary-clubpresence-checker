@@ -3,12 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeDate, generateWednesdayDates, RotaryYear } from '@/utils/dateUtils';
 
-interface AttendanceRecord {
+export interface AttendanceRecord {
   date: Date;
   presentCount: number;
   totalCount: number;
   presentMembers?: number[];
   presentGuests?: number[];
+  topic?: string | null;
+  speakerName?: string | null;
 }
 
 export const useAttendanceData = (rotaryYear: RotaryYear) => {
@@ -44,7 +46,9 @@ export const useAttendanceData = (rotaryYear: RotaryYear) => {
             presentCount: record.present_members?.length || 0,
             totalCount: 36,
             presentMembers: record.present_members || [],
-            presentGuests: record.present_guests || []
+            presentGuests: record.present_guests || [],
+            topic: record.topic ?? null,
+            speakerName: record.speaker_name ?? null
           }
         ])
       );
@@ -66,7 +70,9 @@ export const useAttendanceData = (rotaryYear: RotaryYear) => {
           presentCount: 0,
           totalCount: 36,
           presentMembers: [],
-          presentGuests: []
+          presentGuests: [],
+          topic: null,
+          speakerName: null
         };
       });
     }
@@ -118,9 +124,47 @@ export const useAttendanceData = (rotaryYear: RotaryYear) => {
     }
   });
 
+  const updateMeetingDetails = useMutation({
+    mutationFn: async ({ date, topic, speakerName }: { date: Date; topic: string | null; speakerName: string | null }) => {
+      const dateStr = normalizeDate(date).toISOString().split('T')[0];
+      const recordData = {
+        date: dateStr,
+        topic,
+        speaker_name: speakerName,
+        created_by: (await supabase.auth.getUser()).data.user?.id
+      };
+
+      const { data: updateData, error: updateError } = await supabase
+        .from('attendance_records')
+        .update({ topic, speaker_name: speakerName })
+        .eq('date', dateStr)
+        .select();
+
+      if (!updateError && (!updateData || updateData.length === 0)) {
+        const { data: insertData, error: insertError } = await supabase
+          .from('attendance_records')
+          .insert([recordData])
+          .select();
+
+        if (insertError) throw insertError;
+        return insertData;
+      }
+
+      if (updateError) throw updateError;
+      return updateData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance', rotaryYear] });
+    },
+    onError: (error) => {
+      console.error('Error in updateMeetingDetails mutation:', error);
+    }
+  });
+
   return {
     history,
     isLoading,
-    updateAttendance
+    updateAttendance,
+    updateMeetingDetails
   };
 };

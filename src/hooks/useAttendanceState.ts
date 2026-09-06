@@ -59,7 +59,7 @@ export const useAttendanceState = (rotaryYear: RotaryYear = '2026/2027') => {
   const [activeTab, setActiveTab] = useState('attendance');
   const { toast } = useToast();
   const [members, setMembers] = useState(initialMembers);
-  const { history, updateAttendance } = useAttendanceData(rotaryYear);
+  const { history, updateAttendance, updateMeetingDetails } = useAttendanceData(rotaryYear);
   const { guests, addGuest, removeGuest } = useGuestsData();
   
   const { 
@@ -106,6 +106,7 @@ export const useAttendanceState = (rotaryYear: RotaryYear = '2026/2027') => {
     selectedDate,
     history,
     updateAttendance,
+    updateMeetingDetails,
     guests,
     addGuest,
     removeGuest,
