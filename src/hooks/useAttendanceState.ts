@@ -69,7 +69,7 @@ export const useAttendanceState = (rotaryYear: RotaryYear = '2026/2027') => {
     setSelectedDate, 
     toggleAttendance,
     toggleGuestAttendance 
-  } = useAttendanceMembers(members, guests, history);
+  } = useAttendanceMembers(members, guests, history, rotaryYear);
 
   const handleDateSelect = (date: Date) => {
     console.log('Handling date selection:', date);

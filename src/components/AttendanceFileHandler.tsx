@@ -2,11 +2,13 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
-import { normalizeDate } from '@/utils/dateUtils';
+import { normalizeDate, isMeetingDate, RotaryYear } from '@/utils/dateUtils';
 import { Member } from '@/hooks/useAttendanceState';
+import { useToast } from '@/hooks/use-toast';
 
 interface AttendanceFileHandlerProps {
   selectedDate: Date;
+  rotaryYear: RotaryYear;
   attendanceMembers: Member[];
   attendanceGuests: any[];
   updateAttendance: any;
@@ -16,12 +18,14 @@ interface AttendanceFileHandlerProps {
 
 export const AttendanceFileHandler: React.FC<AttendanceFileHandlerProps> = ({
   selectedDate,
+  rotaryYear,
   attendanceMembers,
   attendanceGuests,
   updateAttendance,
   onSaveSuccess,
   onSaveError
 }) => {
+  const { toast } = useToast();
   const generateAttendanceFile = (date: Date) => {
     const formattedDate = date.toLocaleDateString('pl-PL').replace(/\./g, '_');
     const presentMembers = attendanceMembers.filter(m => m.present);
@@ -58,6 +62,15 @@ export const AttendanceFileHandler: React.FC<AttendanceFileHandlerProps> = ({
 
   const handleSave = async () => {
     console.log('Saving attendance for date:', selectedDate);
+
+    if (!isMeetingDate(rotaryYear, selectedDate)) {
+      toast({
+        title: "Nieprawidłowa data spotkania",
+        description: `${selectedDate.toLocaleDateString('pl-PL')} nie jest dniem spotkania w roku ${rotaryYear}. Wybierz datę spotkania w zakładce Historia.`,
+        variant: "destructive"
+      });
+      return;
+    }
     console.log('Current members state:', attendanceMembers);
     
     const presentMemberIds = attendanceMembers
