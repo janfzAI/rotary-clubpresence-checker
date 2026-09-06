@@ -55,7 +55,7 @@ const initialMembers = [
   { id: 39, name: "Tomasz Korczyński", present: false, active: true },
 ];
 
-export const useAttendanceState = (rotaryYear: RotaryYear = '2025/2026') => {
+export const useAttendanceState = (rotaryYear: RotaryYear = '2026/2027') => {
   const [activeTab, setActiveTab] = useState('attendance');
   const { toast } = useToast();
   const [members, setMembers] = useState(initialMembers);

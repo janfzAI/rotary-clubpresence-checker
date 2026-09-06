@@ -12,7 +12,7 @@ export const areDatesEqual = (date1: Date, date2: Date) => {
   return d1.getTime() === d2.getTime();
 };
 
-export type RotaryYear = '2024/2025' | '2025/2026';
+export type RotaryYear = '2024/2025' | '2025/2026' | '2026/2027';
 
 export const getRotaryYearConfig = (year: RotaryYear) => {
   switch (year) {
@@ -47,6 +47,19 @@ export const getRotaryYearConfig = (year: RotaryYear) => {
         ],
         specialDates: [
           // Dodaj specjalne daty dla nowego roku rotarskiego
+        ]
+      };
+    case '2026/2027':
+      return {
+        startDate: new Date('2026-09-02'),
+        endDate: new Date('2027-06-30'),
+        excludeDates: [
+          '2026-12-24', // Wigilia
+          '2026-12-25', // Boże Narodzenie
+          '2026-12-31', // Sylwester
+          '2027-01-01', // Nowy Rok
+        ],
+        specialDates: [
         ]
       };
   }

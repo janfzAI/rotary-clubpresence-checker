@@ -20,7 +20,11 @@ export const YearNavigation = ({ activeYear, onYearChange }: YearNavigationProps
             </TabsTrigger>
             <TabsTrigger value="2025/2026" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Bieżący rok 2025/2026
+              Rok 2025/2026
+            </TabsTrigger>
+            <TabsTrigger value="2026/2027" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Bieżący rok 2026/2027
             </TabsTrigger>
           </TabsList>
         </Tabs>
