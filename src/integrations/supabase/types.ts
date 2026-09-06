@@ -22,6 +22,8 @@ export type Database = {
           id: string
           present_guests: number[] | null
           present_members: number[] | null
+          speaker_name: string | null
+          topic: string | null
           updated_at: string
         }
         Insert: {
@@ -31,6 +33,8 @@ export type Database = {
           id?: string
           present_guests?: number[] | null
           present_members?: number[] | null
+          speaker_name?: string | null
+          topic?: string | null
           updated_at?: string
         }
         Update: {
@@ -40,6 +44,8 @@ export type Database = {
           id?: string
           present_guests?: number[] | null
           present_members?: number[] | null
+          speaker_name?: string | null
+          topic?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -1,0 +1,1 @@
+ALTER TABLE public.attendance_records ADD COLUMN IF NOT EXISTS topic text, ADD COLUMN IF NOT EXISTS speaker_name text;
