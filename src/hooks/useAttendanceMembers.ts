@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { areDatesEqual } from '@/utils/dateUtils';
+import { areDatesEqual, getDefaultMeetingDate, RotaryYear } from '@/utils/dateUtils';
 
 interface Member {
   id: number;
@@ -24,11 +24,17 @@ interface AttendanceRecord {
 export const useAttendanceMembers = (
   initialMembers: Member[],
   initialGuests: Guest[],
-  history: AttendanceRecord[]
+  history: AttendanceRecord[],
+  rotaryYear: RotaryYear = '2026/2027'
 ) => {
   const [members, setMembers] = useState(initialMembers);
   const [guests, setGuests] = useState(initialGuests);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(() => getDefaultMeetingDate(rotaryYear));
+
+  // Po zmianie roku rotariańskiego ustaw datę ostatniego spotkania z tego roku
+  useEffect(() => {
+    setSelectedDate(getDefaultMeetingDate(rotaryYear));
+  }, [rotaryYear]);
 
   useEffect(() => {
     console.log('useAttendanceMembers - Selected date:', selectedDate);
