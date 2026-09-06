@@ -94,3 +94,19 @@ export const generateWednesdayDates = (year: RotaryYear) => {
   
   return dates;
 };
+
+// Domyślna data: ostatnie spotkanie, które już się odbyło w danym roku rotariańskim.
+// Jeśli rok jeszcze się nie zaczął - pierwsze spotkanie roku.
+export const getDefaultMeetingDate = (year: RotaryYear): Date => {
+  const dates = generateWednesdayDates(year);
+  if (dates.length === 0) return normalizeDate(new Date());
+  const today = normalizeDate(new Date());
+  const past = dates.filter(d => normalizeDate(d).getTime() <= today.getTime());
+  return past.length > 0 ? past[past.length - 1] : dates[0];
+};
+
+// Czy podana data jest dniem spotkania w danym roku rotariańskim?
+export const isMeetingDate = (year: RotaryYear, date: Date): boolean => {
+  const target = normalizeDate(date).getTime();
+  return generateWednesdayDates(year).some(d => normalizeDate(d).getTime() === target);
+};
