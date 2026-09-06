@@ -20,7 +20,7 @@ import { RotaryYear } from '@/utils/dateUtils';
 
 const Index = () => {
   const { isAdmin, isManager, userEmail } = useAuth();
-  const [selectedYear, setSelectedYear] = useState<RotaryYear>('2025/2026');
+  const [selectedYear, setSelectedYear] = useState<RotaryYear>('2026/2027');
   
   const {
     activeTab,
