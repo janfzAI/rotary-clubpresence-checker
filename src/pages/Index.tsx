@@ -132,6 +132,7 @@ const Index = () => {
         <MeetingSummary
           records={history}
           guests={guests}
+          members={members}
           canEdit={canEditAttendance}
           rotaryYear={selectedYear}
           onSaveDetails={(date, topic, speakerName) => {
