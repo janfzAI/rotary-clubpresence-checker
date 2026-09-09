@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import type { AttendanceRecord } from '@/hooks/useAttendanceData';
-import { sortByLastName } from '@/lib/utils';
+import { sortByLastName, excludeSpeakersFromGuests } from '@/lib/utils';
 
 interface Guest {
   id: number;
@@ -86,7 +86,7 @@ export const generateMeetingReportPdf = async (
   doc.setTextColor(0);
 
   const body = held.map(r => {
-    const guestNames = resolveGuestNames(r.presentGuests);
+    const guestNames = excludeSpeakersFromGuests(resolveGuestNames(r.presentGuests), r.speakerName);
     return [
       format(r.date, 'dd.MM.yyyy', { locale: pl }),
       r.topic?.trim() || '—',
