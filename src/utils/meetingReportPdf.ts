@@ -140,7 +140,7 @@ export const generateMeetingReportPdf = async (
     }
   });
 
-  // ---- Sekcja: Statystyki ----
+  // ---- Statystyki: obliczenia (wspólne dla wykresu i tabeli członków) ----
   const now = new Date();
   const pastRecords = records.filter(r => r.date <= now);
   const totalMeetings = pastRecords.length;
@@ -166,90 +166,7 @@ export const generateMeetingReportPdf = async (
     })
     .sort(sortByLastName);
 
-  if (memberStats.length > 0) {
-    doc.addPage();
-
-    doc.setFont('DejaVuSans', 'bold');
-    doc.setFontSize(14);
-    doc.text(`Statystyki — rok rotariański ${rotaryYear}`, marginX, 18);
-
-    doc.setFont('DejaVuSans', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(110);
-    doc.text(
-      `Liczba spotkań: ${totalMeetings}    Średnia obecność: ${avgPresence.toFixed(1)}    Średnia frekwencja: ${avgAttendancePct.toFixed(1)}%`,
-      marginX,
-      26
-    );
-    doc.setTextColor(0);
-
-    const statsBody = memberStats.map((m, i) => [
-      String(i + 1),
-      m.name,
-      String(m.presenceCount),
-      `${m.percentage.toFixed(1)}%`
-    ]);
-
-    autoTable(doc, {
-      startY: 32,
-      head: [['Lp.', 'Członek', 'Obecności', 'Frekwencja']],
-      body: statsBody,
-      showFoot: 'lastPage',
-      foot: [[
-        '',
-        'Średnio',
-        avgPresence.toFixed(1),
-        `${avgAttendancePct.toFixed(1)}%`
-      ]],
-      margin: { left: marginX, right: marginX, bottom: 18 },
-      styles: {
-        font: 'DejaVuSans',
-        fontSize: 8,
-        cellPadding: 1.4,
-        overflow: 'linebreak',
-        lineColor: [220, 220, 220],
-        lineWidth: 0.1
-      },
-      headStyles: {
-        font: 'DejaVuSans',
-        fontStyle: 'bold',
-        fillColor: [23, 69, 143],
-        textColor: 255,
-        fontSize: 9,
-        halign: 'left'
-      },
-      footStyles: {
-        font: 'DejaVuSans',
-        fontStyle: 'bold',
-        fillColor: [235, 239, 245],
-        textColor: 20
-      },
-      alternateRowStyles: { fillColor: [245, 247, 250] },
-      columnStyles: {
-        0: { cellWidth: 14, halign: 'right' },
-        1: { cellWidth: 90 },
-        2: { cellWidth: 30, halign: 'center' },
-        3: { cellWidth: 30, halign: 'right' }
-      },
-      rowPageBreak: 'avoid',
-      didDrawPage: () => {
-        const pageSize = doc.internal.pageSize;
-        doc.setFont('DejaVuSans', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(130);
-        const page = doc.getCurrentPageInfo().pageNumber;
-        doc.text(
-          `Strona ${page}`,
-          pageSize.getWidth() - marginX,
-          pageSize.getHeight() - 8,
-          { align: 'right' }
-        );
-        doc.setTextColor(0);
-      }
-    });
-  }
-
-  // ---- Wykres: frekwencja w czasie ----
+  // ---- Wykres: frekwencja w czasie (drugi element raportu) ----
   if (totalMeetings > 0) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -366,6 +283,90 @@ export const generateMeetingReportPdf = async (
       doc.text(format(points[i].date, 'd MMM', { locale: pl }), points[i].x, plotY + plotH + 4, { align: 'center' });
     });
     doc.setTextColor(0);
+  }
+
+  // ---- Tabela statystyk członków (na końcu raportu) ----
+  if (memberStats.length > 0) {
+    doc.addPage();
+
+    doc.setFont('DejaVuSans', 'bold');
+    doc.setFontSize(14);
+    doc.text(`Statystyki — rok rotariański ${rotaryYear}`, marginX, 18);
+
+    doc.setFont('DejaVuSans', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(110);
+    doc.text(
+      `Liczba spotkań: ${totalMeetings}    Średnia obecność: ${avgPresence.toFixed(1)}    Średnia frekwencja: ${avgAttendancePct.toFixed(1)}%`,
+      marginX,
+      26
+    );
+    doc.setTextColor(0);
+
+    const statsBody = memberStats.map((m, i) => [
+      String(i + 1),
+      m.name,
+      String(m.presenceCount),
+      `${m.percentage.toFixed(1)}%`
+    ]);
+
+    autoTable(doc, {
+      startY: 32,
+      head: [['Lp.', 'Członek', 'Obecności', 'Frekwencja']],
+      body: statsBody,
+      showFoot: 'lastPage',
+      foot: [[
+        '',
+        'Średnio',
+        avgPresence.toFixed(1),
+        `${avgAttendancePct.toFixed(1)}%`
+      ]],
+      margin: { left: marginX, right: marginX, bottom: 18 },
+      styles: {
+        font: 'DejaVuSans',
+        fontSize: 8,
+        cellPadding: 1.4,
+        overflow: 'linebreak',
+        lineColor: [220, 220, 220],
+        lineWidth: 0.1
+      },
+      headStyles: {
+        font: 'DejaVuSans',
+        fontStyle: 'bold',
+        fillColor: [23, 69, 143],
+        textColor: 255,
+        fontSize: 9,
+        halign: 'left'
+      },
+      footStyles: {
+        font: 'DejaVuSans',
+        fontStyle: 'bold',
+        fillColor: [235, 239, 245],
+        textColor: 20
+      },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      columnStyles: {
+        0: { cellWidth: 14, halign: 'right' },
+        1: { cellWidth: 90 },
+        2: { cellWidth: 30, halign: 'center' },
+        3: { cellWidth: 30, halign: 'right' }
+      },
+      rowPageBreak: 'avoid',
+      didDrawPage: () => {
+        const pageSize = doc.internal.pageSize;
+        doc.setFont('DejaVuSans', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(130);
+        const page = doc.getCurrentPageInfo().pageNumber;
+        doc.text(
+          `Strona ${page}`,
+          pageSize.getWidth() - marginX,
+          pageSize.getHeight() - 8,
+          { align: 'right' }
+        );
+        doc.setTextColor(0);
+      }
+    });
   }
 
   doc.save(`podsumowanie-spotkan-${rotaryYear.replace('/', '-')}.pdf`);
