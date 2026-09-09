@@ -133,6 +133,7 @@ const Index = () => {
           records={history}
           guests={guests}
           canEdit={canEditAttendance}
+          rotaryYear={selectedYear}
           onSaveDetails={(date, topic, speakerName) => {
             updateMeetingDetails.mutate(
               { date, topic, speakerName },

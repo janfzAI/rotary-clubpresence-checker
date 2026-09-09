@@ -20,6 +20,7 @@ interface MeetingSummaryProps {
   records: AttendanceRecord[];
   guests: Guest[];
   canEdit: boolean;
+  rotaryYear: string;
   onSaveDetails: (date: Date, topic: string | null, speakerName: string | null) => void;
 }
 
@@ -69,7 +70,9 @@ const EditableField = ({
   );
 };
 
-export const MeetingSummary = ({ records, guests, canEdit, onSaveDetails }: MeetingSummaryProps) => {
+export const MeetingSummary = ({ records, guests, canEdit, rotaryYear, onSaveDetails }: MeetingSummaryProps) => {
+  const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
   const guestNameById = new Map(guests.map(g => [g.id, g.name]));
 
   const resolveGuestNames = (ids?: number[]) =>
@@ -83,8 +86,35 @@ export const MeetingSummary = ({ records, guests, canEdit, onSaveDetails }: Meet
     ? Math.round((heldMeetings.reduce((sum, r) => sum + (r.presentMembers?.length || 0), 0) / heldMeetings.length) * 10) / 10
     : 0;
 
+  const handleDownloadPdf = async () => {
+    setIsGenerating(true);
+    try {
+      await generateMeetingReportPdf(records, guests, rotaryYear);
+      toast({
+        title: 'Raport gotowy',
+        description: 'Plik PDF z podsumowaniem spotkań został pobrany.'
+      });
+    } catch (error) {
+      console.error('Error generating PDF report:', error);
+      toast({
+        title: 'Błąd generowania raportu',
+        description: 'Nie udało się przygotować pliku PDF. Spróbuj ponownie.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button onClick={handleDownloadPdf} disabled={isGenerating}>
+          <FileDown className="h-4 w-4 mr-2" />
+          {isGenerating ? 'Generowanie…' : 'Pobierz raport PDF'}
+        </Button>
+      </div>
+
       <div className="flex flex-wrap gap-4">
         <Card className="flex-1 min-w-[200px]">
           <CardHeader className="pb-2">
