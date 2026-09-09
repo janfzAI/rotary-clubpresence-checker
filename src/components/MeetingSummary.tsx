@@ -16,9 +16,16 @@ interface Guest {
   name: string;
 }
 
+interface SummaryMember {
+  id: number;
+  name: string;
+  active?: boolean;
+}
+
 interface MeetingSummaryProps {
   records: AttendanceRecord[];
   guests: Guest[];
+  members?: SummaryMember[];
   canEdit: boolean;
   rotaryYear: string;
   onSaveDetails: (date: Date, topic: string | null, speakerName: string | null) => void;
@@ -70,7 +77,7 @@ const EditableField = ({
   );
 };
 
-export const MeetingSummary = ({ records, guests, canEdit, rotaryYear, onSaveDetails }: MeetingSummaryProps) => {
+export const MeetingSummary = ({ records, guests, members = [], canEdit, rotaryYear, onSaveDetails }: MeetingSummaryProps) => {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const guestNameById = new Map(guests.map(g => [g.id, g.name]));
@@ -89,7 +96,7 @@ export const MeetingSummary = ({ records, guests, canEdit, rotaryYear, onSaveDet
   const handleDownloadPdf = async () => {
     setIsGenerating(true);
     try {
-      await generateMeetingReportPdf(records, guests, rotaryYear);
+      await generateMeetingReportPdf(records, guests, rotaryYear, members);
       toast({
         title: 'Raport gotowy',
         description: 'Plik PDF z podsumowaniem spotkań został pobrany.'
