@@ -288,43 +288,62 @@ export const generateMeetingReportPdf = async (
     doc.setFillColor(249, 250, 252);
     doc.rect(plotX, plotY, plotW, plotH, 'F');
 
-    // siatka + oś Y
-    doc.setFont('DejaVuSans', 'normal');
-    doc.setFontSize(7);
-    for (let v = 0; v <= 100; v += 25) {
-      const y = plotY + plotH - (v / 100) * plotH;
-      doc.setDrawColor(224, 228, 235);
-      doc.setLineWidth(0.15);
-      doc.line(plotX, y, plotX + plotW, y);
-      doc.setTextColor(130);
-      doc.text(`${v}%`, plotX - 2, y + 1.2, { align: 'right' });
-    }
-
-    const points = pastRecords.map((r, i) => {
+    // punkty danych
+    const rawPoints = pastRecords.map((r, i) => {
       const pct = ((r.presentMembers?.length || 0) / (r.totalCount || 1)) * 100;
       const x = pastRecords.length === 1
         ? plotX + plotW / 2
         : plotX + (i / (pastRecords.length - 1)) * plotW;
-      const y = plotY + plotH - (Math.min(pct, 100) / 100) * plotH;
-      return { x, y, date: r.date };
+      return { x, pct, date: r.date };
     });
 
-    // wypełnienie pod linią
-    if (points.length > 1) {
-      doc.setFillColor(219, 229, 244);
-      for (let i = 0; i < points.length - 1; i++) {
-        const a = points[i];
-        const b = points[i + 1];
-        doc.triangle(a.x, a.y, b.x, b.y, a.x, plotY + plotH, 'F');
-        doc.triangle(b.x, b.y, b.x, plotY + plotH, a.x, plotY + plotH, 'F');
-      }
+    // skala osi Y jak w aplikacji: od 0 do zaokrąglonego maksimum (co 20%)
+    const maxPct = rawPoints.reduce((m, p) => Math.max(m, p.pct), 0);
+    const yMax = Math.min(100, Math.max(20, Math.ceil((maxPct + 1) / 20) * 20));
+    const points = rawPoints.map(p => ({
+      ...p,
+      y: plotY + plotH - (Math.min(p.pct, yMax) / yMax) * plotH
+    }));
+
+    // przerywana siatka pozioma + oś Y
+    doc.setFont('DejaVuSans', 'normal');
+    doc.setFontSize(7);
+    for (let v = 0; v <= yMax; v += 20) {
+      const y = plotY + plotH - (v / yMax) * plotH;
+      doc.setDrawColor(210, 215, 224);
+      doc.setLineWidth(0.2);
+      doc.setLineDashPattern([1.2, 1.2], 0);
+      doc.line(plotX, y, plotX + plotW, y);
+      doc.setLineDashPattern([], 0);
+      doc.setTextColor(130);
+      doc.text(`${v}%`, plotX - 2, y + 1.2, { align: 'right' });
     }
 
+    // pionowe linie siatki co etykietę osi X (liczone niżej — rysowane po wyliczeniu etykiet)
+    const maxLabels = Math.max(1, Math.floor(plotW / 16));
+    const step = Math.ceil(points.length / maxLabels);
+    const labelIdx: number[] = [];
+    let lastLabelX = -Infinity;
+    points.forEach((p, i) => {
+      if (i % step !== 0 && i !== points.length - 1) return;
+      if (p.x - lastLabelX < 14) return;
+      lastLabelX = p.x;
+      labelIdx.push(i);
+    });
+
+    doc.setDrawColor(210, 215, 224);
+    doc.setLineWidth(0.2);
+    doc.setLineDashPattern([1.2, 1.2], 0);
+    labelIdx.forEach(i => {
+      doc.line(points[i].x, plotY, points[i].x, plotY + plotH);
+    });
+    doc.setLineDashPattern([], 0);
+
     // linia średniej
-    const avgY = plotY + plotH - (Math.min(avgAttendancePct, 100) / 100) * plotH;
+    const avgY = plotY + plotH - (Math.min(avgAttendancePct, yMax) / yMax) * plotH;
     doc.setDrawColor(200, 120, 60);
     doc.setLineWidth(0.3);
-    doc.setLineDashPattern([1.5, 1.5], 0);
+    doc.setLineDashPattern([2, 2], 0);
     doc.line(plotX, avgY, plotX + plotW, avgY);
     doc.setLineDashPattern([], 0);
     doc.setTextColor(180, 100, 40);
@@ -332,30 +351,19 @@ export const generateMeetingReportPdf = async (
     doc.text(`średnia ${avgAttendancePct.toFixed(1)}%`, plotX + plotW, avgY - 1.5, { align: 'right' });
 
     // linia frekwencji
-    doc.setDrawColor(23, 69, 143);
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(0.6);
     for (let i = 0; i < points.length - 1; i++) {
       doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
     }
-    doc.setFillColor(23, 69, 143);
-    points.forEach(p => doc.circle(p.x, p.y, 0.7, 'F'));
+    doc.setFillColor(37, 99, 235);
+    points.forEach(p => doc.circle(p.x, p.y, 0.9, 'F'));
 
-    // ramka
-    doc.setDrawColor(210, 215, 224);
-    doc.setLineWidth(0.2);
-    doc.rect(plotX, plotY, plotW, plotH);
-
-    // etykiety osi X
-    const maxLabels = Math.max(1, Math.floor(plotW / 12));
-    const step = Math.ceil(points.length / maxLabels);
+    // etykiety osi X: „11 wrz", „2 paź" jak w aplikacji
     doc.setTextColor(130);
-    doc.setFontSize(6.5);
-    let lastLabelX = -Infinity;
-    points.forEach((p, i) => {
-      if (i % step !== 0 && i !== points.length - 1) return;
-      if (p.x - lastLabelX < 11) return;
-      lastLabelX = p.x;
-      doc.text(format(p.date, 'd.MM', { locale: pl }), p.x, plotY + plotH + 4, { align: 'center' });
+    doc.setFontSize(7);
+    labelIdx.forEach(i => {
+      doc.text(format(points[i].date, 'd MMM', { locale: pl }), points[i].x, plotY + plotH + 4, { align: 'center' });
     });
     doc.setTextColor(0);
   }
