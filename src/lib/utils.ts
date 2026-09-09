@@ -15,3 +15,25 @@ export function sortByLastName(a: { name: string }, b: { name: string }) {
   };
   return getLastName(a.name).localeCompare(getLastName(b.name), 'pl');
 }
+
+// Normalizuje nazwę do porównań (bez znaków diakrytycznych, małe litery)
+const normalizeName = (name: string) =>
+  name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+// Zwraca nazwiska gości bez osób wpisanych jako prelegenci danego spotkania
+export function excludeSpeakersFromGuests(guestNames: string[], speakerName?: string | null) {
+  if (!speakerName) return guestNames;
+  const speakers = new Set(
+    speakerName
+      .split(/[,;]|\si\s/)
+      .map(normalizeName)
+      .filter(Boolean)
+  );
+  if (speakers.size === 0) return guestNames;
+  return guestNames.filter(n => !speakers.has(normalizeName(n)));
+}
