@@ -86,7 +86,7 @@ export const generateMeetingReportPdf = async (
   doc.setTextColor(0);
 
   const body = held.map(r => {
-    const guestNames = resolveGuestNames(r.presentGuests);
+    const guestNames = excludeSpeakersFromGuests(resolveGuestNames(r.presentGuests), r.speakerName);
     return [
       format(r.date, 'dd.MM.yyyy', { locale: pl }),
       r.topic?.trim() || '—',
