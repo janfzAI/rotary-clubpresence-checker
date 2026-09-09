@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Users, User, Mic, Save } from 'lucide-react';
+import { CalendarDays, Users, User, Mic, Save, FileDown } from 'lucide-react';
 import { AttendanceRecord } from '@/hooks/useAttendanceData';
 import { sortByLastName } from '@/lib/utils';
+import { generateMeetingReportPdf } from '@/utils/meetingReportPdf';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Guest {
   id: number;
