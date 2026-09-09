@@ -46,7 +46,7 @@ export const getRotaryYearConfig = (year: RotaryYear) => {
           '2026-01-01', // Nowy Rok
         ],
         specialDates: [
-          // Dodaj specjalne daty dla nowego roku rotarskiego
+          '2025-11-22'  // Turniej tenisowy (sobota)
         ]
       };
     case '2026/2027':
