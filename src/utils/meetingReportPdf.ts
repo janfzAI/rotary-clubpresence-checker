@@ -348,7 +348,7 @@ export const generateMeetingReportPdf = async (
     doc.setLineDashPattern([], 0);
     doc.setTextColor(180, 100, 40);
     doc.setFontSize(7);
-    doc.text(`średnia ${avgAttendancePct.toFixed(1)}%`, plotX + 2, avgY - 1.5, { align: 'left' });
+    doc.text(`średnia ${avgAttendancePct.toFixed(1)}%`, plotX + plotW - 2, plotY + 4, { align: 'right' });
 
     // linia frekwencji
     doc.setDrawColor(37, 99, 235);
