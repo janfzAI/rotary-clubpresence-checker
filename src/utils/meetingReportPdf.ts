@@ -35,7 +35,8 @@ const fetchFontBase64 = async (url: string) => {
 export const generateMeetingReportPdf = async (
   records: AttendanceRecord[],
   guests: Guest[],
-  rotaryYear: string
+  rotaryYear: string,
+  members: ReportMember[] = []
 ) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
