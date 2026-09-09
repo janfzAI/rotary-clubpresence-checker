@@ -194,6 +194,7 @@ export const generateMeetingReportPdf = async (
       startY: 32,
       head: [['Lp.', 'Członek', 'Obecności', 'Frekwencja']],
       body: statsBody,
+      showFoot: 'lastPage',
       foot: [[
         '',
         'Średnio',
