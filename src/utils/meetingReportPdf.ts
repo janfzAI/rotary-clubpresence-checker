@@ -204,8 +204,8 @@ export const generateMeetingReportPdf = async (
       margin: { left: marginX, right: marginX, bottom: 18 },
       styles: {
         font: 'DejaVuSans',
-        fontSize: 9,
-        cellPadding: 2,
+        fontSize: 8,
+        cellPadding: 1.4,
         overflow: 'linebreak',
         lineColor: [220, 220, 220],
         lineWidth: 0.1
