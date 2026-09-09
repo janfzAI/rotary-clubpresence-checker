@@ -91,7 +91,7 @@ export const generateMeetingReportPdf = async (
 
   autoTable(doc, {
     startY: 42,
-    head: [['Data', 'Temat', 'Prelegent', 'Obecni\nczłonkowie', 'Goście']],
+    head: [['Data', 'Temat', 'Prelegent', 'Obecni\nczłonków', 'Goście']],
     body: body.length ? body : [['—', 'Brak odbytych spotkań w tym roku', '—', '—', '—']],
     margin: { left: marginX, right: marginX, bottom: 18 },
     styles: {
@@ -113,11 +113,11 @@ export const generateMeetingReportPdf = async (
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     columnStyles: {
-      0: { cellWidth: 21 },
-      1: { cellWidth: 55 },
-      2: { cellWidth: 36 },
-      3: { cellWidth: 20, halign: 'center' },
-      4: { cellWidth: 50 }
+      0: { cellWidth: 20 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 34 },
+      3: { cellWidth: 22, halign: 'center' },
+      4: { cellWidth: 52 }
     },
     didDrawPage: () => {
       const pageSize = doc.internal.pageSize;
