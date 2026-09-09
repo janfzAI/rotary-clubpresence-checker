@@ -10,6 +10,12 @@ interface Guest {
   name: string;
 }
 
+interface ReportMember {
+  id: number;
+  name: string;
+  active?: boolean;
+}
+
 const FONT_REGULAR = '/fonts/DejaVuSans-subset.ttf';
 const FONT_BOLD = '/fonts/DejaVuSans-Bold-subset.ttf';
 
