@@ -113,12 +113,13 @@ export const generateMeetingReportPdf = async (
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     columnStyles: {
-      0: { cellWidth: 20 },
-      1: { cellWidth: 54 },
-      2: { cellWidth: 34 },
+      0: { cellWidth: 26 },
+      1: { cellWidth: 52 },
+      2: { cellWidth: 32 },
       3: { cellWidth: 22, halign: 'center' },
-      4: { cellWidth: 52 }
+      4: { cellWidth: 50 }
     },
+    rowPageBreak: 'avoid',
     didDrawPage: () => {
       const pageSize = doc.internal.pageSize;
       const pageHeight = pageSize.getHeight();
