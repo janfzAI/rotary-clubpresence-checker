@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Users, User, Mic, Save, FileDown } from 'lucide-react';
 import { AttendanceRecord } from '@/hooks/useAttendanceData';
-import { sortByLastName } from '@/lib/utils';
+import { sortByLastName, excludeSpeakersFromGuests } from '@/lib/utils';
 import { generateMeetingReportPdf } from '@/utils/meetingReportPdf';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -143,7 +143,10 @@ export const MeetingSummary = ({ records, guests, members = [], canEdit, rotaryY
 
       <div className="space-y-3">
         {records.map((record) => {
-          const guestNames = resolveGuestNames(record.presentGuests);
+          const guestNames = excludeSpeakersFromGuests(
+            resolveGuestNames(record.presentGuests),
+            record.speakerName
+          );
           const membersCount = record.presentMembers?.length || 0;
           const hasAttendance = membersCount > 0;
 
