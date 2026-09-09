@@ -249,5 +249,113 @@ export const generateMeetingReportPdf = async (
     });
   }
 
+  // ---- Wykres: frekwencja w czasie ----
+  if (totalMeetings > 0) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const chartWidth = pageWidth - marginX * 2;
+    const chartHeight = 70;
+    const titleSpace = 10;
+    const labelSpace = 10;
+
+    const lastY = (doc as any).lastAutoTable?.finalY ?? 0;
+    let top = lastY ? lastY + 14 : 32;
+
+    if (top + titleSpace + chartHeight + labelSpace > pageHeight - 18) {
+      doc.addPage();
+      top = 20;
+      doc.setFont('DejaVuSans', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(130);
+      doc.text(
+        `Strona ${doc.getCurrentPageInfo().pageNumber}`,
+        pageWidth - marginX,
+        pageHeight - 8,
+        { align: 'right' }
+      );
+      doc.setTextColor(0);
+    }
+
+    doc.setFont('DejaVuSans', 'bold');
+    doc.setFontSize(12);
+    doc.text('Frekwencja w czasie', marginX, top);
+
+    const plotX = marginX + 12;
+    const plotY = top + 6;
+    const plotW = chartWidth - 12;
+    const plotH = chartHeight;
+
+    doc.setFillColor(249, 250, 252);
+    doc.rect(plotX, plotY, plotW, plotH, 'F');
+
+    // siatka + oś Y
+    doc.setFont('DejaVuSans', 'normal');
+    doc.setFontSize(7);
+    for (let v = 0; v <= 100; v += 25) {
+      const y = plotY + plotH - (v / 100) * plotH;
+      doc.setDrawColor(224, 228, 235);
+      doc.setLineWidth(0.15);
+      doc.line(plotX, y, plotX + plotW, y);
+      doc.setTextColor(130);
+      doc.text(`${v}%`, plotX - 2, y + 1.2, { align: 'right' });
+    }
+
+    const points = pastRecords.map((r, i) => {
+      const pct = ((r.presentMembers?.length || 0) / (r.totalCount || 1)) * 100;
+      const x = pastRecords.length === 1
+        ? plotX + plotW / 2
+        : plotX + (i / (pastRecords.length - 1)) * plotW;
+      const y = plotY + plotH - (Math.min(pct, 100) / 100) * plotH;
+      return { x, y, date: r.date };
+    });
+
+    // wypełnienie pod linią
+    if (points.length > 1) {
+      doc.setFillColor(219, 229, 244);
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        doc.triangle(a.x, a.y, b.x, b.y, a.x, plotY + plotH, 'F');
+        doc.triangle(b.x, b.y, b.x, plotY + plotH, a.x, plotY + plotH, 'F');
+      }
+    }
+
+    // linia średniej
+    const avgY = plotY + plotH - (Math.min(avgAttendancePct, 100) / 100) * plotH;
+    doc.setDrawColor(200, 120, 60);
+    doc.setLineWidth(0.3);
+    doc.setLineDashPattern([1.5, 1.5], 0);
+    doc.line(plotX, avgY, plotX + plotW, avgY);
+    doc.setLineDashPattern([], 0);
+    doc.setTextColor(180, 100, 40);
+    doc.setFontSize(7);
+    doc.text(`średnia ${avgAttendancePct.toFixed(1)}%`, plotX + plotW, avgY - 1.5, { align: 'right' });
+
+    // linia frekwencji
+    doc.setDrawColor(23, 69, 143);
+    doc.setLineWidth(0.5);
+    for (let i = 0; i < points.length - 1; i++) {
+      doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+    }
+    doc.setFillColor(23, 69, 143);
+    points.forEach(p => doc.circle(p.x, p.y, 0.7, 'F'));
+
+    // ramka
+    doc.setDrawColor(210, 215, 224);
+    doc.setLineWidth(0.2);
+    doc.rect(plotX, plotY, plotW, plotH);
+
+    // etykiety osi X
+    const maxLabels = Math.max(1, Math.floor(plotW / 12));
+    const step = Math.ceil(points.length / maxLabels);
+    doc.setTextColor(130);
+    doc.setFontSize(6.5);
+    points.forEach((p, i) => {
+      if (i % step !== 0 && i !== points.length - 1) return;
+      doc.text(format(p.date, 'd.MM', { locale: pl }), p.x, plotY + plotH + 4, { align: 'center' });
+    });
+    doc.setTextColor(0);
+  }
+
   doc.save(`podsumowanie-spotkan-${rotaryYear.replace('/', '-')}.pdf`);
 };
