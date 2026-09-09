@@ -16,9 +16,16 @@ interface Guest {
   name: string;
 }
 
+interface SummaryMember {
+  id: number;
+  name: string;
+  active?: boolean;
+}
+
 interface MeetingSummaryProps {
   records: AttendanceRecord[];
   guests: Guest[];
+  members?: SummaryMember[];
   canEdit: boolean;
   rotaryYear: string;
   onSaveDetails: (date: Date, topic: string | null, speakerName: string | null) => void;
