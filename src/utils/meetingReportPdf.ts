@@ -350,8 +350,11 @@ export const generateMeetingReportPdf = async (
     const step = Math.ceil(points.length / maxLabels);
     doc.setTextColor(130);
     doc.setFontSize(6.5);
+    let lastLabelX = -Infinity;
     points.forEach((p, i) => {
       if (i % step !== 0 && i !== points.length - 1) return;
+      if (p.x - lastLabelX < 11) return;
+      lastLabelX = p.x;
       doc.text(format(p.date, 'd.MM', { locale: pl }), p.x, plotY + plotH + 4, { align: 'center' });
     });
     doc.setTextColor(0);
